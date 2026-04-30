@@ -85,6 +85,11 @@
       background: #eef2f7;
       cursor: default;
     }
+    .canvas-wrap,
+    #canvas {
+      touch-action: none;
+      overscroll-behavior: contain;
+    }
     .group {
       border-top: 1px solid #e5e7eb;
       padding-top: 12px;
@@ -2190,15 +2195,153 @@
     function restoreDragOriginals(){ if(!state.dragOriginals)return; state.objects=state.objects.map(o=>state.dragOriginals.has(o.id)?JSON.parse(JSON.stringify(state.dragOriginals.get(o.id))):o); }
     function moveObject(o,dx,dy){ if(o.type==='text'){o.x+=dx;o.y+=dy;} else if(o.type==='erase'){o.points.forEach(p=>{p.x+=dx;p.y+=dy;});} else {o.x1+=dx;o.y1+=dy;o.x2+=dx;o.y2+=dy;} }
 
-    canvas.addEventListener('mousedown', e=>{
-      let p=screenToWorld(e), raw=rawScreenToWorld(e);
+    const activePointers = new Map();
+    const touchInteraction = {
+      primaryId: null,
+      startClientX: 0,
+      startClientY: 0,
+      lastClientX: 0,
+      lastClientY: 0,
+      panStarted: false,
+      emptyPanCandidate: false,
+      longPressTimer: null,
+      pinchLastDistance: 0,
+      pinchLastCenter: null,
+      pinchMode: false,
+      ignoreSyntheticMouseUntil: 0,
+      multiSelectMode: false
+    };
+    const TOUCH_MOVE_THRESHOLD = 6;
+    const TOUCH_LONG_PRESS_MS = 380;
+
+    function getCanvasWrap() {
+      return document.querySelector('.canvas-wrap');
+    }
+
+    function clearTouchLongPress() {
+      if (touchInteraction.longPressTimer) {
+        clearTimeout(touchInteraction.longPressTimer);
+        touchInteraction.longPressTimer = null;
+      }
+    }
+
+    function updateTouchPointer(e) {
+      if (!activePointers.has(e.pointerId)) return;
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY, pointerType: e.pointerType });
+    }
+
+    function getTouchPointers() {
+      return [...activePointers.values()].filter(p => p.pointerType === 'touch');
+    }
+
+    function getTwoTouchInfo() {
+      const touches = getTouchPointers();
+      if (touches.length < 2) return null;
+      const p1 = touches[0], p2 = touches[1];
+      const distance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      return { distance, center };
+    }
+
+    function resetTransientInteraction(restore = false) {
+      if (restore) {
+        if (state.dragging || state.resizingEndpoint) restoreDragOriginals();
+        if (state.erasing) {
+          const last = state.objects[state.objects.length - 1];
+          if (last && last.type === 'erase') state.objects.pop();
+        }
+      }
+      state.drawing = false;
+      state.dragging = false;
+      state.erasing = false;
+      state.boxSelecting = false;
+      state.resizingEndpoint = false;
+      state.resizeEndpointIndex = null;
+      state.resizingObjectId = null;
+      state.dragHistorySaved = false;
+      state.resizeHistorySaved = false;
+      state.start = null;
+      state.current = null;
+      state.dragStartRaw = null;
+      state.dragOriginals = null;
+      state.selectionBox = null;
+      draw();
+    }
+
+    function beginTouchLongPress(found) {
+      clearTouchLongPress();
+      if (!found || state.tool !== 'select') return;
+      touchInteraction.longPressTimer = setTimeout(() => {
+        touchInteraction.longPressTimer = null;
+        if (touchInteraction.primaryId === null || touchInteraction.pinchMode) return;
+        touchInteraction.multiSelectMode = true;
+        const ids = expandSelectionWithGroup(found.id);
+        const set = new Set(state.selectedIds);
+        ids.forEach(id => set.add(id));
+        state.selectedIds = [...set];
+        state.dragOriginals = captureSelectedOriginals();
+        draw();
+        updateCursor();
+      }, TOUCH_LONG_PRESS_MS);
+    }
+
+    function isTouchLike(e) {
+      return e.pointerType === 'touch';
+    }
+
+    function handlePointerDown(e) {
+      if (e.pointerType === 'mouse' && Date.now() < touchInteraction.ignoreSyntheticMouseUntil) return;
+      if (e.button !== undefined && e.button !== 0) return;
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY, pointerType: e.pointerType });
+      try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+
+      if (isTouchLike(e)) {
+        touchInteraction.ignoreSyntheticMouseUntil = Date.now() + 700;
+        e.preventDefault();
+        if (touchInteraction.primaryId === null) {
+          touchInteraction.primaryId = e.pointerId;
+          touchInteraction.startClientX = e.clientX;
+          touchInteraction.startClientY = e.clientY;
+          touchInteraction.lastClientX = e.clientX;
+          touchInteraction.lastClientY = e.clientY;
+          touchInteraction.panStarted = false;
+          touchInteraction.emptyPanCandidate = false;
+        }
+        if (getTouchPointers().length >= 2) {
+          clearTouchLongPress();
+          resetTransientInteraction(true);
+          const info = getTwoTouchInfo();
+          touchInteraction.pinchMode = true;
+          touchInteraction.pinchLastDistance = info ? info.distance : 0;
+          touchInteraction.pinchLastCenter = info ? info.center : null;
+          return;
+        }
+      }
+
+      let p = screenToWorld(e), raw = rawScreenToWorld(e);
       updateCursor(e);
       if(state.tool==='wall') p = snapWallEndpoint(p);
-      if(state.tool==='text'){ addObject({type:'text',x:p.x,y:p.y,text:els.textInput.value.trim()||'文字',layer:'text'}); updateCursor(e); return; }
-      if(state.tool==='eraser'){ saveHistory(); state.erasing=true; state.current=raw; state.objects.push({id:uid(),type:'erase',points:[raw],width:Number(els.eraserWidth.value)||22,layer:'annotations'}); draw(); updateCursor(e); return; }
+      startCanvasInteraction(e, p, raw);
+    }
+
+    function startCanvasInteraction(e, p, raw) {
+      if(state.tool==='text'){
+        addObject({type:'text',x:p.x,y:p.y,text:els.textInput.value.trim()||'文字',layer:'text'});
+        updateCursor(e);
+        return;
+      }
+      if(state.tool==='eraser'){
+        saveHistory();
+        state.erasing=true;
+        state.current=raw;
+        state.objects.push({id:uid(),type:'erase',points:[raw],width:Number(els.eraserWidth.value)||22,layer:'annotations'});
+        draw();
+        updateCursor(e);
+        return;
+      }
       if(state.tool==='select'){
         const endpointHit = hitEndpointHandle(raw);
-        if (endpointHit) {
+        if (endpointHit && !isTouchLike(e)) {
           state.resizingEndpoint = true;
           state.resizeHistorySaved = false;
           state.resizingObjectId = endpointHit.object.id;
@@ -2211,16 +2354,78 @@
         const found=hitTest(raw);
         if(found){
           let ids=expandSelectionWithGroup(found.id);
-          if(e.shiftKey){ const set=new Set(state.selectedIds); ids.forEach(id=>set.has(id)?set.delete(id):set.add(id)); state.selectedIds=[...set]; }
+          if(e.shiftKey || (isTouchLike(e) && touchInteraction.multiSelectMode)){
+            const set=new Set(state.selectedIds);
+            ids.forEach(id=>set.has(id)?set.delete(id):set.add(id));
+            state.selectedIds=[...set];
+          }
           else if(!state.selectedIds.includes(found.id)) state.selectedIds=ids;
-          state.dragging=true; state.dragHistorySaved=false; state.dragStartRaw=raw; state.dragOriginals=captureSelectedOriginals();
-        } else { state.selectedIds=[]; state.boxSelecting=true; state.selectionBox={x1:raw.x,y1:raw.y,x2:raw.x,y2:raw.y}; }
+          beginTouchLongPress(isTouchLike(e) ? found : null);
+          if(state.selectedIds.length){
+            state.dragging=true;
+            state.dragHistorySaved=false;
+            state.dragStartRaw=raw;
+            state.dragOriginals=captureSelectedOriginals();
+          }
+        } else {
+          if (isTouchLike(e)) {
+            clearTouchLongPress();
+            touchInteraction.emptyPanCandidate = true;
+            touchInteraction.panStarted = false;
+          } else {
+            state.selectedIds=[];
+            state.boxSelecting=true;
+            state.selectionBox={x1:raw.x,y1:raw.y,x2:raw.x,y2:raw.y};
+          }
+        }
         draw(); updateCursor(e); return;
       }
       state.drawing=true; state.start=p; state.current=p; draw(); updateCursor(e);
-    });
+    }
 
-    canvas.addEventListener('mousemove', e=>{
+    function handlePointerMove(e) {
+      if (e.pointerType === 'mouse' && Date.now() < touchInteraction.ignoreSyntheticMouseUntil) return;
+      updateTouchPointer(e);
+      if (isTouchLike(e)) {
+        e.preventDefault();
+        if (touchInteraction.pinchMode || getTouchPointers().length >= 2) {
+          const info = getTwoTouchInfo();
+          if (!info) return;
+          const wrap = getCanvasWrap();
+          if (touchInteraction.pinchLastCenter) {
+            const dx = info.center.x - touchInteraction.pinchLastCenter.x;
+            const dy = info.center.y - touchInteraction.pinchLastCenter.y;
+            wrap.scrollLeft -= dx;
+            wrap.scrollTop -= dy;
+          }
+          if (touchInteraction.pinchLastDistance > 0 && info.distance > 0) {
+            const factor = Math.max(0.85, Math.min(1.18, info.distance / touchInteraction.pinchLastDistance));
+            setZoom(state.zoom * factor, info.center.x, info.center.y);
+          }
+          touchInteraction.pinchMode = true;
+          touchInteraction.pinchLastDistance = info.distance;
+          touchInteraction.pinchLastCenter = info.center;
+          return;
+        }
+        if (touchInteraction.primaryId !== null && e.pointerId === touchInteraction.primaryId) {
+          const moved = Math.hypot(e.clientX - touchInteraction.startClientX, e.clientY - touchInteraction.startClientY);
+          if (moved > TOUCH_MOVE_THRESHOLD) clearTouchLongPress();
+          if (touchInteraction.emptyPanCandidate) {
+            const dx = e.clientX - touchInteraction.lastClientX;
+            const dy = e.clientY - touchInteraction.lastClientY;
+            if (moved > TOUCH_MOVE_THRESHOLD) touchInteraction.panStarted = true;
+            if (touchInteraction.panStarted) {
+              const wrap = getCanvasWrap();
+              wrap.scrollLeft -= dx;
+              wrap.scrollTop -= dy;
+              touchInteraction.lastClientX = e.clientX;
+              touchInteraction.lastClientY = e.clientY;
+              return;
+            }
+          }
+        }
+      }
+
       let p=screenToWorld(e), raw=rawScreenToWorld(e);
       updateCursor(e);
       if(state.drawing && state.start && ['line','arrow','wall','dimension','door','window'].includes(state.tool) && e.shiftKey) {
@@ -2245,10 +2450,69 @@
         updateCursor(e); return;
       }
       if(state.drawing){ state.current=p; draw(); updateCursor(e); }
-    });
+    }
 
-    canvas.addEventListener('mouseup', finishPointer);
-    canvas.addEventListener('mouseleave', finishPointer);
+    function handlePointerUp(e) {
+      if (e.pointerType === 'mouse' && Date.now() < touchInteraction.ignoreSyntheticMouseUntil) return;
+      const wasTouch = isTouchLike(e);
+      if (wasTouch) e.preventDefault();
+      clearTouchLongPress();
+      activePointers.delete(e.pointerId);
+      try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+
+      if (wasTouch) {
+        if (touchInteraction.pinchMode) {
+          if (getTouchPointers().length < 2) {
+            touchInteraction.pinchMode = false;
+            touchInteraction.pinchLastDistance = 0;
+            touchInteraction.pinchLastCenter = null;
+          }
+          if (e.pointerId === touchInteraction.primaryId) touchInteraction.primaryId = null;
+          updateCursor(e);
+          return;
+        }
+        if (touchInteraction.emptyPanCandidate) {
+          if (!touchInteraction.panStarted) {
+            state.selectedIds = [];
+            touchInteraction.multiSelectMode = false;
+            draw();
+          }
+          touchInteraction.emptyPanCandidate = false;
+          touchInteraction.panStarted = false;
+          touchInteraction.primaryId = null;
+          updateCursor(e);
+          return;
+        }
+        touchInteraction.primaryId = null;
+      }
+      finishPointer(e);
+    }
+
+    function handlePointerCancel(e) {
+      clearTouchLongPress();
+      activePointers.delete(e.pointerId);
+      try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+      if (isTouchLike(e)) {
+        resetTransientInteraction(true);
+        touchInteraction.primaryId = null;
+        touchInteraction.emptyPanCandidate = false;
+        touchInteraction.panStarted = false;
+        touchInteraction.pinchMode = false;
+        touchInteraction.pinchLastDistance = 0;
+        touchInteraction.pinchLastCenter = null;
+        updateCursor(e);
+        return;
+      }
+      finishPointer(e);
+    }
+
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerup', handlePointerUp);
+    canvas.addEventListener('pointercancel', handlePointerCancel);
+    canvas.addEventListener('lostpointercapture', e => {
+      if (activePointers.has(e.pointerId)) handlePointerCancel(e);
+    });
     canvas.addEventListener('dblclick', e=>{ const t=hitText(rawScreenToWorld(e)); if(t){ e.preventDefault(); editTextObject(t); } });
 
     function finishPointer(e){
