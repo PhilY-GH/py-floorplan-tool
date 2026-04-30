@@ -440,6 +440,7 @@
     .arrow-icon::after { content: ""; position: absolute; right: 0px; top: 3px; width: 7px; height: 7px; border-right: 2px solid currentColor; border-top: 2px solid currentColor; transform: rotate(18deg); }
     .rect-icon { border: 2px solid currentColor; border-radius: 2px; }
     .ellipse-icon { border: 2px solid currentColor; border-radius: 50%; }
+    .area-icon svg { width: 17px; height: 17px; display: block; }
     .door-icon::before { content: ""; position:absolute; left:2px; bottom:2px; width:10px; height:10px; border-left:2px solid currentColor; border-bottom:2px solid currentColor; border-radius:0 0 10px 0; }
     .window-icon::before { transform: none; top: 5px; box-shadow: 0 5px 0 currentColor; border-top-width: 2px; }
     .dimension-icon::after { content: ""; position:absolute; left:1px; right:1px; top:4px; bottom:4px; border-left:2px solid currentColor; border-right:2px solid currentColor; }
@@ -657,6 +658,7 @@
     <header class="top-toolbar">
       <div class="brand-block">
         <div class="brand">PY平面图工具</div>
+        <div class="brand-subtitle" id="appVersionLabel"></div>
       </div>
 
       <div class="toolbar-section object-section">
@@ -670,6 +672,7 @@
           <button data-tool="arrow" class="tool-btn" title="箭头"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><path d="M13 4h7v7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 7l3-3" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg><span>箭头</span></button>
           <button data-tool="rect" class="tool-btn" title="矩形"><span class="mini-icon rect-icon"></span><span>矩形</span></button>
           <button data-tool="ellipse" class="tool-btn" title="椭圆"><span class="mini-icon ellipse-icon"></span><span>椭圆</span></button>
+          <button data-tool="area" class="tool-btn" title="区域"><span class="mini-icon area-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l8 5.8-3 9.2H7L4 9.3z" fill="currentColor" opacity="0.18"/><path d="M12 3.5l8 5.8-3 9.2H7L4 9.3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span><span>区域</span></button>
           <button data-tool="wall" class="tool-btn" title="墙体"><span class="mini-icon wall-icon"></span><span>墙体</span></button>
           <button data-tool="door" class="tool-btn" title="门"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18V6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 18H18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 6A12 12 0 0 1 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>门</span></button>
           <button data-tool="window" class="tool-btn" title="窗"><span class="mini-icon window-icon"></span><span>窗</span></button>
@@ -723,15 +726,17 @@
             <label>图层</label>
             <select id="layerSelect">
               <option value="" selected>默认</option>
+              <option value="areas">区域</option>
               <option value="walls">墙体</option>
+              <option value="symbols">门窗</option>
+              <option value="shapes">图形</option>
               <option value="annotations">标注</option>
               <option value="text">文字</option>
-              <option value="symbols">门窗</option>
             </select>
           </div>
           <div class="row">
             <label>颜色</label>
-            <input id="strokeColor" type="color" value="#111827" />
+            <input id="strokeColor" type="color" value="#000000" />
           </div>
           <div class="swatches" id="swatches"></div>
           <div class="row">
@@ -791,14 +796,14 @@
           <div class="row">
             <label>标尺文字</label>
             <select id="dimensionLabelMode" class="hidden-input">
-              <option value="above" selected>上方</option>
+              <option value="inline" selected>压线</option>
+              <option value="above">上方</option>
               <option value="below">下方</option>
-              <option value="inline">压线</option>
             </select>
             <div class="segmented segmented-3" data-segment-target="dimensionLabelMode">
-              <button type="button" data-value="above" class="active">上方</button>
+              <button type="button" data-value="inline" class="active">压线</button>
+              <button type="button" data-value="above">上方</button>
               <button type="button" data-value="below">下方</button>
-              <button type="button" data-value="inline">压线</button>
             </div>
           </div>
           <div class="row">
@@ -837,11 +842,13 @@
 
 <div class="group">
           <div class="group-title">图层显示</div>
-          <div class="grid-2">
+          <div class="grid-3">
+            <button data-layer-toggle="areas" class="active">区域</button>
             <button data-layer-toggle="walls" class="active">墙体</button>
+            <button data-layer-toggle="symbols" class="active">门窗</button>
+            <button data-layer-toggle="shapes" class="active">图形</button>
             <button data-layer-toggle="annotations" class="active">标注</button>
             <button data-layer-toggle="text" class="active">文字</button>
-            <button data-layer-toggle="symbols" class="active">门窗</button>
           </div>
         </div>
 
@@ -969,6 +976,7 @@
   <div id="propMorePopover" class="prop-more-popover hidden" aria-hidden="true"></div>
 
   <script>
+    const APP_VERSION = 'v58';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -983,9 +991,12 @@
       objects: [],
       groups: {},
       selectedIds: [],
-      visibleLayers: { walls: true, annotations: true, text: true, symbols: true },
+      visibleLayers: { areas: true, walls: true, symbols: true, shapes: true, annotations: true, text: true },
       clipboard: [],
       drawing: false,
+      areaDrawing: false,
+      areaPoints: [],
+      areaPreview: null,
       dragging: false,
       erasing: false,
       boxSelecting: false,
@@ -1045,17 +1056,21 @@
     };
 
     const toolNames = {
-      select: '选择', wall: '墙体', line: '直线', arrow: '箭头线', rect: '矩形', ellipse: '椭圆', dimension: '标尺', text: '文字', door: '门', window: '窗', eraser: '橡皮擦'
+      select: '选择', wall: '墙体', line: '直线', area: '区域', arrow: '箭头线', rect: '矩形', ellipse: '椭圆', dimension: '标尺', text: '文字', door: '门', window: '窗', eraser: '橡皮擦'
     };
 
     const toolLayer = {
-      wall: 'walls', line: 'walls', rect: 'walls', ellipse: 'walls', arrow: 'annotations', dimension: 'annotations', text: 'text', door: 'symbols', window: 'symbols', eraser: 'annotations'
+      area: 'areas', wall: 'walls', line: 'shapes', rect: 'shapes', ellipse: 'shapes', arrow: 'annotations', dimension: 'annotations', text: 'text', door: 'symbols', window: 'symbols', eraser: 'annotations'
     };
 
-    // 常用色按两层整理：第一排为基础/高饱和标注色，第二排为现代专业色
+    const DEFAULT_STROKE_COLOR = '#000000';
+    const DEFAULT_AREA_COLOR = DEFAULT_STROKE_COLOR;
+    // 统一色板：第一行为经典高饱和纯色，第二行为对应版专业深色，第三行为区域高亮浅色。
+    // 左侧默认样式色板和顶部属性栏颜色弹窗共用这一套数据，避免分别维护造成遗漏。
     const colors = [
-      '#000000', '#ffffff', '#ff0000', '#0000ff', '#00b050', '#ffff00', '#ff7a00', '#8000ff',
-      '#0f172a', '#334155', '#64748b', '#cbd5e1', '#1e3a8a', '#2563eb', '#0f766e', '#92400e'
+      '#000000', '#ffffff', '#ff0000', '#ffff00', '#0000ff', '#00ff00', '#ff9900', '#ff00ff',
+      '#4d4d4d', '#808080', '#c00000', '#bf9000', '#1f4e79', '#38761d', '#c65911', '#a64d79',
+      '#bfbfbf', '#d9d9d9', '#ffcce5', '#ffff99', '#ccecff', '#ccffcc', '#ffd9b3', '#ffccff'
     ];
 
     let currentProjectFileName = '';
@@ -1068,6 +1083,11 @@
 
     function updateDocumentTitle() {
       document.title = currentProjectDisplayName ? `PY平面图工具 - ${currentProjectDisplayName}` : 'PY平面图工具';
+    }
+
+    function updateAppVersionLabel() {
+      const label = document.getElementById('appVersionLabel');
+      if (label) label.textContent = APP_VERSION;
     }
 
     function uid() { return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()); }
@@ -1159,7 +1179,7 @@
         fontSize: Number(els.fontSize.value) || 20,
         arrowMode: els.arrowMode.value || 'end',
         arrowSize: Number(els.arrowSize.value) || 14,
-        dimensionLabelMode: els.dimensionLabelMode.value || 'above',
+        dimensionLabelMode: els.dimensionLabelMode.value || 'inline',
         wallThickness: Number(els.wallThickness.value) || 10,
         wallStyle: els.wallStyle.value || 'hollow',
         openingThicknessMode: els.openingThicknessMode.value || 'linear',
@@ -1191,9 +1211,10 @@
       drawGrid(ctx);
       // 固定显示顺序由 buildRenderItems() 统一生成，屏幕、图片导出、PDF 导出共用同一套基础绘图元素。
       drawCanvasRenderItems(ctx, buildRenderItems(state.objects));
-      if (state.drawing && state.start && state.current && !['select','text','eraser'].includes(state.tool)) {
+      if (state.drawing && state.start && state.current && !['select','text','eraser','area'].includes(state.tool)) {
         drawCanvasRenderItems(ctx, buildObjectRenderItems(buildShapeFromPoints(state.tool, state.start, state.current, true)));
       }
+      if (state.areaDrawing) drawAreaDraft(ctx);
       state.objects.forEach(obj => {
         if (obj.id && state.selectedIds.includes(obj.id) && obj.type !== 'erase') drawSelection(ctx, obj);
       });
@@ -1254,12 +1275,13 @@
       }
       if (o.type === 'text') defs.push({ key:'text', label:'文字', type:'text' });
       defs.push({ key:'color', label:'颜色', type:'swatches' });
-      if (['wall','line','arrow','rect','ellipse','dimension','door','window'].includes(o.type)) defs.push({ key:'lineWidth', label:'线宽', type:'number', unit:'px' });
+      if (['wall','line','arrow','rect','ellipse','dimension','door','window','area'].includes(o.type)) defs.push({ key:'lineWidth', label:'线宽', type:'number', unit:'px' });
       if (o.type === 'wall') {
         defs.push({ key:'wallThickness', label:'墙厚', type:'number', unit:'px' });
         defs.push({ key:'wallStyle', label:'墙体', type:'select', options:[['hollow','空心'],['solid','实心']] });
       }
       if (['door','window'].includes(o.type)) defs.push({ key:'openingThicknessMode', label:'厚度', type:'select', options:[['linear','线性'],['wall','墙体']] });
+      if (o.type === 'door') defs.push({ key:'doorSwing', label:'开向', type:'select', options:[['right','右开'],['left','左开']] });
       if (['text','dimension'].includes(o.type)) defs.push({ key:'fontSize', label:'字号', type:'number', unit:'px' });
       if (o.type === 'arrow') {
         defs.push({ key:'arrowMode', label:'箭头', type:'select', options:[['end','单箭头'],['both','双箭头']] });
@@ -1267,9 +1289,9 @@
       }
       if (o.type === 'dimension') {
         defs.push({ key:'arrowSize', label:'大小', type:'number', unit:'px' });
-        defs.push({ key:'dimensionLabelMode', label:'文字', type:'select', options:[['above','上方'],['below','下方'],['inline','压线']] });
+        defs.push({ key:'dimensionLabelMode', label:'文字', type:'select', options:[['inline','压线'],['above','上方'],['below','下方']] });
       }
-      defs.push({ key:'layer', label:'图层', type:'select', options:[['walls','墙体'],['annotations','标注'],['text','文字'],['symbols','门窗']] });
+      defs.push({ key:'layer', label:'图层', type:'select', options:[['areas','区域'],['walls','墙体'],['symbols','门窗'],['shapes','图形'],['annotations','标注'],['text','文字']] });
       return defs;
     }
 
@@ -1286,10 +1308,11 @@
       if (key === 'wallThickness') return o.wallThickness || 10;
       if (key === 'wallStyle') return o.wallStyle || 'hollow';
       if (key === 'openingThicknessMode') return o.openingThicknessMode || (o.openingUseWallThickness ? 'wall' : 'linear');
+      if (key === 'doorSwing') return o.doorSwing || o.swing || 'right';
       if (key === 'fontSize') return o.fontSize || 20;
       if (key === 'arrowMode') return o.arrowMode || 'end';
       if (key === 'arrowSize') return o.arrowSize || 14;
-      if (key === 'dimensionLabelMode') return o.dimensionLabelMode || 'above';
+      if (key === 'dimensionLabelMode') return o.dimensionLabelMode || 'inline';
       if (key === 'layer') return o.layer || toolLayer[o.type] || 'walls';
       return o[key] ?? '';
     }
@@ -1531,6 +1554,9 @@
         o.openingThicknessMode = raw;
         o.openingUseWallThickness = raw === 'wall';
         if (raw === 'wall') o.wallThickness = o.wallThickness || Number(els.wallThickness.value) || 10;
+      } else if (key === 'doorSwing') {
+        o.doorSwing = raw === 'left' ? 'left' : 'right';
+        o.swing = o.doorSwing;
       } else if (key === 'fontSize') {
         o.fontSize = Math.max(8, n);
       } else if (key === 'arrowMode') {
@@ -1538,7 +1564,7 @@
       } else if (key === 'arrowSize') {
         o.arrowSize = Math.max(4, n);
       } else if (key === 'dimensionLabelMode') {
-        o.dimensionLabelMode = ['above','below','inline'].includes(raw) ? raw : 'above';
+        o.dimensionLabelMode = ['inline','above','below'].includes(raw) ? raw : 'inline';
       } else if (key === 'layer') {
         o.layer = raw;
       }
@@ -1577,6 +1603,10 @@
       return { kind: 'text', text: String(text ?? ''), x, y, fill, fontSize, ...extra };
     }
 
+    function renderPolygon(points, fill, stroke, lineWidth, lineCap = 'round', lineJoin = 'round', extra = {}) {
+      return { kind: 'polygon', points: points || [], fill, stroke, lineWidth, lineCap, lineJoin, ...extra };
+    }
+
     function applyPreviewDash(obj, items) {
       if (!obj || !obj.preview) return items;
       return items.map(item => item.stroke ? { ...item, dash: [8, 6] } : item);
@@ -1587,6 +1617,18 @@
         renderLine(x, y, x - size * Math.cos(angle - Math.PI / 6), y - size * Math.sin(angle - Math.PI / 6), color, width, 'round', 'round', extra),
         renderLine(x, y, x - size * Math.cos(angle + Math.PI / 6), y - size * Math.sin(angle + Math.PI / 6), color, width, 'round', 'round', extra)
       ];
+    }
+
+    function buildAreaRenderItems(o) {
+      const points = Array.isArray(o.points) ? o.points : [];
+      if (points.length < 3) return [];
+      const color = o.color || DEFAULT_AREA_COLOR;
+      const width = o.lineWidth || 2;
+      return applyPreviewDash(o, [renderPolygon(points, color, color, width)]);
+    }
+
+    function getDoorSwing(o) {
+      return (o && (o.doorSwing || o.swing) === 'left') ? 'left' : 'right';
     }
 
     function buildWallRenderItems(o) {
@@ -1673,12 +1715,18 @@
         ? openingThickness / 2 + Math.max(2, sealLineWidth * 0.55)
         : Math.max(doorLineWidth / 2 + 1, 2.5);
       const transform = { x: o.x1, y: o.y1, rotation: a };
+      const swing = getDoorSwing(o);
+      const hingeX = swing === 'right' ? len : 0;
+      const leafEndY = -len;
+      const arcStart = -Math.PI / 2;
+      const arcEnd = swing === 'right' ? Math.PI - arcEndAngle : arcEndAngle;
+      const arcAnticlockwise = swing === 'right';
       return applyPreviewDash(o, [
         renderLine(0, 0, len, 0, '#ffffff', cutWidth, 'butt', 'round', { transform }),
         renderRect(-sealLineWidth / 2, -sealHalf, sealLineWidth, sealHalf * 2, color, null, 0, { transform }),
         renderRect(len - sealLineWidth / 2, -sealHalf, sealLineWidth, sealHalf * 2, color, null, 0, { transform }),
-        renderLine(0, extend, 0, -len, color, doorLineWidth, 'round', 'round', { transform }),
-        { kind: 'arc', cx: 0, cy: 0, r: len, startAngle: -Math.PI / 2, endAngle: arcEndAngle, anticlockwise: false, stroke: color, lineWidth: doorLineWidth, lineCap: 'butt', lineJoin: 'round', transform }
+        renderLine(hingeX, extend, hingeX, leafEndY, color, doorLineWidth, 'round', 'round', { transform }),
+        { kind: 'arc', cx: hingeX, cy: 0, r: len, startAngle: arcStart, endAngle: arcEnd, anticlockwise: arcAnticlockwise, stroke: color, lineWidth: doorLineWidth, lineCap: 'butt', lineJoin: 'round', transform }
       ]);
     }
 
@@ -1742,7 +1790,7 @@
     }
 
     function resolveDimensionLabelMode(mode, lineLength, labelWidth, arrowSize, angle = 0, fontSize = 20) {
-      const selected = ['above','below','inline'].includes(mode) ? mode : 'above';
+      const selected = ['inline','above','below'].includes(mode) ? mode : 'inline';
       if (selected !== 'inline') return selected;
       // 压线模式采用“尺寸线断开避让文字”，需要给文字、两端箭头和安全边距留出空间；长度不足时临时回退到上方。
       const labelGap = getInlineDimensionLabelGap(angle, labelWidth, fontSize);
@@ -1762,7 +1810,7 @@
       const fontSize = o.fontSize || 20;
       const label = `${formatNumber(px * (Number(els.scaleFactor.value) || 1))} ${els.unitName.value.trim() || 'unit'}`;
       const labelWidth = measureRenderTextWidth(label, fontSize);
-      const labelMode = resolveDimensionLabelMode(o.dimensionLabelMode || 'above', px, labelWidth, arrowSize, a, fontSize);
+      const labelMode = resolveDimensionLabelMode(o.dimensionLabelMode || 'inline', px, labelWidth, arrowSize, a, fontSize);
       const cx = (o.x1 + o.x2) / 2;
       const cy = (o.y1 + o.y2) / 2;
       const items = [];
@@ -1803,7 +1851,8 @@
       const color = o.color || '#111827';
       const width = o.lineWidth || 2;
       let items = [];
-      if (o.type === 'wall') items = buildWallRenderItems(o);
+      if (o.type === 'area') items = buildAreaRenderItems(o);
+      else if (o.type === 'wall') items = buildWallRenderItems(o);
       else if (o.type === 'line') items = [renderLine(o.x1, o.y1, o.x2, o.y2, color, width)];
       else if (o.type === 'arrow') {
         const a = Math.atan2(o.y2 - o.y1, o.x2 - o.x1);
@@ -1825,16 +1874,15 @@
     }
 
     function buildRenderItems(objects = state.objects) {
+      const list = objects || [];
       const items = [];
-      (objects || []).forEach(o => { if (isLayerVisible(o) && o.type === 'wall') items.push(...buildObjectRenderItems(o)); });
-      items.push(...buildWallJointPatchRenderItems(objects));
-      (objects || []).forEach(o => {
-        if (!isLayerVisible(o)) return;
-        if (o.type === 'wall' || isOpeningObject(o) || o.type === 'dimension' || o.type === 'text') return;
-        items.push(...buildObjectRenderItems(o));
-      });
-      (objects || []).forEach(o => { if (isLayerVisible(o) && isOpeningObject(o)) items.push(...buildObjectRenderItems(o)); });
-      (objects || []).forEach(o => { if (isLayerVisible(o) && ['dimension', 'text'].includes(o.type)) items.push(...buildObjectRenderItems(o)); });
+      list.forEach(o => { if (isLayerVisible(o) && o.type === 'area') items.push(...buildObjectRenderItems(o)); });
+      list.forEach(o => { if (isLayerVisible(o) && (o.type === 'wall' || o.type === 'line')) items.push(...buildObjectRenderItems(o)); });
+      items.push(...buildWallJointPatchRenderItems(list));
+      list.forEach(o => { if (isLayerVisible(o) && ['rect', 'ellipse', 'erase'].includes(o.type)) items.push(...buildObjectRenderItems(o)); });
+      list.forEach(o => { if (isLayerVisible(o) && isOpeningObject(o)) items.push(...buildObjectRenderItems(o)); });
+      list.forEach(o => { if (isLayerVisible(o) && ['arrow', 'dimension'].includes(o.type)) items.push(...buildObjectRenderItems(o)); });
+      list.forEach(o => { if (isLayerVisible(o) && o.type === 'text') items.push(...buildObjectRenderItems(o)); });
       return items;
     }
 
@@ -2017,8 +2065,107 @@
         base.x2 = finalStart.x + Math.sign(dx || 1) * size;
         base.y2 = finalStart.y + Math.sign(dy || 1) * size;
       }
-      if (type === 'door') base.swing = 'right';
+      if (type === 'door') { base.doorSwing = 'right'; base.swing = 'right'; }
       return base;
+    }
+
+    function getAreaDrawColor() {
+      return els.strokeColor.value || DEFAULT_STROKE_COLOR;
+    }
+
+    function buildAreaObject(points) {
+      const s = currentStyle();
+      return {
+        type: 'area',
+        points: points.map(p => ({ x: p.x, y: p.y })),
+        color: getAreaDrawColor(),
+        lineWidth: s.lineWidth,
+        layer: s.layer || 'areas'
+      };
+    }
+
+    function getAreaCloseTolerance() {
+      return Math.max(10 / state.zoom, 6);
+    }
+
+    function isNearAreaStart(p) {
+      if (!state.areaDrawing || state.areaPoints.length < 3) return false;
+      const first = state.areaPoints[0];
+      return Math.hypot(p.x - first.x, p.y - first.y) <= getAreaCloseTolerance();
+    }
+
+    function cancelAreaDraft(shouldDraw = true) {
+      state.areaDrawing = false;
+      state.areaPoints = [];
+      state.areaPreview = null;
+      if (shouldDraw) draw();
+    }
+
+    function completeAreaDraft() {
+      if (!state.areaDrawing || state.areaPoints.length < 3) return false;
+      const points = [];
+      (state.areaPoints || []).forEach(pt => {
+        const last = points[points.length - 1];
+        if (!last || Math.hypot(pt.x - last.x, pt.y - last.y) > 0.5) points.push({ x: pt.x, y: pt.y });
+      });
+      if (points.length >= 2) {
+        const first = points[0];
+        const last = points[points.length - 1];
+        if (Math.hypot(first.x - last.x, first.y - last.y) <= getAreaCloseTolerance()) points.pop();
+      }
+      if (points.length < 3) return false;
+      cancelAreaDraft(false);
+      addObject(buildAreaObject(points));
+      return true;
+    }
+
+    function handleAreaPointerDown(e, p) {
+      if (state.areaDrawing && e.detail >= 2) {
+        if (completeAreaDraft()) return;
+      }
+      if (state.areaDrawing && isNearAreaStart(p)) {
+        completeAreaDraft();
+        return;
+      }
+      if (!state.areaDrawing) {
+        state.areaDrawing = true;
+        state.areaPoints = [];
+      }
+      state.areaPoints.push({ x: p.x, y: p.y });
+      state.areaPreview = { x: p.x, y: p.y };
+      draw();
+    }
+
+    function drawAreaDraft(c) {
+      const points = state.areaPoints || [];
+      if (!points.length) return;
+      const preview = state.areaPreview || points[points.length - 1];
+      const color = getAreaDrawColor();
+      const width = Number(els.lineWidth.value) || 2;
+      c.save();
+      c.strokeStyle = color;
+      c.fillStyle = '#ffffff';
+      c.lineWidth = width;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      c.setLineDash([8 / state.zoom, 6 / state.zoom]);
+      c.beginPath();
+      points.forEach((pt, i) => i ? c.lineTo(pt.x, pt.y) : c.moveTo(pt.x, pt.y));
+      if (preview && points.length) c.lineTo(preview.x, preview.y);
+      if (points.length >= 3) c.lineTo(points[0].x, points[0].y);
+      c.stroke();
+      c.setLineDash([]);
+      const r = Math.max(4 / state.zoom, 3);
+      points.forEach((pt, i) => {
+        c.beginPath();
+        c.fillStyle = i === 0 && points.length >= 3 ? '#eff6ff' : '#ffffff';
+        c.strokeStyle = color;
+        c.lineWidth = 1.5 / state.zoom;
+        c.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+      });
+      c.restore();
     }
 
     function drawObject(c, obj, exportMode) {
@@ -2063,31 +2210,26 @@
         const pad=(o.wallThickness||10)/2+8;
         return {x:b.x-pad,y:b.y-pad,w:b.w+pad*2,h:b.h+pad*2};
       }
+      if(o.type==='area') { const pts=Array.isArray(o.points)?o.points:[]; if(!pts.length)return {x:0,y:0,w:0,h:0}; const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y); const pad=Math.max(6,(o.lineWidth||2)+4); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys); return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
       if(o.type==='text') { ctx.save(); ctx.font=`${o.fontSize||20}px Arial, Microsoft YaHei, sans-serif`; const w=Math.max(ctx.measureText(o.text||'文字').width,24); ctx.restore(); return {x:o.x,y:o.y,w,h:(o.fontSize||20)*1.25}; }
       if(o.type==='door') {
         const a = Math.atan2(o.y2-o.y1, o.x2-o.x1);
         const len = Math.hypot(o.x2-o.x1, o.y2-o.y1);
         const wallThickness = o.wallThickness || Number(els.wallThickness.value) || 10;
-        const extend = Math.max(4, wallThickness / 2);
-        const wallFaceOffset = Math.min(wallThickness / 2, len * 0.35);
-        const arcEndAngle = -Math.asin(Math.min(0.35, wallFaceOffset / Math.max(len, 1)));
-        const pts = [{x:o.x1,y:o.y1},{x:o.x2,y:o.y2}];
-
-        // 门扇略微延伸进墙体的端点，也要纳入选择框
-        pts.push({
-          x: o.x1 - extend * Math.sin(a),
-          y: o.y1 + extend * Math.cos(a)
+        const useWallThickness = usesWallThickness(o);
+        const openingThickness = useWallThickness ? wallThickness : (o.lineWidth || 2);
+        const extend = useWallThickness ? Math.max(4, openingThickness / 2) : 0;
+        const swing = getDoorSwing(o);
+        const hingeX = swing === 'right' ? len : 0;
+        const arcAngles = swing === 'right'
+          ? Array.from({length: 19}, (_, i) => -Math.PI / 2 - (Math.PI / 2) * (i / 18))
+          : Array.from({length: 19}, (_, i) => -Math.PI / 2 + (Math.PI / 2) * (i / 18));
+        const localToWorld = (lx, ly) => ({
+          x: o.x1 + lx * Math.cos(a) - ly * Math.sin(a),
+          y: o.y1 + lx * Math.sin(a) + ly * Math.cos(a)
         });
-
-        for (let i = 0; i <= 18; i++) {
-          const t = -Math.PI/2 + (arcEndAngle + Math.PI/2) * (i/18);
-          const lx = Math.cos(t) * len;
-          const ly = Math.sin(t) * len;
-          pts.push({
-            x: o.x1 + lx * Math.cos(a) - ly * Math.sin(a),
-            y: o.y1 + lx * Math.sin(a) + ly * Math.cos(a)
-          });
-        }
+        const pts = [localToWorld(0,0), localToWorld(len,0), localToWorld(hingeX, extend), localToWorld(hingeX, -len)];
+        arcAngles.forEach(t => pts.push(localToWorld(hingeX + Math.cos(t) * len, Math.sin(t) * len)));
         const xs = pts.map(p=>p.x), ys = pts.map(p=>p.y);
         const pad = Math.max(10, (o.lineWidth || 2) + 7, wallThickness / 2 + 4);
         const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
@@ -2131,7 +2273,11 @@
     function drawSelectionBox(c){ const b=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); c.save(); c.fillStyle='rgba(37,99,235,.08)'; c.strokeStyle='#2563eb'; c.setLineDash([5,4]); c.lineWidth=1.5/state.zoom; c.fillRect(b.x,b.y,b.w,b.h); c.strokeRect(b.x,b.y,b.w,b.h); c.restore(); }
     function drawEraserCursor(c){ c.save(); c.strokeStyle='#94a3b8'; c.setLineDash([4,4]); c.lineWidth=1/state.zoom; c.beginPath(); c.arc(state.current.x,state.current.y,(Number(els.eraserWidth.value)||22)/2,0,Math.PI*2); c.stroke(); c.restore(); }
 
-    function hitTest(p){ for(let i=state.objects.length-1;i>=0;i--){ const o=state.objects[i]; if(o.type==='erase'||!isLayerVisible(o))continue; if(isPointOnObject(p,o))return o; } return null; }
+    function hitTest(p){
+      for(let i=state.objects.length-1;i>=0;i--){ const o=state.objects[i]; if(o.type==='erase'||o.type==='area'||!isLayerVisible(o))continue; if(isPointOnObject(p,o))return o; }
+      for(let i=state.objects.length-1;i>=0;i--){ const o=state.objects[i]; if(o.type!=='area'||!isLayerVisible(o))continue; if(isPointOnObject(p,o))return o; }
+      return null;
+    }
     function hitText(p){ for(let i=state.objects.length-1;i>=0;i--){ const o=state.objects[i]; if(o.type==='text'&&isPointOnObject(p,o))return o; } return null; }
     function isPointOnObject(p,o){
       const t=o.type==='text'?18/state.zoom:10/state.zoom;
@@ -2139,8 +2285,11 @@
       if(o.type==='rect'){ const b=getObjectBox(o); return Math.abs(p.x-b.x)<=t&&p.y>=b.y-t&&p.y<=b.y+b.h+t || Math.abs(p.x-(b.x+b.w))<=t&&p.y>=b.y-t&&p.y<=b.y+b.h+t || Math.abs(p.y-b.y)<=t&&p.x>=b.x-t&&p.x<=b.x+b.w+t || Math.abs(p.y-(b.y+b.h))<=t&&p.x>=b.x-t&&p.x<=b.x+b.w+t; }
       if(o.type==='ellipse'){ const b=getObjectBox(o), cx=b.x+b.w/2, cy=b.y+b.h/2, rx=Math.max(b.w/2,.0001), ry=Math.max(b.h/2,.0001); const v=((p.x-cx)**2)/(rx**2)+((p.y-cy)**2)/(ry**2); return Math.abs(v-1)<=Math.max(.08,t/Math.max(rx,ry)); }
       if(o.type==='text') return pointInBox(p,getObjectBox(o),t);
+      if(o.type==='area') { const pts=Array.isArray(o.points)?o.points:[]; return pts.length>=3 && (pointInPolygon(p,pts) || distanceToClosedPolyline(p,pts)<=t); }
       return false;
     }
+    function pointInPolygon(p, points){ let inside=false; for(let i=0,j=points.length-1;i<points.length;j=i++){ const xi=points[i].x, yi=points[i].y, xj=points[j].x, yj=points[j].y; const intersect=((yi>p.y)!==(yj>p.y)) && (p.x < (xj-xi)*(p.y-yi)/((yj-yi)||1e-9)+xi); if(intersect)inside=!inside; } return inside; }
+    function distanceToClosedPolyline(p, points){ if(!points||points.length<2)return Infinity; let best=Infinity; for(let i=0;i<points.length;i++){ const a=points[i], b=points[(i+1)%points.length]; best=Math.min(best,distanceToSegment(p,a,b)); } return best; }
     function pointInBox(p,b,t=0){ return p.x>=b.x-t&&p.x<=b.x+b.w+t&&p.y>=b.y-t&&p.y<=b.y+b.h+t; }
     function distanceToSegment(p,a,b){ const dx=b.x-a.x,dy=b.y-a.y; if(dx===0&&dy===0)return Math.hypot(p.x-a.x,p.y-a.y); const t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy))); return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy)); }
 
@@ -2193,7 +2342,7 @@
 
     function captureSelectedOriginals(){ const m=new Map(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))m.set(o.id,JSON.parse(JSON.stringify(o))); }); return m; }
     function restoreDragOriginals(){ if(!state.dragOriginals)return; state.objects=state.objects.map(o=>state.dragOriginals.has(o.id)?JSON.parse(JSON.stringify(state.dragOriginals.get(o.id))):o); }
-    function moveObject(o,dx,dy){ if(o.type==='text'){o.x+=dx;o.y+=dy;} else if(o.type==='erase'){o.points.forEach(p=>{p.x+=dx;p.y+=dy;});} else {o.x1+=dx;o.y1+=dy;o.x2+=dx;o.y2+=dy;} }
+    function moveObject(o,dx,dy){ if(o.type==='text'){o.x+=dx;o.y+=dy;} else if(o.type==='erase'||o.type==='area'){(o.points||[]).forEach(p=>{p.x+=dx;p.y+=dy;});} else {o.x1+=dx;o.y1+=dy;o.x2+=dx;o.y2+=dy;} }
 
     const activePointers = new Map();
     const touchInteraction = {
@@ -2252,6 +2401,9 @@
         }
       }
       state.drawing = false;
+      state.areaDrawing = false;
+      state.areaPoints = [];
+      state.areaPreview = null;
       state.dragging = false;
       state.erasing = false;
       state.boxSelecting = false;
@@ -2325,6 +2477,11 @@
     }
 
     function startCanvasInteraction(e, p, raw) {
+      if(state.tool==='area'){
+        handleAreaPointerDown(e, p);
+        updateCursor(e);
+        return;
+      }
       if(state.tool==='text'){
         addObject({type:'text',x:p.x,y:p.y,text:els.textInput.value.trim()||'文字',layer:'text'});
         updateCursor(e);
@@ -2428,6 +2585,7 @@
 
       let p=screenToWorld(e), raw=rawScreenToWorld(e);
       updateCursor(e);
+      if(state.tool==='area' && state.areaDrawing){ state.areaPreview=p; draw(); updateCursor(e); return; }
       if(state.drawing && state.start && ['line','arrow','wall','dimension','door','window'].includes(state.tool) && e.shiftKey) {
         p = constrainToAngle(state.start, p, 45);
       }
@@ -2513,7 +2671,7 @@
     canvas.addEventListener('lostpointercapture', e => {
       if (activePointers.has(e.pointerId)) handlePointerCancel(e);
     });
-    canvas.addEventListener('dblclick', e=>{ const t=hitText(rawScreenToWorld(e)); if(t){ e.preventDefault(); editTextObject(t); } });
+    canvas.addEventListener('dblclick', e=>{ if(state.tool==='area'){ e.preventDefault(); completeAreaDraft(); return; } const t=hitText(rawScreenToWorld(e)); if(t){ e.preventDefault(); editTextObject(t); } });
 
     function finishPointer(e){
       if(state.resizingEndpoint){
@@ -2538,6 +2696,7 @@
     function editTextObject(o){ const v=prompt('编辑文字标签：',o.text||''); if(v===null)return; saveHistory(); o.text=v.trim()||'文字'; state.selectedIds=[o.id]; draw(); }
 
     function setTool(tool) {
+      if (tool !== state.tool) cancelAreaDraft(false);
       document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active', b.dataset.tool === tool));
       state.tool = tool;
       if (tool !== 'select') state.selectedIds = [];
@@ -2622,7 +2781,7 @@
       const fontSize = Number(els.fontSize.value) || 20;
       const arrowMode = els.arrowMode.value || 'end';
       const arrowSize = Number(els.arrowSize.value) || 14;
-      const dimensionLabelMode = els.dimensionLabelMode.value || 'above';
+      const dimensionLabelMode = els.dimensionLabelMode.value || 'inline';
       const layer = els.layerSelect.value;
       const openingThicknessMode = els.openingThicknessMode.value || 'linear';
       const openingUseWallThickness = openingThicknessMode === 'wall';
@@ -2635,7 +2794,7 @@
         if(layer) o.layer = layer;
 
         // 线宽：适用于所有线性/轮廓对象，包括墙体、线、箭头、矩形、椭圆、标尺、门窗
-        if(['wall','line','arrow','rect','ellipse','dimension','door','window'].includes(o.type)) {
+        if(['wall','line','arrow','rect','ellipse','dimension','door','window','area'].includes(o.type)) {
           o.lineWidth = lineWidth;
         }
 
@@ -2861,7 +3020,7 @@
       return parts.join('');
     }
 
-    async function openPdfPrintWindowFromSvg(svgMarkup, paper, title = 'PY平面图工具 矢量PDF'){
+    async function openPdfPrintWindowFromSvg(svgMarkup, paper, title = 'floor-plan.pdf'){
       try{
         const win = window.open('', '_blank');
         if(!win){ alert('浏览器阻止了导出窗口，请允许弹出窗口后再试'); return; }
@@ -2931,12 +3090,20 @@
       }, 0);
     }
 
+    function getExportBaseName(){
+      return currentProjectDisplayName || 'floor-plan';
+    }
+
+    function getExportFileName(ext, suffix = ''){
+      return `${getExportBaseName()}${suffix}.${ext}`;
+    }
+
     async function downloadCanvas(out, format, suffix = ''){
       const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
       const ext = format === 'jpg' ? 'jpg' : 'png';
       try{
         const blob = await canvasToBlob(out, mime, .95);
-        downloadBlob(blob, `floor-plan${suffix}.${ext}`);
+        downloadBlob(blob, getExportFileName(ext, suffix));
       }catch(err){
         alert('导出图片失败，请尝试降低画布尺寸或使用其他浏览器');
       }
@@ -2968,7 +3135,7 @@
       if(format === 'pdf') {
         const paper = getPdfPaperInfo();
         const svgMarkup = buildExportSvg('white');
-        await openPdfPrintWindowFromSvg(svgMarkup, paper, 'PY平面图工具 矢量PDF');
+        await openPdfPrintWindowFromSvg(svgMarkup, paper, getExportFileName('pdf'));
         return;
       }
       const out = makeExportCanvas(scale, backgroundMode);
@@ -2980,7 +3147,8 @@
 
     function buildProjectData(){
       return {
-        version: 4,
+        version: 5,
+        appVersion: APP_VERSION,
         page: {
           preset: els.pagePreset.value,
           orientation: els.pageOrientation.value,
@@ -3025,8 +3193,10 @@
         if((o.type==='door'||o.type==='window')&&!o.openingThicknessMode) {
           o.openingThicknessMode = o.openingUseWallThickness ? 'wall' : 'linear';
         }
+        if(o.type==='door') { o.doorSwing = o.doorSwing || o.swing || 'right'; o.swing = o.doorSwing; }
+        if(o.type==='area') { o.layer = o.layer || 'areas'; o.points = Array.isArray(o.points) ? o.points : []; }
         if(o.type === 'dimension' && !o.dimensionLabelMode) {
-          o.dimensionLabelMode = 'above';
+          o.dimensionLabelMode = 'inline';
         }
         return o;
       });
@@ -3131,6 +3301,10 @@
         state.current = null;
         handled = true;
       }
+      if (state.areaDrawing) {
+        cancelAreaDraft(false);
+        handled = true;
+      }
       if (state.erasing) {
         const last = state.objects[state.objects.length - 1];
         if (last && last.type === 'erase') state.objects.pop();
@@ -3180,6 +3354,7 @@
       resizeCanvas();
     });
 
+    updateAppVersionLabel();
     initSwatches();
     syncSegmentedControls();
     updateAspectRatioLockVisual();
