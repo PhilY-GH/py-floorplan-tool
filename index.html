@@ -456,6 +456,13 @@
     .metric-input.unitized {
       text-align: center;
     }
+    .sidebar input[type="text"],
+    .sidebar input[type="number"] {
+      text-align: left;
+    }
+    .sidebar input.sidebar-unitized {
+      text-align: left;
+    }
 
 
     .metric-input:focus {
@@ -781,14 +788,16 @@
       position: absolute;
       left: 14px;
       top: 14px;
-      background: rgba(255,255,255,0.95);
-      border: 1px solid #d1d5db;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(209,213,219,0.78);
       border-radius: 10px;
       padding: 8px 10px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.06);
       font-size: 13px;
       z-index: 2;
       pointer-events: none;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
     }
     .pill {
       display: inline-flex;
@@ -885,6 +894,7 @@
           <button id="openJsonBtn" class="toolbar-btn" title="打开"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.8 7.5h6l1.7 2H20v9.5H4z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M4 9.5l2-4h5l1.5 2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg><span>打开</span></button>
           <button id="exportBtn" class="toolbar-btn primary-command" title="导出"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11" fill="none" stroke="currentColor" stroke-linecap="round"/><path d="M8 10l4 4 4-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" fill="none" stroke="currentColor" stroke-linecap="round"/></svg><span>导出</span></button>
           <button id="undoBtn" class="toolbar-btn" title="撤销"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7H5v-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 7.5A8 8 0 1 1 8 18.5" fill="none" stroke="currentColor" stroke-linecap="round"/></svg><span>撤销</span></button>
+          <button id="redoBtn" class="toolbar-btn" title="重做"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7h4v-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 7.5A8 8 0 1 0 16 18.5" fill="none" stroke="currentColor" stroke-linecap="round"/></svg><span>重做</span></button>
           <button id="copyBtn" class="toolbar-btn" title="复制"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="6" width="11" height="14" rx="2" fill="none" stroke="currentColor"/><path d="M5 16V4h10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg><span>复制</span></button>
           <button id="pasteBtn" class="toolbar-btn" title="粘贴"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5h8v3H8z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M6 7H5v13h14V7h-1" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M9 12h6M9 16h4" fill="none" stroke="currentColor" stroke-linecap="round"/></svg><span>粘贴</span></button>
           <button id="deleteBtn" class="toolbar-btn" title="删除"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>删除</span></button>
@@ -1202,7 +1212,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v70';
+    const APP_VERSION = 'v72';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1247,7 +1257,8 @@
       pageH: 850,
       aspectRatio: 1100 / 850,
       backgroundImage: null,
-      history: []
+      history: [],
+      redoHistory: []
     };
 
     const els = {
@@ -1381,7 +1392,7 @@
       let x = (e.clientX - rect.left - state.panX) / state.zoom;
       let y = (e.clientY - rect.top - state.panY) / state.zoom;
       if (useSnap && els.snapMode.value === 'on') {
-        const g = Number(els.gridSize.value) || 20;
+        const g = getInputNumber(els.gridSize, 20) || 20;
         x = Math.round(x / g) * g;
         y = Math.round(y / g) * g;
       }
@@ -1389,15 +1400,14 @@
     }
     function rawScreenToWorld(e) { return screenToWorld(e, false); }
 
-    function saveHistory(includeBackground = false) {
+    function createHistorySnapshot(includeBackground = false) {
       const snapshot = { objects: state.objects, groups: state.groups, pageW: state.pageW, pageH: state.pageH, aspectRatio: state.aspectRatio };
       if (includeBackground) snapshot.backgroundImage = state.backgroundImage;
-      state.history.push(JSON.stringify(snapshot));
-      if (state.history.length > 100) state.history.shift();
+      return JSON.stringify(snapshot);
     }
-    function undo() {
-      if (!state.history.length) return;
-      const old = JSON.parse(state.history.pop());
+
+    function applyHistorySnapshot(snapshotText) {
+      const old = typeof snapshotText === 'string' ? JSON.parse(snapshotText) : (snapshotText || {});
       state.objects = old.objects || [];
       state.groups = old.groups || {};
       state.pageW = old.pageW || state.pageW;
@@ -1410,12 +1420,57 @@
       els.pageWidth.value = state.pageW;
       els.pageHeight.value = state.pageH;
       state.selectedIds = [];
+      refreshSidebarUnitizedInputs();
       resizeCanvas();
       draw();
     }
 
+    function snapshotIncludesBackground(snapshotText) {
+      try {
+        const data = typeof snapshotText === 'string' ? JSON.parse(snapshotText) : snapshotText;
+        return !!(data && Object.prototype.hasOwnProperty.call(data, 'backgroundImage'));
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function updateHistoryButtons() {
+      const undoBtn = document.getElementById('undoBtn');
+      const redoBtn = document.getElementById('redoBtn');
+      if (undoBtn) undoBtn.disabled = !state.history.length;
+      if (redoBtn) redoBtn.disabled = !state.redoHistory.length;
+    }
+
+    function saveHistory(includeBackground = false) {
+      state.history.push(createHistorySnapshot(includeBackground));
+      if (state.history.length > 100) state.history.shift();
+      state.redoHistory = [];
+      updateHistoryButtons();
+      markProjectDirty();
+    }
+
+    function undo() {
+      if (!state.history.length) return;
+      const oldSnapshot = state.history.pop();
+      state.redoHistory.push(createHistorySnapshot(snapshotIncludesBackground(oldSnapshot)));
+      if (state.redoHistory.length > 100) state.redoHistory.shift();
+      applyHistorySnapshot(oldSnapshot);
+      updateHistoryButtons();
+      markProjectDirty();
+    }
+
+    function redo() {
+      if (!state.redoHistory.length) return;
+      const nextSnapshot = state.redoHistory.pop();
+      state.history.push(createHistorySnapshot(snapshotIncludesBackground(nextSnapshot)));
+      if (state.history.length > 100) state.history.shift();
+      applyHistorySnapshot(nextSnapshot);
+      updateHistoryButtons();
+      markProjectDirty();
+    }
+
     function getDefaultAreaFillOpacity() {
-      const raw = Number(els.areaOpacity && els.areaOpacity.value);
+      const raw = getInputNumber(els.areaOpacity, 100);
       if (!Number.isFinite(raw)) return 1;
       return Math.max(0, Math.min(100, raw)) / 100;
     }
@@ -1423,13 +1478,13 @@
     function currentStyle() {
       return {
         color: els.strokeColor.value,
-        lineWidth: Number(els.lineWidth.value) || 2,
+        lineWidth: getInputNumber(els.lineWidth, 2) || 2,
         areaOpacity: getDefaultAreaFillOpacity(),
-        fontSize: Number(els.fontSize.value) || 20,
+        fontSize: getInputNumber(els.fontSize, 20) || 20,
         arrowMode: els.arrowMode.value || 'end',
-        arrowSize: Number(els.arrowSize.value) || 14,
+        arrowSize: getInputNumber(els.arrowSize, 14) || 14,
         dimensionLabelMode: els.dimensionLabelMode.value || 'inline',
-        wallThickness: Number(els.wallThickness.value) || 10,
+        wallThickness: getInputNumber(els.wallThickness, 10) || 10,
         wallStyle: els.wallStyle.value || 'hollow',
         openingThicknessMode: els.openingThicknessMode.value || 'linear',
         openingUseWallThickness: els.openingThicknessMode.value === 'wall',
@@ -1475,7 +1530,7 @@
     }
 
     function updateStatus() {
-      els.status.textContent = `当前工具：${toolNames[state.tool]} | 已选 ${state.selectedIds.length} 个对象`;
+      els.status.textContent = `当前工具：${toolNames[state.tool]}｜已选 ${state.selectedIds.length} 个对象`;
       if (document.activeElement !== els.zoomInput) els.zoomInput.value = `${Math.round(state.zoom * 100)}%`;
       updateObjectMetrics();
     }
@@ -1496,7 +1551,7 @@
     }
 
     function getScaleFactorValue() {
-      return Math.max(0.0001, Number(els.scaleFactor.value) || 1);
+      return Math.max(0.0001, getInputNumber(els.scaleFactor, 1) || 1);
     }
 
     function getObjectAngleDegrees(o) {
@@ -1590,6 +1645,84 @@
       if (text.toLowerCase().endsWith(unitText.toLowerCase())) return text;
       if (unitText === '°' || unitText === '%') return `${text}${unitText}`;
       return `${text} ${unitText}`;
+    }
+
+    function parseInputNumber(value, fallback = 0) {
+      const text = String(value ?? '').trim().replace(/,/g, '');
+      const n = parseFloat(text);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function getInputNumber(input, fallback = 0) {
+      if (!input) return fallback;
+      return parseInputNumber(input.value, fallback);
+    }
+
+    const sidebarUnitizedInputDefs = [
+      { id: 'lineWidth', unit: 'px', fallback: 2, min: 1, max: 30 },
+      { id: 'wallThickness', unit: 'px', fallback: 10, min: 4, max: 120 },
+      { id: 'areaOpacity', unit: '%', fallback: 100, min: 0, max: 100 },
+      { id: 'fontSize', unit: 'px', fallback: 20, min: 8, max: 96 },
+      { id: 'arrowSize', unit: 'px', fallback: 14, min: 4, max: 80 },
+      { id: 'eraserWidth', unit: 'px', fallback: 22, min: 4, max: 120 },
+      { id: 'gridSize', unit: 'px', fallback: 20, min: 5, max: 200 },
+      { id: 'pageWidth', unit: 'px', fallback: 1100, min: 200, max: 6000 },
+      { id: 'pageHeight', unit: 'px', fallback: 850, min: 200, max: 6000 }
+    ];
+
+    function getSidebarUnitizedDef(input) {
+      if (!input) return null;
+      return sidebarUnitizedInputDefs.find(def => def.id === input.id) || null;
+    }
+
+    function clampSidebarNumber(value, def) {
+      let n = Number.isFinite(Number(value)) ? Number(value) : def.fallback;
+      if (Number.isFinite(def.min)) n = Math.max(def.min, n);
+      if (Number.isFinite(def.max)) n = Math.min(def.max, n);
+      return n;
+    }
+
+    function normalizeSidebarUnitizedInput(input, showUnit = true) {
+      const def = getSidebarUnitizedDef(input);
+      if (!def || !input) return;
+      const value = clampSidebarNumber(getInputNumber(input, def.fallback), def);
+      input.dataset.lastNumericValue = String(value);
+      input.value = showUnit ? formatMetricDisplayValue(formatNumber(value), def.unit) : String(value);
+    }
+
+    function refreshSidebarUnitizedInputs() {
+      sidebarUnitizedInputDefs.forEach(def => {
+        const input = document.getElementById(def.id);
+        if (!input || document.activeElement === input) return;
+        normalizeSidebarUnitizedInput(input, true);
+      });
+    }
+
+    function initSidebarUnitizedInputs() {
+      sidebarUnitizedInputDefs.forEach(def => {
+        const input = document.getElementById(def.id);
+        if (!input) return;
+        input.type = 'text';
+        input.inputMode = 'decimal';
+        input.dataset.sidebarUnit = def.unit;
+        input.dataset.lastNumericValue = String(getInputNumber(input, def.fallback));
+        input.classList.add('sidebar-unitized');
+        input.addEventListener('focus', () => {
+          normalizeSidebarUnitizedInput(input, false);
+          input.select();
+        });
+        input.addEventListener('blur', () => normalizeSidebarUnitizedInput(input, true));
+        input.addEventListener('change', () => normalizeSidebarUnitizedInput(input, document.activeElement !== input));
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            input.value = input.dataset.lastNumericValue || String(def.fallback);
+            input.blur();
+          }
+        });
+      });
+      refreshSidebarUnitizedInputs();
     }
 
     function setPropertyInputDisplayValue(input, value, unit = '') {
@@ -1874,7 +2007,7 @@
       } else if (key === 'openingThicknessMode') {
         o.openingThicknessMode = raw;
         o.openingUseWallThickness = raw === 'wall';
-        if (raw === 'wall') o.wallThickness = o.wallThickness || Number(els.wallThickness.value) || 10;
+        if (raw === 'wall') o.wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 10) || 10;
       } else if (key === 'doorSwing') {
         o.doorSwing = raw === 'left' ? 'left' : 'right';
         o.swing = o.doorSwing;
@@ -2028,7 +2161,7 @@
       const color = o.color || '#111827';
       const doorLineWidth = o.lineWidth || 2;
       const useWallThickness = usesWallThickness(o);
-      const wallThickness = o.wallThickness || Number(els.wallThickness.value) || 10;
+      const wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 10) || 10;
       const openingThickness = useWallThickness ? wallThickness : doorLineWidth;
       const cutWidth = useWallThickness
         ? Math.max(wallThickness + doorLineWidth + 4, doorLineWidth + 8)
@@ -2063,7 +2196,7 @@
       const color = o.color || '#111827';
       const windowLineWidth = o.lineWidth || 2;
       const useWallThickness = usesWallThickness(o);
-      const wallThickness = o.wallThickness || Number(els.wallThickness.value) || 10;
+      const wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 10) || 10;
       const openingThickness = useWallThickness ? wallThickness : Math.max(windowLineWidth + 4, 7);
       const cutWidth = useWallThickness
         ? Math.max(wallThickness + windowLineWidth + 4, windowLineWidth + 8)
@@ -2134,7 +2267,7 @@
       const color = o.color || '#111827';
       const width = o.lineWidth || 2;
       const fontSize = o.fontSize || 20;
-      const label = `${formatNumber(px * (Number(els.scaleFactor.value) || 1))} ${els.unitName.value.trim() || 'unit'}`;
+      const label = `${formatNumber(px * (getInputNumber(els.scaleFactor, 1) || 1))} ${els.unitName.value.trim() || 'unit'}`;
       const labelWidth = measureRenderTextWidth(label, fontSize);
       const labelMode = resolveDimensionLabelMode(o.dimensionLabelMode || 'inline', px, labelWidth, arrowSize, a, fontSize);
       const cx = (o.x1 + o.x2) / 2;
@@ -2382,7 +2515,7 @@
     }
 
     function drawGrid(c) {
-      const grid = Number(els.gridSize.value) || 20;
+      const grid = getInputNumber(els.gridSize, 20) || 20;
       c.save(); c.beginPath(); c.rect(0, 0, state.pageW, state.pageH); c.clip();
       c.beginPath(); c.strokeStyle = '#e5e7eb'; c.lineWidth = 1 / state.zoom;
       for (let x = 0; x <= state.pageW; x += grid) { c.moveTo(x, 0); c.lineTo(x, state.pageH); }
@@ -2519,7 +2652,7 @@
       if (!points.length) return;
       const preview = state.areaPreview || points[points.length - 1];
       const color = getAreaDrawColor();
-      const width = Number(els.lineWidth.value) || 2;
+      const width = getInputNumber(els.lineWidth, 2) || 2;
       c.save();
       c.strokeStyle = color;
       c.fillStyle = '#ffffff';
@@ -2553,7 +2686,7 @@
     // 旧版对象专属 canvas 绘制函数已移除；所有对象统一走 buildObjectRenderItems()。
 
     function snapWallEndpoint(p){
-      const threshold = Math.max(10, (Number(els.gridSize.value)||20) * 0.45);
+      const threshold = Math.max(10, (getInputNumber(els.gridSize, 20)||20) * 0.45);
       let best = null;
       let bestDist = Infinity;
       state.objects.forEach(o=>{
@@ -2593,7 +2726,7 @@
       if(o.type==='door') {
         const a = Math.atan2(o.y2-o.y1, o.x2-o.x1);
         const len = Math.hypot(o.x2-o.x1, o.y2-o.y1);
-        const wallThickness = o.wallThickness || Number(els.wallThickness.value) || 10;
+        const wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 10) || 10;
         const useWallThickness = usesWallThickness(o);
         const openingThickness = useWallThickness ? wallThickness : (o.lineWidth || 2);
         const extend = useWallThickness ? Math.max(4, openingThickness / 2) : 0;
@@ -2615,7 +2748,7 @@
       }
       if(o.type==='window') {
         const b = normalizeBox(o.x1,o.y1,o.x2,o.y2);
-        const wallThickness = o.wallThickness || Number(els.wallThickness.value) || 10;
+        const wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 10) || 10;
         const pad = Math.max(10, (o.lineWidth || 2) + 7, wallThickness / 2 + 4);
         return {x:b.x-pad, y:b.y-pad, w:b.w+pad*2, h:b.h+pad*2};
       }
@@ -2623,12 +2756,30 @@
       return {x,y,w,h};
     }
     function normalizeBox(x1,y1,x2,y2){ return {x:Math.min(x1,x2),y:Math.min(y1,y2),w:Math.abs(x2-x1),h:Math.abs(y2-y1)}; }
+
+    let touchControlMode = false;
+    function isTouchControlMode() {
+      return touchControlMode || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    }
+    function getSelectionStrokeWidth() {
+      return (isTouchControlMode() ? 2 : 1.5) / state.zoom;
+    }
+    function getEndpointHandleRadius() {
+      return isTouchControlMode() ? Math.max(8 / state.zoom, 6) : Math.max(5 / state.zoom, 4);
+    }
+    function getBoxHandleSize() {
+      return isTouchControlMode() ? Math.max(13 / state.zoom, 9) : Math.max(8 / state.zoom, 6);
+    }
+    function getHandleHitTolerance() {
+      return isTouchControlMode() ? Math.max(20 / state.zoom, 12) : Math.max(10 / state.zoom, 6);
+    }
+
     function drawSelection(c,o){
       const b=getObjectBox(o);
       c.save();
       c.setLineDash([5,4]);
       c.strokeStyle='#2563eb';
-      c.lineWidth=1.5/state.zoom;
+      c.lineWidth=getSelectionStrokeWidth();
       c.strokeRect(b.x-6,b.y-6,b.w+12,b.h+12);
       c.restore();
       if (state.selectedIds.length === 1) {
@@ -2638,7 +2789,7 @@
       }
     }
     function drawEndpointHandles(c,o){
-      const r = Math.max(5 / state.zoom, 4);
+      const r = getEndpointHandleRadius();
       c.save();
       c.setLineDash([]);
       c.fillStyle = '#ffffff';
@@ -2683,7 +2834,7 @@
     }
 
     function drawBoxResizeHandles(c, o) {
-      const size = Math.max(8 / state.zoom, 6);
+      const size = getBoxHandleSize();
       const half = size / 2;
       c.save();
       c.setLineDash([]);
@@ -2701,7 +2852,7 @@
     function drawAreaVertexHandles(c, o) {
       const pts = Array.isArray(o.points) ? o.points : [];
       if (pts.length < 3) return;
-      const r = Math.max(5 / state.zoom, 4);
+      const r = getEndpointHandleRadius();
       c.save();
       c.setLineDash([]);
       c.fillStyle = '#ffffff';
@@ -2716,7 +2867,7 @@
       c.restore();
     }
     function drawSelectionBox(c){ const b=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); c.save(); c.fillStyle='rgba(37,99,235,.08)'; c.strokeStyle='#2563eb'; c.setLineDash([5,4]); c.lineWidth=1.5/state.zoom; c.fillRect(b.x,b.y,b.w,b.h); c.strokeRect(b.x,b.y,b.w,b.h); c.restore(); }
-    function drawEraserCursor(c){ c.save(); c.strokeStyle='#94a3b8'; c.setLineDash([4,4]); c.lineWidth=1/state.zoom; c.beginPath(); c.arc(state.current.x,state.current.y,(Number(els.eraserWidth.value)||22)/2,0,Math.PI*2); c.stroke(); c.restore(); }
+    function drawEraserCursor(c){ c.save(); c.strokeStyle='#94a3b8'; c.setLineDash([4,4]); c.lineWidth=1/state.zoom; c.beginPath(); c.arc(state.current.x,state.current.y,(getInputNumber(els.eraserWidth, 22)||22)/2,0,Math.PI*2); c.stroke(); c.restore(); }
 
     function hitTest(p){
       for(let i=state.objects.length-1;i>=0;i--){ const o=state.objects[i]; if(o.type==='erase'||o.type==='area'||!isLayerVisible(o))continue; if(isPointOnObject(p,o))return o; }
@@ -2741,7 +2892,7 @@
     function hitEndpointHandle(p) {
       const o = getSingleEditableLineObject();
       if (!o) return null;
-      const tolerance = Math.max(10 / state.zoom, 6);
+      const tolerance = getHandleHitTolerance();
       const endpoints = [{index:1,x:o.x1,y:o.y1},{index:2,x:o.x2,y:o.y2}];
       let best = null;
       let bestDist = Infinity;
@@ -2756,7 +2907,7 @@
       if (state.selectedIds.length !== 1) return null;
       const o = state.objects.find(x => x.id === state.selectedIds[0]);
       if (!isResizableBoxObject(o)) return null;
-      const tolerance = Math.max(10 / state.zoom, 6);
+      const tolerance = getHandleHitTolerance();
       let best = null;
       let bestDist = Infinity;
       getBoxResizeHandles(o).forEach(h => {
@@ -2772,7 +2923,7 @@
       if (!o || o.type !== 'area') return null;
       const pts = Array.isArray(o.points) ? o.points : [];
       if (pts.length < 3) return null;
-      const tolerance = Math.max(10 / state.zoom, 6);
+      const tolerance = getHandleHitTolerance();
       let bestIndex = null;
       let bestDist = Infinity;
       pts.forEach((pt, index) => {
@@ -2985,6 +3136,7 @@
       try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
 
       if (isTouchLike(e)) {
+        touchControlMode = true;
         touchInteraction.ignoreSyntheticMouseUntil = Date.now() + 700;
         e.preventDefault();
         if (touchInteraction.primaryId === null) {
@@ -3028,7 +3180,7 @@
         saveHistory();
         state.erasing=true;
         state.current=raw;
-        state.objects.push({id:uid(),type:'erase',points:[raw],width:Number(els.eraserWidth.value)||22,layer:'annotations'});
+        state.objects.push({id:uid(),type:'erase',points:[raw],width:getInputNumber(els.eraserWidth, 22)||22,layer:'annotations'});
         draw();
         updateCursor(e);
         return;
@@ -3142,7 +3294,7 @@
       if(state.boxSelecting&&state.selectionBox){ state.selectionBox.x2=raw.x; state.selectionBox.y2=raw.y; const box=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); state.selectedIds=state.objects.filter(o=>o.type!=='erase'&&isLayerVisible(o)&&boxIntersectsObject(box,o)).map(o=>o.id); draw(); updateCursor(e); return; }
       if(state.dragging&&state.selectedIds.length){
         let dx=raw.x-state.dragStartRaw.x,dy=raw.y-state.dragStartRaw.y;
-        if(els.snapMode.value==='on'){ const g=Number(els.gridSize.value)||20; dx=Math.round(dx/g)*g; dy=Math.round(dy/g)*g; }
+        if(els.snapMode.value==='on'){ const g=getInputNumber(els.gridSize, 20)||20; dx=Math.round(dx/g)*g; dy=Math.round(dy/g)*g; }
         if(dx !== 0 || dy !== 0){
           if(!state.dragHistorySaved){ saveHistory(); state.dragHistorySaved = true; }
           restoreDragOriginals();
@@ -3241,7 +3393,14 @@
       state.drawing=false; state.start=null; state.current=null; draw(); updateCursor(e);
     }
 
-    function editTextObject(o){ const v=prompt('编辑文字标签：',o.text||''); if(v===null)return; saveHistory(); o.text=v.trim()||'文字'; state.selectedIds=[o.id]; draw(); }
+    async function editTextObject(o){
+      const v = await showTextInputDialog('编辑文字', '请输入新的文字内容：', o.text || '', '文字标签');
+      if(v === null) return;
+      saveHistory();
+      o.text = v.trim() || '文字';
+      state.selectedIds = [o.id];
+      draw();
+    }
 
     function setTool(tool) {
       if (tool !== state.tool) cancelAreaDraft(false);
@@ -3317,18 +3476,18 @@
 
     function applyStyle(){
       if(!state.selectedIds.length){
-        alert('请先选择一个或多个对象');
+        showMessageDialog('未选择对象', '请先选择一个或多个对象。');
         return;
       }
       saveHistory();
 
       const color = els.strokeColor.value;
-      const lineWidth = Number(els.lineWidth.value) || 2;
-      const wallThickness = Number(els.wallThickness.value) || 10;
+      const lineWidth = getInputNumber(els.lineWidth, 2) || 2;
+      const wallThickness = getInputNumber(els.wallThickness, 10) || 10;
       const wallStyle = els.wallStyle.value || 'hollow';
-      const fontSize = Number(els.fontSize.value) || 20;
+      const fontSize = getInputNumber(els.fontSize, 20) || 20;
       const arrowMode = els.arrowMode.value || 'end';
-      const arrowSize = Number(els.arrowSize.value) || 14;
+      const arrowSize = getInputNumber(els.arrowSize, 14) || 14;
       const dimensionLabelMode = els.dimensionLabelMode.value || 'inline';
       const layer = els.layerSelect.value;
       const openingThicknessMode = els.openingThicknessMode.value || 'linear';
@@ -3385,11 +3544,12 @@
     function alignSelected(mode){ if(state.selectedIds.length<2)return; saveHistory(); const selected=state.objects.filter(o=>state.selectedIds.includes(o.id)); const boxes=selected.map(getObjectBox); const left=Math.min(...boxes.map(b=>b.x)), right=Math.max(...boxes.map(b=>b.x+b.w)), top=Math.min(...boxes.map(b=>b.y)), bottom=Math.max(...boxes.map(b=>b.y+b.h)); const cx=(left+right)/2, cy=(top+bottom)/2; selected.forEach((o,i)=>{ const b=boxes[i]; let dx=0,dy=0; if(mode==='left')dx=left-b.x; if(mode==='center')dx=cx-(b.x+b.w/2); if(mode==='right')dx=right-(b.x+b.w); if(mode==='top')dy=top-b.y; if(mode==='middle')dy=cy-(b.y+b.h/2); if(mode==='bottom')dy=bottom-(b.y+b.h); moveObject(o,dx,dy); }); draw(); }
 
     document.getElementById('undoBtn').onclick=undo;
+    document.getElementById('redoBtn').onclick=redo;
     document.getElementById('deleteBtn').onclick=deleteSelected;
     document.getElementById('copyBtn').onclick=copySelected;
     document.getElementById('pasteBtn').onclick=pasteClipboard;
     document.getElementById('applyStyleBtn').onclick=applyStyle;
-    document.getElementById('editTextBtn').onclick=()=>{ const o=state.objects.find(x=>state.selectedIds.includes(x.id)&&x.type==='text'); if(!o)alert('请先选中一个文字标签'); else editTextObject(o); };
+    document.getElementById('editTextBtn').onclick=()=>{ const o=state.objects.find(x=>state.selectedIds.includes(x.id)&&x.type==='text'); if(!o)showMessageDialog('未选择文字', '请先选中一个文字标签。'); else editTextObject(o); };
     document.getElementById('groupSidebarBtn').onclick=groupSelected;
     document.getElementById('ungroupSidebarBtn').onclick=ungroupSelected;
     document.getElementById('alignLeftBtn').onclick=()=>alignSelected('left');
@@ -3398,9 +3558,23 @@
     document.getElementById('alignTopBtn').onclick=()=>alignSelected('top');
     document.getElementById('alignMiddleBtn').onclick=()=>alignSelected('middle');
     document.getElementById('alignBottomBtn').onclick=()=>alignSelected('bottom');
-    document.getElementById('clearBtn').onclick=()=>{ if(confirm('确定清空当前平面图？')){ saveHistory(); state.objects=[]; state.groups={}; state.selectedIds=[]; draw(); } };
+    document.getElementById('clearBtn').onclick=async()=>{
+      const choice = await showChoiceDialog('清空画布', '确定清空当前平面图？此操作会同时清除本地草稿。', [
+        { label: '取消', value: 'cancel' },
+        { label: '清空画布', value: 'clear', primary: true }
+      ]);
+      if(choice === 'clear'){
+        saveHistory();
+        state.objects=[];
+        state.groups={};
+        state.selectedIds=[];
+        draw();
+        markProjectClean();
+        await deleteLocalDraftRecord();
+      }
+    };
 
-    document.querySelectorAll('[data-layer-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const layer=btn.dataset.layerToggle; state.visibleLayers[layer]=!state.visibleLayers[layer]; btn.classList.toggle('active',state.visibleLayers[layer]); draw(); }));
+    document.querySelectorAll('[data-layer-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const layer=btn.dataset.layerToggle; state.visibleLayers[layer]=!state.visibleLayers[layer]; btn.classList.toggle('active',state.visibleLayers[layer]); draw(); markProjectDirty(); }));
 
     function isAspectRatioLocked() {
       return els.aspectRatioLock.value !== 'off';
@@ -3470,13 +3644,14 @@
       state.pageW=w; state.pageH=h;
       updateAspectRatioFromPage();
       els.pageWidth.value=w; els.pageHeight.value=h;
+      refreshSidebarUnitizedInputs();
       rememberPageSelectorValues();
       resizeCanvas();
       return true;
     }
     async function applyCustomPageSize(source){
-      let w=Math.max(200,Number(els.pageWidth.value)||1100);
-      let h=Math.max(200,Number(els.pageHeight.value)||850);
+      let w=Math.max(200,getInputNumber(els.pageWidth, 1100)||1100);
+      let h=Math.max(200,getInputNumber(els.pageHeight, 850)||850);
       if(isAspectRatioLocked()){
         const ratio = state.aspectRatio || (state.pageW / Math.max(1, state.pageH)) || (1100/850);
         if(source === 'width') h = Math.max(200, Math.round(w / ratio));
@@ -3486,12 +3661,14 @@
       if(!ok){
         els.pageWidth.value = state.pageW;
         els.pageHeight.value = state.pageH;
+        refreshSidebarUnitizedInputs();
         return false;
       }
       saveHistory();
       state.pageW=w; state.pageH=h;
       els.pagePreset.value='custom';
       els.pageWidth.value=w; els.pageHeight.value=h;
+      refreshSidebarUnitizedInputs();
       updateAspectRatioFromPage();
       rememberPageSelectorValues();
       resizeCanvas();
@@ -3506,6 +3683,7 @@
         els.pageOrientation.value = oldOrientation;
         els.pageWidth.value = state.pageW;
         els.pageHeight.value = state.pageH;
+        refreshSidebarUnitizedInputs();
       }
     };
     els.pageOrientation.onchange=async()=>{
@@ -3517,11 +3695,12 @@
         els.pageOrientation.value = oldOrientation;
         els.pageWidth.value = state.pageW;
         els.pageHeight.value = state.pageH;
+        refreshSidebarUnitizedInputs();
       }
     };
     els.pageWidth.onchange=()=>applyCustomPageSize('width');
     els.pageHeight.onchange=()=>applyCustomPageSize('height');
-    els.aspectRatioLock.onchange=()=>updateAspectRatioFromPage();
+    els.aspectRatioLock.onchange=()=>{ updateAspectRatioFromPage(); markProjectDirty(); };
 
     document.getElementById('zoomIn').onclick=()=>setZoom(state.zoom*1.10);
     document.getElementById('zoomOut').onclick=()=>setZoom(state.zoom/1.10);
@@ -3653,11 +3832,11 @@
     async function openPdfPrintWindowFromSvg(svgMarkup, paper, title = 'floor-plan.pdf'){
       try{
         const win = window.open('', '_blank');
-        if(!win){ alert('浏览器阻止了导出窗口，请允许弹出窗口后再试'); return; }
+        if(!win){ await showMessageDialog('导出窗口被阻止', '浏览器阻止了导出窗口，请允许弹出窗口后再试。'); return; }
         win.document.write(`<!doctype html><html><head><meta charset="UTF-8"><title>${escapeSvg(title)}</title><style>@page{size:${paper.cssSize};margin:0;}html,body{margin:0;padding:0;background:white;width:100%;height:100%;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}svg{display:block;width:${paper.wIn}in;height:${paper.hIn}in;overflow:hidden;}text{font-family:${PDF_TEXT_FONT_FAMILY};}</style></head><body>${svgMarkup}<script>setTimeout(function(){ window.print(); }, 250);<\/script></body></html>`);
         win.document.close();
       }catch(err){
-        alert('PDF矢量导出预览生成失败，请检查是否有异常对象或改用PNG/JPG导出');
+        await showMessageDialog('PDF 导出失败', 'PDF 矢量导出预览生成失败，请检查是否有异常对象，或改用 PNG / JPG 导出。');
       }
     }
 
@@ -3735,12 +3914,12 @@
         const blob = await canvasToBlob(out, mime, .95);
         downloadBlob(blob, getExportFileName(ext, suffix));
       }catch(err){
-        alert('导出图片失败，请尝试降低画布尺寸或使用其他浏览器');
+        await showMessageDialog('图片导出失败', '导出图片失败，请尝试降低画布尺寸，或使用其他浏览器。');
       }
     }
 
     function getExportScaleValue(){
-      return Math.max(1, Number(els.exportScale?.value) || 1);
+      return Math.max(1, getInputNumber(els.exportScale, 1) || 1);
     }
 
     function getExportBackgroundMode(){
@@ -3758,7 +3937,7 @@
     }
 
     async function exportCurrentPlan(){
-      try { await ensureBackgroundImageLoaded(); } catch(err) { alert('底图加载失败，无法导出'); return; }
+      try { await ensureBackgroundImageLoaded(); } catch(err) { await showMessageDialog('底图加载失败', '底图加载失败，无法导出。'); return; }
       updateExportOptions();
       const format = els.exportFormat.value;
       const scale = getExportScaleValue();
@@ -3800,23 +3979,23 @@
         defaults: {
           layer: els.layerSelect.value,
           color: els.strokeColor.value,
-          lineWidth: els.lineWidth.value,
-          wallThickness: els.wallThickness.value,
+          lineWidth: getInputNumber(els.lineWidth, 2),
+          wallThickness: getInputNumber(els.wallThickness, 10),
           wallStyle: els.wallStyle.value,
           openingThicknessMode: els.openingThicknessMode.value,
-          areaOpacity: els.areaOpacity.value,
-          fontSize: els.fontSize.value,
+          areaOpacity: getInputNumber(els.areaOpacity, 100),
+          fontSize: getInputNumber(els.fontSize, 20),
           arrowMode: els.arrowMode.value,
-          arrowSize: els.arrowSize.value,
+          arrowSize: getInputNumber(els.arrowSize, 14),
           dimensionLabelMode: els.dimensionLabelMode.value,
-          eraserWidth: els.eraserWidth.value
+          eraserWidth: getInputNumber(els.eraserWidth, 22)
         },
         view: {
           visibleLayers: state.visibleLayers,
           snapMode: els.snapMode.value,
-          gridSize: els.gridSize.value,
+          gridSize: getInputNumber(els.gridSize, 20),
           unitName: els.unitName.value,
-          scaleFactor: els.scaleFactor.value
+          scaleFactor: getInputNumber(els.scaleFactor, 0.05)
         },
         export: {
           format: els.exportFormat.value,
@@ -3844,8 +4023,12 @@
       });
     }
 
-    function loadProjectData(data){
-      saveHistory(true);
+    function loadProjectData(data, options = {}){
+      const previousDraftPause = localDraftAutosavePaused;
+      localDraftAutosavePaused = true;
+      if (!options.skipHistory) saveHistory(true);
+      state.redoHistory = [];
+      updateHistoryButtons();
       const page = data.page || data;
       const defaults = data.defaults || {};
       const view = data.view || data;
@@ -3872,7 +4055,10 @@
       if(defaults.wallThickness) els.wallThickness.value = defaults.wallThickness;
       if(defaults.wallStyle) els.wallStyle.value = defaults.wallStyle;
       if(defaults.openingThicknessMode) els.openingThicknessMode.value = defaults.openingThicknessMode;
-      if(defaults.areaOpacity !== undefined) els.areaOpacity.value = Math.round(Math.max(0, Math.min(1, Number(defaults.areaOpacity) > 1 ? Number(defaults.areaOpacity) / 100 : Number(defaults.areaOpacity))) * 100);
+      if(defaults.areaOpacity !== undefined) {
+        const opacityRaw = parseInputNumber(defaults.areaOpacity, 100);
+        els.areaOpacity.value = Math.round(Math.max(0, Math.min(100, opacityRaw > 1 ? opacityRaw : opacityRaw * 100)));
+      }
       if(defaults.fontSize) els.fontSize.value = defaults.fontSize;
       if(defaults.arrowMode) els.arrowMode.value = defaults.arrowMode;
       if(defaults.arrowSize) els.arrowSize.value = defaults.arrowSize;
@@ -3888,6 +4074,7 @@
       if(exportSettings.background) els.exportBackground.value = exportSettings.background;
       updateExportOptions(false);
       ensureBackgroundImageLoaded().catch(() => { state.backgroundImage = null; backgroundImgElement = null; draw(); });
+      refreshSidebarUnitizedInputs();
 
       syncSegmentedControls();
       rememberPageSelectorValues();
@@ -3897,6 +4084,10 @@
       });
       resizeCanvas();
       draw();
+      localDraftAutosavePaused = previousDraftPause;
+      if (options.markDirty) markProjectDirty();
+      else markProjectClean();
+      if (options.clearDraft) deleteLocalDraftRecord();
     }
 
 
@@ -3941,6 +4132,58 @@
           row.appendChild(btn);
         });
         box.appendChild(h); box.appendChild(p); box.appendChild(row); overlay.appendChild(box); document.body.appendChild(overlay);
+      });
+    }
+
+    async function showMessageDialog(title, message, primaryLabel = '确定') {
+      return await showChoiceDialog(title, message, [
+        { label: primaryLabel, value: 'ok', primary: true }
+      ]);
+    }
+
+    function showTextInputDialog(title, message, initialValue = '', placeholder = '') {
+      return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;padding:20px;';
+        const box = document.createElement('div');
+        box.style.cssText = 'width:min(460px,100%);background:#fff;border:1px solid #cbd5e1;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.28);padding:18px;font-family:Arial,"Microsoft YaHei",sans-serif;color:#111827;';
+        const h = document.createElement('div');
+        h.textContent = title;
+        h.style.cssText = 'font-size:16px;font-weight:800;margin-bottom:8px;';
+        const p = document.createElement('div');
+        p.textContent = message || '';
+        p.style.cssText = 'font-size:13px;line-height:1.6;color:#475569;margin-bottom:12px;white-space:pre-line;';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = initialValue || '';
+        input.placeholder = placeholder || '';
+        input.style.cssText = 'width:100%;min-height:38px;border:1px solid #cbd5e1;border-radius:9px;padding:8px 10px;font-size:13px;margin-bottom:16px;outline:none;';
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.textContent = '取消';
+        cancelBtn.style.cssText = 'min-height:34px;border:1px solid #cbd5e1;background:#f8fafc;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;';
+        const okBtn = document.createElement('button');
+        okBtn.type = 'button';
+        okBtn.textContent = '确定';
+        okBtn.style.cssText = 'min-height:34px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;font-weight:700;';
+        const finish = value => { overlay.remove(); resolve(value); };
+        cancelBtn.addEventListener('click', () => finish(null));
+        okBtn.addEventListener('click', () => finish(input.value));
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); finish(input.value); }
+          if (e.key === 'Escape') { e.preventDefault(); finish(null); }
+        });
+        row.appendChild(cancelBtn);
+        row.appendChild(okBtn);
+        box.appendChild(h);
+        if (message) box.appendChild(p);
+        box.appendChild(input);
+        box.appendChild(row);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        setTimeout(() => { input.focus(); input.select(); }, 0);
       });
     }
 
@@ -4036,6 +4279,7 @@
         els.pagePreset.value = 'custom';
         els.pageWidth.value = state.pageW;
         els.pageHeight.value = state.pageH;
+        refreshSidebarUnitizedInputs();
         updateAspectRatioFromPage();
         rememberPageSelectorValues();
         state.backgroundImage = {
@@ -4053,7 +4297,7 @@
         resizeCanvas();
         draw();
       } catch (err) {
-        alert('底图导入失败，请换一张图片再试');
+        await showMessageDialog('底图导入失败', '底图导入失败，请换一张图片再试。');
       }
     }
 
@@ -4132,10 +4376,151 @@
       pop.setAttribute('aria-hidden', 'false');
     }
 
-    document.getElementById('saveJsonBtn').onclick=()=>{
+    const LOCAL_DRAFT_DB_NAME = 'pyFloorPlanLocalDraftDB';
+    const LOCAL_DRAFT_DB_VERSION = 1;
+    const LOCAL_DRAFT_STORE = 'drafts';
+    const LOCAL_DRAFT_KEY = 'current';
+    const LOCAL_DRAFT_SAVE_DELAY = 1000;
+    let localDraftSaveTimer = null;
+    let localDraftDbPromise = null;
+    let localDraftAutosaveReady = false;
+    let localDraftAutosavePaused = false;
+    let hasUnsavedProjectChanges = false;
+
+    function openLocalDraftDb() {
+      if (localDraftDbPromise) return localDraftDbPromise;
+      localDraftDbPromise = new Promise((resolve, reject) => {
+        if (!('indexedDB' in window)) { reject(new Error('当前浏览器不支持 IndexedDB')); return; }
+        const request = indexedDB.open(LOCAL_DRAFT_DB_NAME, LOCAL_DRAFT_DB_VERSION);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(LOCAL_DRAFT_STORE)) db.createObjectStore(LOCAL_DRAFT_STORE, { keyPath: 'id' });
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('本地草稿数据库打开失败'));
+      });
+      return localDraftDbPromise;
+    }
+
+    async function writeLocalDraftRecord(record) {
+      const db = await openLocalDraftDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(LOCAL_DRAFT_STORE, 'readwrite');
+        tx.objectStore(LOCAL_DRAFT_STORE).put(record);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('本地草稿保存失败'));
+      });
+    }
+
+    async function readLocalDraftRecord() {
+      const db = await openLocalDraftDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(LOCAL_DRAFT_STORE, 'readonly');
+        const request = tx.objectStore(LOCAL_DRAFT_STORE).get(LOCAL_DRAFT_KEY);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error || new Error('本地草稿读取失败'));
+      });
+    }
+
+    async function deleteLocalDraftRecord() {
+      clearTimeout(localDraftSaveTimer);
+      localDraftSaveTimer = null;
+      try {
+        const db = await openLocalDraftDb();
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(LOCAL_DRAFT_STORE, 'readwrite');
+          tx.objectStore(LOCAL_DRAFT_STORE).delete(LOCAL_DRAFT_KEY);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error || new Error('本地草稿删除失败'));
+        });
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function hasRecoverableDraftData(data) {
+      if (!data) return false;
+      if (Array.isArray(data.objects) && data.objects.length > 0) return true;
+      if (data.backgroundImage && data.backgroundImage.dataUrl) return true;
+      const page = data.page || {};
+      if (page.width && page.height && (Number(page.width) !== 1100 || Number(page.height) !== 850)) return true;
+      return false;
+    }
+
+    function scheduleLocalDraftSave() {
+      if (!localDraftAutosaveReady || localDraftAutosavePaused) return;
+      clearTimeout(localDraftSaveTimer);
+      localDraftSaveTimer = setTimeout(async () => {
+        localDraftSaveTimer = null;
+        try {
+          await writeLocalDraftRecord({
+            id: LOCAL_DRAFT_KEY,
+            savedAt: Date.now(),
+            appVersion: APP_VERSION,
+            data: buildProjectData()
+          });
+        } catch (err) {
+          console.warn('本地草稿保存失败', err);
+        }
+      }, LOCAL_DRAFT_SAVE_DELAY);
+    }
+
+    function markProjectDirty() {
+      if (localDraftAutosavePaused) return;
+      hasUnsavedProjectChanges = true;
+      scheduleLocalDraftSave();
+    }
+
+    function markProjectClean() {
+      hasUnsavedProjectChanges = false;
+      clearTimeout(localDraftSaveTimer);
+      localDraftSaveTimer = null;
+    }
+
+    async function initLocalDraftRecovery() {
+      try {
+        const record = await readLocalDraftRecord();
+        const data = record && record.data;
+        if (hasRecoverableDraftData(data)) {
+          const savedAt = record.savedAt ? new Date(record.savedAt).toLocaleString('zh-CN') : '上次关闭前';
+          const choice = await showChoiceDialog(
+            '检测到本地草稿',
+            `检测到上次未保存的本地草稿。\n保存时间：${savedAt}\n是否恢复？`,
+            [
+              { label: '忽略', value: 'discard' },
+              { label: '恢复草稿', value: 'restore', primary: true }
+            ]
+          );
+          if (choice === 'restore') {
+            localDraftAutosavePaused = true;
+            loadProjectData(data, { preserveDraft: true, markDirty: true });
+            localDraftAutosavePaused = false;
+            hasUnsavedProjectChanges = true;
+          } else {
+            await deleteLocalDraftRecord();
+            markProjectClean();
+          }
+        }
+      } catch (err) {
+        console.warn('本地草稿恢复检查失败', err);
+      } finally {
+        localDraftAutosaveReady = true;
+        if (hasUnsavedProjectChanges) scheduleLocalDraftSave();
+      }
+    }
+
+    window.addEventListener('beforeunload', e => {
+      if (!hasUnsavedProjectChanges) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+
+    document.getElementById('saveJsonBtn').onclick=async()=>{
       const blob=new Blob([JSON.stringify(buildProjectData(),null,2)],{type:'application/json'});
       const filename = currentProjectFileName || 'floor-plan-project.json';
       downloadBlob(blob, filename);
+      markProjectClean();
+      await deleteLocalDraftRecord();
     };
     document.getElementById('openJsonBtn').onclick=()=>els.openJsonInput.click();
     els.openJsonInput.onchange=e=>{
@@ -4144,12 +4529,12 @@
       const reader=new FileReader();
       reader.onload=()=>{
         try{
-          loadProjectData(JSON.parse(reader.result));
+          loadProjectData(JSON.parse(reader.result), { clearDraft: true });
           currentProjectFileName = file.name || '';
           currentProjectDisplayName = getProjectDisplayName(currentProjectFileName);
           updateDocumentTitle();
         }
-        catch(err){ alert('无法打开这个工程文件'); }
+        catch(err){ showMessageDialog('打开失败', '无法打开这个工程文件。请确认文件是由本工具保存的 JSON 工程文件。'); }
       };
       reader.readAsText(file);
       e.target.value='';
@@ -4224,6 +4609,8 @@
         return;
       }
       if(e.key === 'Escape'){ e.preventDefault(); cancelCurrentOperation(); return; }
+      if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='z'){ e.preventDefault(); redo(); return; }
+      if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); return; }
       if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); return; }
       if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='c'){ e.preventDefault(); copySelected(); return; }
       if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='v'){ e.preventDefault(); pasteClipboard(); return; }
@@ -4234,10 +4621,10 @@
       if(keys.includes(e.key)&&state.selectedIds.length){ e.preventDefault(); const step=e.shiftKey?10:1; let dx=0,dy=0; if(e.key==='ArrowLeft')dx=-step; if(e.key==='ArrowRight')dx=step; if(e.key==='ArrowUp')dy=-step; if(e.key==='ArrowDown')dy=step; saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))moveObject(o,dx,dy); }); draw(); }
     });
 
-    [els.strokeColor,els.lineWidth,els.wallThickness,els.wallStyle,els.openingThicknessMode,els.areaOpacity,els.fontSize,els.arrowMode,els.arrowSize,els.dimensionLabelMode,els.eraserWidth,els.snapMode,els.gridSize,els.unitName,els.scaleFactor,els.layerSelect].forEach(el=>{ if(!el) return; el.addEventListener('input',draw); el.addEventListener('change',draw); });
+    [els.strokeColor,els.lineWidth,els.wallThickness,els.wallStyle,els.openingThicknessMode,els.areaOpacity,els.fontSize,els.arrowMode,els.arrowSize,els.dimensionLabelMode,els.eraserWidth,els.snapMode,els.gridSize,els.unitName,els.scaleFactor,els.layerSelect].forEach(el=>{ if(!el) return; el.addEventListener('input',()=>{ draw(); markProjectDirty(); }); el.addEventListener('change',()=>{ draw(); markProjectDirty(); }); });
     [els.exportFormat, els.exportScale, els.exportBackground].forEach(el=>{
       if(!el) return;
-      el.addEventListener('change', () => { updateExportOptions(); syncSegmentedControls(el.id); });
+      el.addEventListener('change', () => { updateExportOptions(); syncSegmentedControls(el.id); markProjectDirty(); });
     });
 
 
@@ -4249,12 +4636,14 @@
 
     updateAppVersionLabel();
     initSwatches();
+    initSidebarUnitizedInputs();
     syncSegmentedControls();
     updateAspectRatioLockVisual();
     updateAspectRatioFromPage();
     rememberPageSelectorValues();
     resizeCanvas();
     updateCursor();
+    updateHistoryButtons();
   
     function initSidebarCollapsing() {
       const main = document.querySelector('.main');
@@ -4311,6 +4700,7 @@
     }
 
     initSidebarCollapsing();
+    initLocalDraftRecovery();
 
 </script>
 </body>
