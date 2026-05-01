@@ -21,7 +21,7 @@
     .top-toolbar {
       display: flex;
       align-items: stretch;
-      gap: 22px;
+      gap: 18px;
       padding: 9px 16px;
       background: linear-gradient(#ffffff, #f8fafc);
       border-bottom: 1px solid #cbd5e1;
@@ -38,9 +38,20 @@
       justify-content: center;
       align-self: stretch;
       min-width: 146px;
+      min-height: 58px;
       padding-right: 18px;
-      border-right: 1px solid #e2e8f0;
+      border-right: 0;
+      position: relative;
       flex: 0 0 auto;
+    }
+    .brand-block::after {
+      content: "";
+      position: absolute;
+      top: -2px;
+      bottom: -2px;
+      right: 0;
+      width: 1px;
+      background: #e2e8f0;
     }
     .brand {
       font-weight: 900;
@@ -134,12 +145,27 @@
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
+      align-self: stretch;
       gap: 6px;
+      min-height: 58px;
       padding-right: 18px;
-      border-right: 1px solid #e2e8f0;
+      border-right: 0;
+      position: relative;
       flex: 0 0 auto;
     }
-    .toolbar-section:last-child { border-right: 0; padding-right: 0; }
+    .toolbar-section::after {
+      content: "";
+      position: absolute;
+      top: -2px;
+      bottom: -2px;
+      right: 0;
+      width: 1px;
+      background: #e2e8f0;
+    }
+    .toolbar-section:last-child::after { display: none; }
+    .toolbar-section:last-child { padding-right: 0; }
+    .app.property-expanded .toolbar-section,
+    .app.property-expanded .brand-block { min-height: 98px; }
     .section-label {
       font-size: 11px;
       font-weight: 800;
@@ -179,23 +205,23 @@
       color: #0f172a;
       border: 1px solid #d6dee9;
       background: #ffffff;
-      border-radius: 999px;
-      padding: 5px 9px;
+      border-radius: 8px;
+      padding: 5px 8px;
     }
     .zoom-input {
-      width: 92px;
-      min-width: 92px;
-      max-width: 92px;
-      flex: 0 0 92px;
+      width: 68px;
+      min-width: 68px;
+      max-width: 68px;
+      flex: 0 0 68px;
       padding-left: 6px;
       padding-right: 6px;
       outline: none;
     }
     .top-toolbar input.zoom-input {
-      width: 92px !important;
-      min-width: 92px !important;
-      max-width: 92px !important;
-      flex: 0 0 92px;
+      width: 68px !important;
+      min-width: 68px !important;
+      max-width: 68px !important;
+      flex: 0 0 68px;
     }
     .zoom-input:focus {
       border-color: #2563eb;
@@ -203,10 +229,11 @@
     }
 
     .property-section {
-      width: 536px;
-      min-width: 536px;
-      max-width: 536px;
+      width: 464px;
+      min-width: 464px;
+      max-width: 464px;
       gap: 6px;
+      padding-right: 10px;
     }
     .property-title-row {
       display: flex;
@@ -236,23 +263,23 @@
       --prop-control-height: 34px;
       width: 100%;
       min-width: 0;
-      height: 34px;
-      min-height: 34px;
-      max-height: 34px;
+      height: 36px;
+      min-height: 36px;
+      max-height: 36px;
       display: grid !important;
-      grid-template-columns: repeat(4, 122px);
+      grid-template-columns: repeat(4, 104px);
       grid-auto-rows: var(--prop-control-height);
-      column-gap: 8px;
-      row-gap: 6px;
+      column-gap: 10px;
+      row-gap: 7px;
       overflow: hidden;
       padding-bottom: 0;
       align-content: start;
       align-items: start;
     }
     .property-section.expanded .property-strip {
-      height: 74px;
-      min-height: 74px;
-      max-height: 74px;
+      height: 78px;
+      min-height: 78px;
+      max-height: 78px;
       overflow: hidden;
       padding-bottom: 0;
     }
@@ -270,27 +297,27 @@
     .metric-group {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      width: 122px;
-      min-width: 122px;
-      max-width: 122px;
+      gap: 3px;
+      width: 104px;
+      min-width: 104px;
+      max-width: 104px;
       flex: 0 0 auto;
     }
     .metric-group.compact { min-width: auto; }
     .metric-label {
-      width: 34px;
-      min-width: 34px;
+      width: 32px;
+      min-width: 32px;
       text-align: left;
       font-size: 12px;
       font-weight: 700;
       color: #475569;
       white-space: nowrap;
     }
-    .metric-group.wide-label .metric-label { width: 34px; min-width: 34px; }
+    .metric-group.wide-label .metric-label { width: 32px; min-width: 32px; }
     .metric-input {
-      width: 60px !important;
-      min-width: 60px !important;
-      max-width: 60px !important;
+      width: 69px !important;
+      min-width: 69px !important;
+      max-width: 69px !important;
       height: 34px !important;
       min-height: 34px !important;
       max-height: 34px !important;
@@ -300,15 +327,15 @@
       font-size: 12px;
       font-weight: 400;
       border: 1px solid #d6dee9;
-      border-radius: 999px;
-      padding: 5px 6px;
+      border-radius: 8px;
+      padding: 5px 7px;
       outline: none;
       background: #ffffff;
     }
     .metric-input.angle-input {
-      width: 60px !important;
-      min-width: 60px !important;
-      max-width: 60px !important;
+      width: 69px !important;
+      min-width: 69px !important;
+      max-width: 69px !important;
     }
 
     .top-toolbar input,
@@ -323,6 +350,9 @@
       padding-left: 8px;
       padding-right: 8px;
     }
+    .metric-input.unitized {
+      text-align: center;
+    }
 
 
     .metric-input:focus {
@@ -330,19 +360,19 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, .14);
     }
     .metric-input.prop-text {
-      width: 80px !important;
-      min-width: 80px !important;
-      max-width: 80px !important;
+      width: 69px !important;
+      min-width: 69px !important;
+      max-width: 69px !important;
       text-align: left;
-      border-radius: 10px;
+      border-radius: 8px;
       font-weight: 400;
     }
     .metric-input.prop-select {
-      width: 60px !important;
-      min-width: 60px !important;
-      max-width: 60px !important;
-      border-radius: 10px;
-      padding: 5px 6px;
+      width: 69px !important;
+      min-width: 69px !important;
+      max-width: 69px !important;
+      border-radius: 8px;
+      padding: 5px 7px;
       font-weight: 400;
     }
     .prop-color-picker {
@@ -352,14 +382,14 @@
       flex: 0 0 auto;
     }
     .prop-color-current {
-      width: 60px;
-      min-width: 60px;
-      max-width: 60px;
+      width: 69px;
+      min-width: 69px;
+      max-width: 69px;
       height: var(--prop-control-height) !important;
       min-height: var(--prop-control-height) !important;
       max-height: var(--prop-control-height) !important;
       padding: 0 !important;
-      border-radius: 999px;
+      border-radius: 8px;
       border: 1px solid #cbd5e1;
       background: #111827;
       box-shadow: inset 0 0 0 2px rgba(255,255,255,.75), 0 1px 3px rgba(15, 23, 42, .10);
@@ -396,7 +426,7 @@
       min-height: var(--prop-control-height) !important;
       max-height: var(--prop-control-height) !important;
       padding: 0 10px !important;
-      border-radius: 999px;
+      border-radius: 8px;
       font-size: 12px;
       font-weight: 700;
       color: #334155;
@@ -462,9 +492,7 @@
     }
     .color-popover button[title="#ffffff"] { border-color: #94a3b8; }
     .metric-unit {
-      font-size: 12px;
-      color: #64748b;
-      min-width: 16px;
+      display: none;
     }
     .mini-icon {
       position: relative;
@@ -745,8 +773,8 @@
         <div class="section-label">文件与编辑</div>
         <div class="tool-strip">
           <button id="backgroundBtn" class="toolbar-btn" title="导入 / 管理底图"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-linejoin="round"/><circle cx="9" cy="10" r="1.6" fill="none" stroke="currentColor"/><path d="M5.5 17l4.5-4.6 3.1 3.1 2.2-2.4 3.2 3.9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg><span>底图</span></button>
-          <button id="saveJsonBtn" class="toolbar-btn" title="保存工程"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M8 4v6h8V4M8 20v-6h8v6" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg><span>保存工程</span></button>
-          <button id="openJsonBtn" class="toolbar-btn" title="打开工程"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.8 7.5h6l1.7 2H20v9.5H4z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M4 9.5l2-4h5l1.5 2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg><span>打开工程</span></button>
+          <button id="saveJsonBtn" class="toolbar-btn" title="保存"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M8 4v6h8V4M8 20v-6h8v6" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg><span>保存</span></button>
+          <button id="openJsonBtn" class="toolbar-btn" title="打开"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.8 7.5h6l1.7 2H20v9.5H4z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M4 9.5l2-4h5l1.5 2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg><span>打开</span></button>
           <button id="exportBtn" class="toolbar-btn primary-command" title="导出"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11" fill="none" stroke="currentColor" stroke-linecap="round"/><path d="M8 10l4 4 4-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" fill="none" stroke="currentColor" stroke-linecap="round"/></svg><span>导出</span></button>
           <button id="undoBtn" class="toolbar-btn" title="撤销"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7H5v-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 7.5A8 8 0 1 1 8 18.5" fill="none" stroke="currentColor" stroke-linecap="round"/></svg><span>撤销</span></button>
           <button id="copyBtn" class="toolbar-btn" title="复制"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="6" width="11" height="14" rx="2" fill="none" stroke="currentColor"/><path d="M5 16V4h10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg><span>复制</span></button>
@@ -1024,7 +1052,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v65';
+    const APP_VERSION = 'v68';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1176,7 +1204,7 @@
     function setZoom(z, centerClientX, centerClientY) {
       const wrap = document.querySelector('.canvas-wrap');
       const oldZoom = state.zoom;
-      const newZoom = Math.max(.25, Math.min(3, z));
+      const newZoom = Math.max(.25, Math.min(6, z));
       if (Math.abs(newZoom - oldZoom) < 0.0001) return;
 
       const wrapRect = wrap.getBoundingClientRect();
@@ -1391,6 +1419,41 @@
       return o[key] ?? '';
     }
 
+    function isUnitizedPropertyInput(input) {
+      return !!(input && input.tagName !== 'SELECT' && input.dataset && input.dataset.unit);
+    }
+
+    function stripMetricDisplayValue(value, unit) {
+      let text = String(value ?? '').trim();
+      if (!unit || !text) return text;
+      const unitText = String(unit);
+      if (text.toLowerCase().endsWith(unitText.toLowerCase())) {
+        text = text.slice(0, text.length - unitText.length);
+      }
+      return text.trim();
+    }
+
+    function formatMetricDisplayValue(value, unit) {
+      const text = String(value ?? '').trim();
+      if (!unit || !text) return text;
+      const unitText = String(unit);
+      if (text.toLowerCase().endsWith(unitText.toLowerCase())) return text;
+      if (unitText === '°' || unitText === '%') return `${text}${unitText}`;
+      return `${text} ${unitText}`;
+    }
+
+    function setPropertyInputDisplayValue(input, value, unit = '') {
+      if (!input) return;
+      if (input.tagName === 'SELECT') {
+        input.value = value;
+        return;
+      }
+      input.dataset.unit = unit || '';
+      if (unit) input.classList.add('unitized');
+      else input.classList.remove('unitized');
+      input.value = formatMetricDisplayValue(value, unit);
+    }
+
     function buildPropertyField(def, value) {
       const group = document.createElement('span');
       group.className = 'metric-group' + (String(def.label || '').length > 2 ? ' wide-label' : '');
@@ -1422,29 +1485,54 @@
         input.className = 'metric-input prop-select';
         def.options.forEach(([v, text]) => {
           const opt = document.createElement('option');
-          opt.value = v; opt.textContent = text;
+          opt.value = v;
+          opt.textContent = text;
           input.appendChild(opt);
         });
+        input.value = value;
+        input.addEventListener('change', () => applyPropertyInput(input));
       } else {
         input = document.createElement('input');
         input.type = 'text';
         input.inputMode = def.type === 'number' ? 'decimal' : 'text';
         input.className = 'metric-input' + (def.cls ? ' ' + def.cls : '') + (def.type === 'text' ? ' prop-text' : '');
+        setPropertyInputDisplayValue(input, value, def.unit || '');
+        if (def.unit) {
+          input.addEventListener('focus', () => {
+            input.dataset.changedDuringFocus = '0';
+            input.value = stripMetricDisplayValue(input.value, def.unit);
+            input.select();
+          });
+          input.addEventListener('change', () => {
+            input.dataset.changedDuringFocus = '1';
+            input.value = stripMetricDisplayValue(input.value, def.unit);
+            applyPropertyInput(input);
+          });
+          input.addEventListener('blur', () => {
+            if (input.dataset.changedDuringFocus === '1') {
+              input.dataset.changedDuringFocus = '0';
+              return;
+            }
+            updateObjectMetrics(true);
+          });
+        } else {
+          input.value = value;
+          input.addEventListener('change', () => applyPropertyInput(input));
+        }
       }
       input.dataset.prop = def.key;
-      input.value = value;
-      input.addEventListener('change', () => applyPropertyInput(input));
+      if (def.unit) input.dataset.unit = def.unit;
       input.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); input.blur(); }
-        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); updateObjectMetrics(true); input.blur(); }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          input.dataset.changedDuringFocus = '0';
+          updateObjectMetrics(true);
+          input.blur();
+        }
       });
       group.appendChild(input);
-      if (def.unit) {
-        const unit = document.createElement('span');
-        unit.className = 'metric-unit';
-        unit.textContent = def.unit;
-        group.appendChild(unit);
-      }
       return group;
     }
 
@@ -1586,7 +1674,10 @@
           return;
         }
         const input = fields.querySelector(`[data-prop="${def.key}"]`);
-        if (input && document.activeElement !== input) input.value = value;
+        if (input && document.activeElement !== input) {
+          if (input.tagName === 'SELECT') input.value = value;
+          else setPropertyInputDisplayValue(input, value, input.dataset.unit || '');
+        }
       });
     }
 
@@ -3177,18 +3268,63 @@
       state.aspectRatio = Math.max(0.0001, state.pageW / Math.max(1, state.pageH));
       updateAspectRatioLockVisual();
     }
-    function applyPagePreset(){
+    function getBackgroundContentBox() {
+      const bg = state.backgroundImage;
+      if (!bg) return null;
+      return {
+        x: Number(bg.x) || 0,
+        y: Number(bg.y) || 0,
+        w: Math.max(1, Number(bg.width || bg.naturalWidth) || 1),
+        h: Math.max(1, Number(bg.height || bg.naturalHeight) || 1)
+      };
+    }
+
+    function wouldContentExceedCanvas(newW, newH) {
+      const w = Math.max(1, Number(newW) || 1);
+      const h = Math.max(1, Number(newH) || 1);
+      const bg = getBackgroundContentBox();
+      if (bg && (bg.x < 0 || bg.y < 0 || bg.x + bg.w > w || bg.y + bg.h > h)) return true;
+      return state.objects.some(o => {
+        if (!o || o.type === 'erase') return false;
+        const b = getObjectBox(o);
+        return b.x < 0 || b.y < 0 || b.x + b.w > w || b.y + b.h > h;
+      });
+    }
+
+    async function confirmCanvasResizeIfNeeded(newW, newH) {
+      if (!wouldContentExceedCanvas(newW, newH)) return true;
+      const choice = await showChoiceDialog(
+        '画布尺寸提示',
+        '新画布尺寸小于当前内容，超出画布范围的底图或对象可能不会显示或导出。是否继续？',
+        [
+          { label: '取消', value: 'cancel' },
+          { label: '继续', value: 'continue', primary: true }
+        ]
+      );
+      return choice === 'continue';
+    }
+
+    function rememberPageSelectorValues() {
+      if (els.pagePreset) els.pagePreset.dataset.lastValue = els.pagePreset.value;
+      if (els.pageOrientation) els.pageOrientation.dataset.lastValue = els.pageOrientation.value;
+    }
+
+    async function applyPagePreset(){
       const p=els.pagePreset.value;
-      if(p==='custom') { updateAspectRatioFromPage(); return; }
+      if(p==='custom') { updateAspectRatioFromPage(); rememberPageSelectorValues(); return true; }
       let {w,h}=pagePresets[p];
       if(els.pageOrientation.value==='portrait')[w,h]=[Math.min(w,h),Math.max(w,h)]; else [w,h]=[Math.max(w,h),Math.min(w,h)];
+      const ok = await confirmCanvasResizeIfNeeded(w, h);
+      if(!ok) return false;
       saveHistory();
       state.pageW=w; state.pageH=h;
       updateAspectRatioFromPage();
       els.pageWidth.value=w; els.pageHeight.value=h;
+      rememberPageSelectorValues();
       resizeCanvas();
+      return true;
     }
-    function applyCustomPageSize(source){
+    async function applyCustomPageSize(source){
       let w=Math.max(200,Number(els.pageWidth.value)||1100);
       let h=Math.max(200,Number(els.pageHeight.value)||850);
       if(isAspectRatioLocked()){
@@ -3196,15 +3332,43 @@
         if(source === 'width') h = Math.max(200, Math.round(w / ratio));
         if(source === 'height') w = Math.max(200, Math.round(h * ratio));
       }
+      const ok = await confirmCanvasResizeIfNeeded(w, h);
+      if(!ok){
+        els.pageWidth.value = state.pageW;
+        els.pageHeight.value = state.pageH;
+        return false;
+      }
       saveHistory();
       state.pageW=w; state.pageH=h;
       els.pagePreset.value='custom';
       els.pageWidth.value=w; els.pageHeight.value=h;
       updateAspectRatioFromPage();
+      rememberPageSelectorValues();
       resizeCanvas();
+      return true;
     }
-    els.pagePreset.onchange=applyPagePreset;
-    els.pageOrientation.onchange=applyPagePreset;
+    els.pagePreset.onchange=async()=>{
+      const oldPreset = els.pagePreset.dataset.lastValue || 'letter';
+      const oldOrientation = els.pageOrientation.dataset.lastValue || 'landscape';
+      const ok = await applyPagePreset();
+      if(!ok){
+        els.pagePreset.value = oldPreset;
+        els.pageOrientation.value = oldOrientation;
+        els.pageWidth.value = state.pageW;
+        els.pageHeight.value = state.pageH;
+      }
+    };
+    els.pageOrientation.onchange=async()=>{
+      const oldPreset = els.pagePreset.dataset.lastValue || 'letter';
+      const oldOrientation = els.pageOrientation.dataset.lastValue || 'landscape';
+      const ok = await applyPagePreset();
+      if(!ok){
+        els.pagePreset.value = oldPreset;
+        els.pageOrientation.value = oldOrientation;
+        els.pageWidth.value = state.pageW;
+        els.pageHeight.value = state.pageH;
+      }
+    };
     els.pageWidth.onchange=()=>applyCustomPageSize('width');
     els.pageHeight.onchange=()=>applyCustomPageSize('height');
     els.aspectRatioLock.onchange=()=>updateAspectRatioFromPage();
@@ -3219,7 +3383,7 @@
       if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
 
-      // 以“滚轮一格≈10%”为目标：累积小幅滚轮事件，达到阈值后只执行一次缩放，避免一下跳到 300% 或 49%。
+      // 以“滚轮一格≈10%”为目标：累积小幅滚轮事件，达到阈值后只执行一次缩放，避免一下跳到 600% 或 49%。
       const unit = e.deltaMode === 1 ? 3 : e.deltaMode === 2 ? 100 : 1;
       wheelZoomAccumulator += e.deltaY * unit;
 
@@ -3239,7 +3403,7 @@
       const raw = String(els.zoomInput.value || '').replace('%', '').trim();
       const percent = Number(raw);
       if (!Number.isFinite(percent)) { updateStatus(); return; }
-      const clamped = Math.max(25, Math.min(300, percent));
+      const clamped = Math.max(25, Math.min(600, percent));
       setZoom(clamped / 100);
       els.zoomInput.value = `${Math.round(state.zoom * 100)}%`;
     }
@@ -3576,6 +3740,7 @@
       ensureBackgroundImageLoaded().catch(() => { state.backgroundImage = null; backgroundImgElement = null; draw(); });
 
       syncSegmentedControls();
+      rememberPageSelectorValues();
       document.querySelectorAll('[data-layer-toggle]').forEach(btn=>{
         const layer = btn.dataset.layerToggle;
         btn.classList.toggle('active', state.visibleLayers[layer] !== false);
@@ -3684,38 +3849,23 @@
     }
 
     async function chooseBackgroundCanvasAction(imgW, imgH) {
-      const largerW = imgW > state.pageW;
-      const largerH = imgH > state.pageH;
-      const smallerOrEqualW = imgW <= state.pageW;
-      const smallerOrEqualH = imgH <= state.pageH;
-      if (smallerOrEqualW && smallerOrEqualH) {
-        return await showChoiceDialog(
-          '底图小于当前画布',
-          `底图尺寸为 ${imgW} × ${imgH} px，当前画布为 ${state.pageW} × ${state.pageH} px。`,
-          [
-            { label: '取消', value: 'cancel' },
-            { label: '保持当前画布', value: 'keep' },
-            { label: '调整为底图大小', value: 'image', primary: true }
-          ]
-        );
-      }
-      if (largerW && largerH) {
-        return await showChoiceDialog(
-          '底图大于当前画布',
-          `底图尺寸为 ${imgW} × ${imgH} px，当前画布为 ${state.pageW} × ${state.pageH} px。\n建议扩展画布以完整显示底图。`,
-          [
-            { label: '取消', value: 'cancel' },
-            { label: '扩展为底图大小', value: 'image', primary: true }
-          ]
-        );
-      }
+      const willClip = imgW > state.pageW || imgH > state.pageH;
+      const message = willClip
+        ? `底图尺寸为 ${imgW} × ${imgH} px，当前画布为 ${state.pageW} × ${state.pageH} px。
+
+适配底图尺寸：将画布调整为图片尺寸，完整显示底图。
+保持画布尺寸：画布尺寸不变，超出画布的底图部分不会显示或导出。`
+        : `底图尺寸为 ${imgW} × ${imgH} px，当前画布为 ${state.pageW} × ${state.pageH} px。
+
+适配底图尺寸：将画布调整为图片尺寸。
+保持画布尺寸：保留当前画布大小。`;
       return await showChoiceDialog(
-        '底图一边超出当前画布',
-        `底图尺寸为 ${imgW} × ${imgH} px，当前画布为 ${state.pageW} × ${state.pageH} px。`,
+        '导入底图',
+        message,
         [
           { label: '取消', value: 'cancel' },
-          { label: '仅扩展不足边', value: 'expand', primary: true },
-          { label: '调整为底图大小', value: 'image' }
+          { label: '保持画布尺寸', value: 'keep' },
+          { label: '适配底图尺寸', value: 'image', primary: true }
         ]
       );
     }
@@ -3731,15 +3881,13 @@
         if (action === 'image') {
           state.pageW = prepared.width;
           state.pageH = prepared.height;
-        } else if (action === 'expand') {
-          state.pageW = Math.max(state.pageW, prepared.width);
-          state.pageH = Math.max(state.pageH, prepared.height);
         }
         state.aspectRatio = state.pageW / Math.max(1, state.pageH);
         els.pagePreset.value = 'custom';
         els.pageWidth.value = state.pageW;
         els.pageHeight.value = state.pageH;
         updateAspectRatioFromPage();
+        rememberPageSelectorValues();
         state.backgroundImage = {
           dataUrl: prepared.dataUrl,
           naturalWidth: prepared.width,
@@ -3954,6 +4102,7 @@
     syncSegmentedControls();
     updateAspectRatioLockVisual();
     updateAspectRatioFromPage();
+    rememberPageSelectorValues();
     resizeCanvas();
     updateCursor();
   </script>
