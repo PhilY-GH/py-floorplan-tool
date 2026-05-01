@@ -50,13 +50,13 @@
       top: -2px;
       bottom: -2px;
       right: 0;
-      width: 1px;
+      width: 2px;
       background: #e2e8f0;
     }
     .brand {
       font-weight: 900;
-      font-size: 18px;
-      letter-spacing: 1.6px;
+      font-size: 19px;
+      letter-spacing: 1.8px;
       white-space: nowrap;
     }
     .brand-subtitle {
@@ -70,13 +70,74 @@
       grid-template-columns: 310px minmax(0, 1fr);
       min-height: 0;
       min-width: 0;
+      transition: grid-template-columns .18s ease;
+    }
+    .main.sidebar-collapsed {
+      grid-template-columns: 42px minmax(0, 1fr);
     }
     .sidebar {
       background: #ffffff;
       border-right: 1px solid #d1d5db;
-      padding: 12px 14px;
-      overflow-y: auto;
+      padding: 0;
+      overflow: hidden;
       font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .sidebar-brand-row {
+      flex: 0 0 auto;
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px 8px 14px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #ffffff;
+    }
+    .sidebar-brand-text {
+      min-width: 0;
+      font-size: 12px;
+      color: #6b7280;
+      line-height: 1.4;
+    }
+    .sidebar-collapse-btn {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      min-height: 28px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #d6dee9;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #475569;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .sidebar-collapse-btn:hover {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      color: #1d4ed8;
+    }
+    .sidebar-content {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 12px 14px;
+    }
+    .main.sidebar-collapsed .sidebar-brand-row {
+      justify-content: center;
+      padding: 8px 6px;
+      border-bottom: 0;
+    }
+    .main.sidebar-collapsed .sidebar-brand-text,
+    .main.sidebar-collapsed .sidebar-content {
+      display: none;
     }
     .sidebar button,
     .sidebar input,
@@ -107,12 +168,53 @@
       margin-top: 12px;
     }
     .group:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+    .group-header {
+      min-height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
     .group-title {
       font-size: 12px;
       font-weight: 800;
       color: #475569;
       letter-spacing: .03em;
-      margin-bottom: 8px;
+      margin-bottom: 0;
+    }
+    .group-toggle-btn {
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      min-height: 24px;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #64748b;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .group-header:hover .group-toggle-btn {
+      color: #1d4ed8;
+      background: #eff6ff;
+    }
+    .group-body {
+      display: block;
+    }
+    .group.collapsed .group-body {
+      display: none;
+    }
+    .group.collapsed .group-toggle-btn {
+      transform: rotate(-90deg);
     }
     button, input, select { font: inherit; }
     button {
@@ -160,7 +262,7 @@
       top: -2px;
       bottom: -2px;
       right: 0;
-      width: 1px;
+      width: 2px;
       background: #e2e8f0;
     }
     .toolbar-section:last-child::after { display: none; }
@@ -792,12 +894,20 @@
 
     <div class="main">
       <aside class="sidebar">
-        <div style="margin-bottom:12px;font-size:12px;color:#6b7280;line-height:1.4;">
-          © 2026 Philip Yu. All Rights Reserved.<br/>
-          Independently Developed Tool
+        <div class="sidebar-brand-row">
+          <div class="sidebar-brand-text">
+            © 2026 Philip Yu. All Rights Reserved.<br/>
+            Independently Developed Tool
+          </div>
+          <button id="sidebarCollapseBtn" class="sidebar-collapse-btn" type="button" title="收起侧边栏">‹</button>
         </div>
-<div class="group">
-          <div class="group-title">默认样式</div>
+        <div class="sidebar-content">
+<div class="group" data-collapse-key="defaultStyle">
+          <div class="group-header" title="折叠 / 展开">
+            <div class="group-title">默认样式</div>
+            <button class="group-toggle-btn" type="button" aria-label="折叠 / 展开">▾</button>
+          </div>
+          <div class="group-body">
           <div class="row">
             <label>图层</label>
             <select id="layerSelect">
@@ -891,10 +1001,15 @@
             <input id="eraserWidth" type="number" min="4" max="120" value="22" />
           </div>
           <button id="applyStyleBtn" class="full">应用到选中对象</button>
+                  </div>
         </div>
 
-<div class="group">
-          <div class="group-title">网格与吸附</div>
+<div class="group" data-collapse-key="gridSnap">
+          <div class="group-header" title="折叠 / 展开">
+            <div class="group-title">网格与吸附</div>
+            <button class="group-toggle-btn" type="button" aria-label="折叠 / 展开">▾</button>
+          </div>
+          <div class="group-body">
           <div class="row">
             <label>吸附网格</label>
             <select id="snapMode" class="hidden-input">
@@ -918,10 +1033,15 @@
             <label>比例</label>
             <input id="scaleFactor" type="number" step="0.01" min="0.0001" value="0.05" />
           </div>
+                  </div>
         </div>
 
-<div class="group">
-          <div class="group-title">图层显示</div>
+<div class="group" data-collapse-key="layers">
+          <div class="group-header" title="折叠 / 展开">
+            <div class="group-title">图层显示</div>
+            <button class="group-toggle-btn" type="button" aria-label="折叠 / 展开">▾</button>
+          </div>
+          <div class="group-body">
           <div class="grid-3">
             <button data-layer-toggle="areas" class="active">区域</button>
             <button data-layer-toggle="walls" class="active">墙体</button>
@@ -930,10 +1050,15 @@
             <button data-layer-toggle="annotations" class="active">标注</button>
             <button data-layer-toggle="text" class="active">文字</button>
           </div>
+                  </div>
         </div>
 
-<div class="group">
-          <div class="group-title">排列 / 组合</div>
+<div class="group" data-collapse-key="arrange">
+          <div class="group-header" title="折叠 / 展开">
+            <div class="group-title">排列 / 组合</div>
+            <button class="group-toggle-btn" type="button" aria-label="折叠 / 展开">▾</button>
+          </div>
+          <div class="group-body">
           <div class="grid-3">
             <button id="alignLeftBtn">左对齐</button>
             <button id="alignCenterBtn">居中</button>
@@ -947,10 +1072,15 @@
             <button id="groupSidebarBtn">组合</button>
             <button id="ungroupSidebarBtn">取消组合</button>
           </div>
+                  </div>
         </div>
 
-        <div class="group">
-          <div class="group-title">页面</div>
+        <div class="group" data-collapse-key="page">
+          <div class="group-header" title="折叠 / 展开">
+            <div class="group-title">页面</div>
+            <button class="group-toggle-btn" type="button" aria-label="折叠 / 展开">▾</button>
+          </div>
+          <div class="group-body">
           <div class="row">
             <label>纸张</label>
             <select id="pagePreset">
@@ -1037,10 +1167,15 @@
           </div>
           <div style="height:8px"></div>
           <button id="clearBtn" class="full danger">清空画布</button>
+                  </div>
         </div>
 
-<div class="group">
-          <div class="group-title">快捷键</div>
+<div class="group" data-collapse-key="shortcuts">
+          <div class="group-header" title="折叠 / 展开">
+            <div class="group-title">快捷键</div>
+            <button class="group-toggle-btn" type="button" aria-label="折叠 / 展开">▾</button>
+          </div>
+          <div class="group-body">
           <div class="hint hint-list">
             <div>框选可多选；Shift+点击可增减选择</div>
             <div>绘制线、箭、墙、尺时，按 Shift 可锁定 0° / 45° / 90°</div>
@@ -1051,6 +1186,8 @@
             <div>Ctrl+C / Ctrl+V 复制粘贴</div>
             <div>Ctrl+G 组合；Ctrl+Shift+G 取消组合</div>
           </div>
+        </div>
+                        </div>
         </div>
       </aside>
 
@@ -1065,7 +1202,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v69';
+    const APP_VERSION = 'v70';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -4118,6 +4255,63 @@
     rememberPageSelectorValues();
     resizeCanvas();
     updateCursor();
-  </script>
+  
+    function initSidebarCollapsing() {
+      const main = document.querySelector('.main');
+      const sidebarBtn = document.getElementById('sidebarCollapseBtn');
+      if (!main || !sidebarBtn) return;
+      const sidebarCollapsedKey = 'pyFloorPlan.sidebarCollapsed.v70';
+
+      function setSidebarCollapsed(collapsed, persist = true) {
+        main.classList.toggle('sidebar-collapsed', collapsed);
+        sidebarBtn.textContent = collapsed ? '›' : '‹';
+        sidebarBtn.title = collapsed ? '展开侧边栏' : '收起侧边栏';
+        sidebarBtn.setAttribute('aria-label', sidebarBtn.title);
+        if (persist) localStorage.setItem(sidebarCollapsedKey, collapsed ? '1' : '0');
+        requestAnimationFrame(() => {
+          resizeCanvas();
+          draw();
+        });
+      }
+
+      const savedSidebarCollapsed = localStorage.getItem(sidebarCollapsedKey) === '1';
+      setSidebarCollapsed(savedSidebarCollapsed, false);
+
+      sidebarBtn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSidebarCollapsed(!main.classList.contains('sidebar-collapsed'));
+      });
+
+      document.querySelectorAll('.sidebar .group[data-collapse-key]').forEach(group => {
+        const key = 'pyFloorPlan.sidebarGroup.' + group.dataset.collapseKey + '.collapsed.v70';
+        const header = group.querySelector('.group-header');
+        const btn = group.querySelector('.group-toggle-btn');
+        const saved = localStorage.getItem(key) === '1';
+
+        function setGroupCollapsed(collapsed, persist = true) {
+          group.classList.toggle('collapsed', collapsed);
+          if (btn) {
+            btn.textContent = '▾';
+            btn.title = collapsed ? '展开' : '折叠';
+            btn.setAttribute('aria-label', btn.title);
+          }
+          if (persist) localStorage.setItem(key, collapsed ? '1' : '0');
+        }
+
+        setGroupCollapsed(saved, false);
+
+        if (header) {
+          header.addEventListener('click', e => {
+            e.preventDefault();
+            setGroupCollapsed(!group.classList.contains('collapsed'));
+          });
+        }
+      });
+    }
+
+    initSidebarCollapsing();
+
+</script>
 </body>
 </html>
