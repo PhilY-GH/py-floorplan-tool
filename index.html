@@ -55,8 +55,8 @@
     }
     .brand {
       font-weight: 900;
-      font-size: 17px;
-      letter-spacing: 1.2px;
+      font-size: 18px;
+      letter-spacing: 1.6px;
       white-space: nowrap;
     }
     .brand-subtitle {
@@ -108,16 +108,17 @@
     }
     .group:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
     .group-title {
-      font-size: 13px;
-      font-weight: bold;
-      color: #374151;
+      font-size: 12px;
+      font-weight: 800;
+      color: #475569;
+      letter-spacing: .03em;
       margin-bottom: 8px;
     }
     button, input, select { font: inherit; }
     button {
       border: 1px solid #cbd5e1;
       background: #f8fafc;
-      border-radius: 9px;
+      border-radius: 8px;
       padding: 8px 10px;
       cursor: pointer;
       transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .08s ease;
@@ -583,7 +584,7 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       width: 100%;
       border: 1px solid #cbd5e1;
-      border-radius: 9px;
+      border-radius: 8px;
       overflow: hidden;
       background: #f8fafc;
     }
@@ -669,6 +670,11 @@
       border-radius: 8px;
       padding: 8px;
     }
+    .hint-list {
+      display: grid;
+      gap: 4px;
+      line-height: 1.55;
+    }
     .status {
       position: absolute;
       left: 14px;
@@ -737,17 +743,17 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l13 12.2-6.1 1.1 3 5.4-2.7 1.3-3-5.5L5 22V3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
             <span>选择</span>
           </button>
-          <button data-tool="line" class="tool-btn" title="直线"><span class="mini-icon line-icon"></span><span>直线</span></button>
-          <button data-tool="arrow" class="tool-btn" title="箭头"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><path d="M13 4h7v7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 7l3-3" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg><span>箭头</span></button>
-          <button data-tool="rect" class="tool-btn" title="矩形"><span class="mini-icon rect-icon"></span><span>矩形</span></button>
-          <button data-tool="ellipse" class="tool-btn" title="椭圆"><span class="mini-icon ellipse-icon"></span><span>椭圆</span></button>
+          <button data-tool="line" class="tool-btn" title="直线"><span class="mini-icon line-icon"></span><span>线</span></button>
+          <button data-tool="arrow" class="tool-btn" title="箭头"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><path d="M13 4h7v7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 7l3-3" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg><span>箭</span></button>
+          <button data-tool="rect" class="tool-btn" title="矩形"><span class="mini-icon rect-icon"></span><span>方</span></button>
+          <button data-tool="ellipse" class="tool-btn" title="椭圆"><span class="mini-icon ellipse-icon"></span><span>圆</span></button>
           <button data-tool="area" class="tool-btn" title="区域"><span class="mini-icon area-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l8 5.8-3 9.2H7L4 9.3z" fill="currentColor" opacity="0.18"/><path d="M12 3.5l8 5.8-3 9.2H7L4 9.3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span><span>区域</span></button>
-          <button data-tool="wall" class="tool-btn" title="墙体"><span class="mini-icon wall-icon"></span><span>墙体</span></button>
+          <button data-tool="wall" class="tool-btn" title="墙体"><span class="mini-icon wall-icon"></span><span>墙</span></button>
           <button data-tool="door" class="tool-btn" title="门"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18V6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 18H18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 6A12 12 0 0 1 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>门</span></button>
           <button data-tool="window" class="tool-btn" title="窗"><span class="mini-icon window-icon"></span><span>窗</span></button>
-          <button data-tool="dimension" class="tool-btn" title="标尺"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12v8M20 12v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 16v3M12 16v4M16 16v3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>标尺</span></button>
-          <button data-tool="text" class="tool-btn" title="文字"><span class="mini-icon text-icon">T</span><span>文字</span></button>
-          <button data-tool="eraser" class="tool-btn" title="橡皮"><span class="mini-icon eraser-icon"></span><span>橡皮</span></button>
+          <button data-tool="dimension" class="tool-btn" title="标尺"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12v8M20 12v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 16v3M12 16v4M16 16v3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>尺</span></button>
+          <button data-tool="text" class="tool-btn" title="文字"><span class="mini-icon text-icon">T</span><span>字</span></button>
+          <button data-tool="eraser" class="tool-btn" title="橡皮 / 擦除"><span class="mini-icon eraser-icon"></span><span>擦</span></button>
         </div>
       </div>
 
@@ -1035,8 +1041,15 @@
 
 <div class="group">
           <div class="group-title">快捷键</div>
-          <div class="hint">
-            框选可多选；Shift+点击可增减选择。画直线/箭头/墙体/标尺时按 Shift 可锁定 0°/45°/90°。方向键微调 1 px，Shift+方向键移动 10 px，不受吸附限制。Ctrl+C / Ctrl+V 复制粘贴，Ctrl+G 组合，Ctrl+Shift+G 取消组合。角度采用逆时针为正。
+          <div class="hint hint-list">
+            <div>框选可多选；Shift+点击可增减选择</div>
+            <div>绘制线、箭、墙、尺时，按 Shift 可锁定 0° / 45° / 90°</div>
+            <div>拖动方 / 圆角点时，按 Shift 可保持比例</div>
+            <div>绘制区域时，按 Enter 完成闭合；按 Esc 取消绘制</div>
+            <div>拖动节点或控制点时，按 Esc 可取消本次调整</div>
+            <div>方向键微调 1 px；Shift+方向键移动 10 px，不受吸附限制</div>
+            <div>Ctrl+C / Ctrl+V 复制粘贴</div>
+            <div>Ctrl+G 组合；Ctrl+Shift+G 取消组合</div>
           </div>
         </div>
       </aside>
@@ -1052,7 +1065,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v68';
+    const APP_VERSION = 'v69';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1376,7 +1389,7 @@
       if (o.type === 'text') defs.push({ key:'text', label:'文字', type:'text' });
       defs.push({ key:'color', label:'颜色', type:'swatches' });
       if (['wall','line','arrow','rect','ellipse','dimension','door','window','area'].includes(o.type)) defs.push({ key:'lineWidth', label:'线宽', type:'number', unit:'px' });
-      if (o.type === 'area') defs.push({ key:'fillOpacity', label:'透明度', type:'number', unit:'%' });
+      if (o.type === 'area') defs.push({ key:'fillOpacity', label:'透明', type:'number', unit:'%' });
       if (o.type === 'wall') {
         defs.push({ key:'wallThickness', label:'墙厚', type:'number', unit:'px' });
         defs.push({ key:'wallStyle', label:'墙体', type:'select', options:[['hollow','空心'],['solid','实心']] });
