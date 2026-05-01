@@ -813,7 +813,7 @@
           </div>
           <div class="row">
             <label>区域透明度</label>
-            <input id="areaOpacity" type="number" min="0" max="100" step="1" value="100" title="只影响区域填充；100% 为完全显示，数值越低越透明" />
+            <input id="areaOpacity" type="number" min="0" max="100" step="1" value="100" title="影响区域填充；100% 为完全显示，数值越低越透明" />
           </div>
           <div class="row">
             <label>字号</label>
@@ -1024,7 +1024,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v63';
+    const APP_VERSION = 'v65';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1992,6 +1992,11 @@
       return Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 1;
     }
 
+    function getRenderOpacity(item) {
+      const raw = Number(item && item.opacity);
+      return Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 1;
+    }
+
     function drawCanvasRenderItem(c, item) {
       if (!item) return;
       const transformed = applyCanvasRenderTransform(c, item);
@@ -2022,11 +2027,20 @@
         if (item.stroke) { applyCanvasStrokeStyle(c, item); c.stroke(); }
       } else if (item.kind === 'polygon') {
         if (!item.points || item.points.length < 2) { if (transformed) c.restore(); return; }
+        const hasWholeOpacity = item.opacity !== undefined;
+        if (hasWholeOpacity) { c.save(); c.globalAlpha *= getRenderOpacity(item); }
         c.beginPath();
         item.points.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
         c.closePath();
-        if (item.fill) { c.save(); c.globalAlpha *= getRenderFillOpacity(item); c.fillStyle = item.fill; c.fill(); c.restore(); }
+        if (item.fill) {
+          if (!hasWholeOpacity && item.fillOpacity !== undefined) {
+            c.save(); c.globalAlpha *= getRenderFillOpacity(item); c.fillStyle = item.fill; c.fill(); c.restore();
+          } else {
+            c.fillStyle = item.fill; c.fill();
+          }
+        }
         if (item.stroke) { applyCanvasStrokeStyle(c, item); c.stroke(); }
+        if (hasWholeOpacity) c.restore();
       } else if (item.kind === 'arc') {
         c.beginPath();
         applyCanvasStrokeStyle(c, item);
@@ -2075,6 +2089,7 @@
       if (!item) return '';
       const transform = svgTransformAttr(item);
       const dash = svgDashAttr(item);
+      const opacityAttr = item.opacity !== undefined ? ` opacity="${svgNum(getRenderOpacity(item))}"` : '';
       const strokeBase = item.stroke ? `stroke="${escapeSvg(item.stroke)}" stroke-width="${svgNum(item.lineWidth || 1)}" stroke-linecap="${item.lineCap || 'round'}" stroke-linejoin="${item.lineJoin || 'round'}"${dash}` : 'stroke="none"';
       const fillOpacityAttr = item.fill && item.fillOpacity !== undefined ? ` fill-opacity="${svgNum(getRenderFillOpacity(item))}"` : '';
       const fillBase = item.fill ? `fill="${escapeSvg(item.fill)}"${fillOpacityAttr}` : 'fill="none"';
@@ -2090,7 +2105,7 @@
       if (item.kind === 'polygon') {
         const points = (item.points || []).map(p => `${svgNum(p.x)},${svgNum(p.y)}`).join(' ');
         if (!points) return '';
-        return `<polygon points="${points}" ${fillBase} ${strokeBase}${transform} />`;
+        return `<polygon points="${points}" ${fillBase} ${strokeBase}${opacityAttr}${transform} />`;
       }
       if (item.kind === 'arc') {
         const startX = item.cx + Math.cos(item.startAngle) * item.r;
@@ -3899,7 +3914,17 @@
       return handled;
     }
 
+    function isTextEditingTarget(target) {
+      if (!target) return false;
+      const tag = String(target.tagName || '').toLowerCase();
+      return target.isContentEditable || tag === 'input' || tag === 'textarea' || tag === 'select';
+    }
+
     document.addEventListener('keydown', e=>{
+      if((e.key === 'Enter' || e.key === 'Return') && state.tool === 'area' && state.areaDrawing && !isTextEditingTarget(e.target)){
+        if(state.areaPoints.length >= 3 && completeAreaDraft()){ e.preventDefault(); updateCursor(); }
+        return;
+      }
       if(e.key === 'Escape'){ e.preventDefault(); cancelCurrentOperation(); return; }
       if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); return; }
       if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='c'){ e.preventDefault(); copySelected(); return; }
