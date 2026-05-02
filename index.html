@@ -476,6 +476,11 @@
       cursor: not-allowed;
       opacity: 1;
     }
+    .metric-input.mixed-value {
+      color: #64748b;
+      background: #f8fafc;
+      font-style: normal;
+    }
     .metric-input.prop-text {
       width: 69px !important;
       min-width: 69px !important;
@@ -511,6 +516,10 @@
       background: #111827;
       box-shadow: inset 0 0 0 2px rgba(255,255,255,.75), 0 1px 3px rgba(15, 23, 42, .10);
       appearance: none;
+    }
+    .prop-color-current.mixed {
+      background: linear-gradient(135deg, #111827 0 25%, #ffffff 25% 50%, #111827 50% 75%, #ffffff 75% 100%);
+      border-color: #94a3b8;
     }
     .color-popover {
       position: fixed;
@@ -1231,6 +1240,7 @@
           <div class="group-body">
           <div class="hint hint-list">
             <div>框选可多选；Shift+点击可增减选择</div>
+            <div>点击画布左上角状态栏中的“已选 x 个对象”可开启 / 关闭多选模式</div>
             <div>绘制线、箭、墙、尺时，按 Shift 可锁定 0° / 45° / 90°</div>
             <div>拖动方 / 圆角点时，按 Shift 可保持比例</div>
             <div>绘制区域时，按 Enter 完成闭合；按 Esc 取消绘制</div>
@@ -1255,7 +1265,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v80';
+    const APP_VERSION = 'v81';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1820,6 +1830,165 @@
       return o[key] ?? '';
     }
 
+    const MIXED_PROPERTY_VALUE = '__PY_MIXED_PROPERTY_VALUE__';
+    const MIXED_PROPERTY_LABEL = '混合';
+
+    function isMixedPropertyValue(value) {
+      return value === MIXED_PROPERTY_VALUE;
+    }
+
+    function getSelectedObjects() {
+      const selected = new Set(state.selectedIds || []);
+      return state.objects.filter(o => o && selected.has(o.id));
+    }
+
+    function propertyComparableValue(value) {
+      if (typeof value === 'string') return value.trim().toLowerCase();
+      return value;
+    }
+
+    function getCommonPropertyValue(objects, key) {
+      if (!objects || !objects.length) return '';
+      const values = objects.map(o => getPropertyValue(o, key));
+      const first = values[0];
+      const firstComparable = propertyComparableValue(first);
+      const allSame = values.every(v => propertyComparableValue(v) === firstComparable);
+      return allSame ? first : MIXED_PROPERTY_VALUE;
+    }
+
+    function getMultiPropertyDefs(objects) {
+      if (!objects || objects.length < 2) return [];
+      const types = [...new Set(objects.map(o => o.type === 'erase' ? 'brush' : o.type))];
+      if (types.length > 1) return [{ key:'color', label:'颜色', type:'swatches' }];
+      const type = types[0];
+      const defs = [{ key:'color', label:'颜色', type:'swatches' }];
+      if (['wall','line','arrow','rect','ellipse','dimension','door','window','area'].includes(type)) defs.push({ key:'lineWidth', label:'线宽', type:'number', unit:'px' });
+      if (type === 'area') defs.push({ key:'fillOpacity', label:'透明', type:'number', unit:'%' });
+      if (type === 'brush') {
+        defs.push({ key:'brushObjectWidth', label:'大小', type:'number', unit:'px' });
+        defs.push({ key:'brushObjectOpacity', label:'透明', type:'number', unit:'%' });
+      }
+      if (type === 'wall') {
+        defs.push({ key:'wallThickness', label:'墙厚', type:'number', unit:'px' });
+        defs.push({ key:'wallStyle', label:'墙体', type:'select', options:[['hollow','空心'],['solid','实心']] });
+      }
+      if (['door','window'].includes(type)) defs.push({ key:'openingThicknessMode', label:'厚度', type:'select', options:[['linear','线性'],['wall','墙体']] });
+      if (type === 'door') defs.push({ key:'doorSwing', label:'开向', type:'select', options:[['right','右开'],['left','左开']] });
+      if (type === 'arrow') {
+        defs.push({ key:'arrowSize', label:'箭头', type:'number', unit:'px' });
+        defs.push({ key:'arrowMode', label:'类型', type:'select', options:[['end','单箭头'],['both','双箭头']] });
+      }
+      if (type === 'dimension') {
+        const allCustom = objects.every(o => (o.dimensionTextMode || 'auto') === 'custom');
+        defs.push({ key:'dimensionTextMode', label:'模式', type:'select', options:[['auto','自动'],['custom','自定义']] });
+        defs.push({ key:'dimensionCustomText', label:'内容', type:'text', disabled: !allCustom, disabledTitle: '自动或混合模式下保留内容，但不参与显示' });
+        defs.push({ key:'fontSize', label:'字号', type:'number', unit:'px' });
+        defs.push({ key:'arrowSize', label:'箭头', type:'number', unit:'px' });
+        defs.push({ key:'dimensionLabelMode', label:'位置', type:'select', options:[['inline','压线'],['above','上方'],['below','下方']] });
+      }
+      if (type === 'text') defs.push({ key:'fontSize', label:'字号', type:'number', unit:'px' });
+      return defs;
+    }
+
+    function getMultiPropertyValue(objects, def) {
+      return getCommonPropertyValue(objects, def.key);
+    }
+
+    function isNumericPropertyKey(key) {
+      return ['length','angle','width','height','lineWidth','wallThickness','fontSize','arrowSize','fillOpacity','brushObjectWidth','brushObjectOpacity'].includes(key);
+    }
+
+    function canObjectReceiveMultiProperty(o, key) {
+      if (!o) return false;
+      if (key === 'color') return ['wall','line','arrow','rect','ellipse','dimension','door','window','area','text','brush','erase'].includes(o.type);
+      if (key === 'layer') return !!o.type;
+      if (key === 'lineWidth') return ['wall','line','arrow','rect','ellipse','dimension','door','window','area'].includes(o.type);
+      if (key === 'fillOpacity') return o.type === 'area';
+      if (key === 'brushObjectWidth' || key === 'brushObjectOpacity') return o.type === 'brush' || o.type === 'erase';
+      if (key === 'wallThickness' || key === 'wallStyle') return o.type === 'wall';
+      if (key === 'openingThicknessMode') return o.type === 'door' || o.type === 'window';
+      if (key === 'doorSwing') return o.type === 'door';
+      if (key === 'fontSize') return o.type === 'text' || o.type === 'dimension';
+      if (key === 'arrowMode') return o.type === 'arrow';
+      if (key === 'arrowSize') return o.type === 'arrow' || o.type === 'dimension';
+      if (key === 'dimensionTextMode' || key === 'dimensionCustomText' || key === 'dimensionLabelMode') return o.type === 'dimension';
+      return false;
+    }
+
+    function applyObjectProperty(o, key, raw, n) {
+      if (!canObjectReceiveMultiProperty(o, key)) return false;
+      if (key === 'color') {
+        o.color = raw;
+      } else if (key === 'lineWidth') {
+        o.lineWidth = Math.max(1, n);
+      } else if (key === 'brushObjectWidth') {
+        o.width = Math.max(1, n);
+      } else if (key === 'brushObjectOpacity') {
+        o.opacity = Math.max(0, Math.min(100, n)) / 100;
+      } else if (key === 'fillOpacity') {
+        o.fillOpacity = Math.max(0, Math.min(100, n)) / 100;
+      } else if (key === 'wallThickness') {
+        o.wallThickness = Math.max(4, n);
+      } else if (key === 'wallStyle') {
+        o.wallStyle = raw;
+      } else if (key === 'openingThicknessMode') {
+        o.openingThicknessMode = raw;
+        o.openingUseWallThickness = raw === 'wall';
+        if (raw === 'wall') o.wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 10) || 10;
+      } else if (key === 'doorSwing') {
+        o.doorSwing = raw === 'left' ? 'left' : 'right';
+        o.swing = o.doorSwing;
+      } else if (key === 'fontSize') {
+        o.fontSize = Math.max(8, n);
+      } else if (key === 'arrowMode') {
+        o.arrowMode = raw;
+      } else if (key === 'arrowSize') {
+        o.arrowSize = Math.max(4, n);
+      } else if (key === 'dimensionTextMode') {
+        o.dimensionTextMode = raw === 'custom' ? 'custom' : 'auto';
+      } else if (key === 'dimensionCustomText') {
+        o.dimensionCustomText = String(raw || '').trim();
+      } else if (key === 'dimensionLabelMode') {
+        o.dimensionLabelMode = ['inline','above','below'].includes(raw) ? raw : 'inline';
+      } else if (key === 'layer') {
+        o.layer = raw;
+      } else {
+        return false;
+      }
+      return true;
+    }
+
+    function applyMultiPropertyInput(input) {
+      const objects = getSelectedObjects();
+      if (!input || objects.length < 2) return false;
+      const key = input.dataset.prop;
+      const raw = input.dataset.value ?? input.value;
+      if (isMixedPropertyValue(raw) || String(raw ?? '').trim() === MIXED_PROPERTY_LABEL) { updateObjectMetrics(true); return true; }
+      if (isNumericPropertyKey(key) && String(raw ?? '').trim() === '') { updateObjectMetrics(true); return true; }
+      const n = Number(raw);
+      if (isNumericPropertyKey(key) && !Number.isFinite(n)) { updateObjectMetrics(true); return true; }
+      const targets = objects.filter(o => canObjectReceiveMultiProperty(o, key));
+      if (!targets.length) { updateObjectMetrics(true); return true; }
+      saveHistory();
+      targets.forEach(o => applyObjectProperty(o, key, raw, n));
+      draw();
+      updateObjectMetrics(key === 'dimensionTextMode');
+      updateDimensionCustomTextInputState();
+      markProjectDirty();
+      return true;
+    }
+
+    function updateColorPropertyButton(btn, value) {
+      if (!btn) return;
+      const mixed = isMixedPropertyValue(value);
+      btn.classList.toggle('mixed', mixed);
+      btn.dataset.value = mixed ? MIXED_PROPERTY_VALUE : (value || '#111827');
+      btn.title = mixed ? '当前颜色：混合' : `当前颜色：${value || '#111827'}`;
+      if (mixed) btn.style.background = '';
+      else btn.style.background = value || '#111827';
+    }
+
+
     function isUnitizedPropertyInput(input) {
       return !!(input && input.tagName !== 'SELECT' && input.dataset && input.dataset.unit);
     }
@@ -1930,7 +2099,10 @@
       input.dataset.unit = unit || '';
       if (unit) input.classList.add('unitized');
       else input.classList.remove('unitized');
-      input.value = formatMetricDisplayValue(value, unit);
+      const mixed = isMixedPropertyValue(value);
+      input.classList.toggle('mixed-value', mixed);
+      input.dataset.mixedValue = mixed ? '1' : '0';
+      input.value = mixed ? MIXED_PROPERTY_LABEL : formatMetricDisplayValue(value, unit);
     }
 
     function buildPropertyField(def, value) {
@@ -1947,10 +2119,8 @@
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'prop-color-current';
-        b.style.background = value || '#111827';
-        b.title = `当前颜色：${value || '#111827'}`;
+        updateColorPropertyButton(b, value || '#111827');
         b.dataset.prop = def.key;
-        b.dataset.value = value || '#111827';
         b.addEventListener('click', e => {
           e.stopPropagation();
           openColorPopover(b, def.key, b.dataset.value);
@@ -1962,13 +2132,22 @@
       if (def.type === 'select') {
         input = document.createElement('select');
         input.className = 'metric-input prop-select';
+        if (isMixedPropertyValue(value)) {
+          const mixedOpt = document.createElement('option');
+          mixedOpt.value = MIXED_PROPERTY_VALUE;
+          mixedOpt.textContent = MIXED_PROPERTY_LABEL;
+          mixedOpt.disabled = true;
+          mixedOpt.selected = true;
+          input.appendChild(mixedOpt);
+          input.classList.add('mixed-value');
+        }
         def.options.forEach(([v, text]) => {
           const opt = document.createElement('option');
           opt.value = v;
           opt.textContent = text;
           input.appendChild(opt);
         });
-        input.value = value;
+        if (!isMixedPropertyValue(value)) input.value = value;
         input.addEventListener('change', () => applyPropertyInput(input));
       } else {
         input = document.createElement('input');
@@ -1979,8 +2158,13 @@
         if (def.unit) {
           input.addEventListener('focus', () => {
             input.dataset.changedDuringFocus = '0';
-            input.value = stripMetricDisplayValue(input.value, def.unit);
-            input.select();
+            if (input.dataset.mixedValue === '1') {
+              input.value = '';
+              input.classList.remove('mixed-value');
+            } else {
+              input.value = stripMetricDisplayValue(input.value, def.unit);
+              input.select();
+            }
           });
           input.addEventListener('change', () => {
             input.dataset.changedDuringFocus = '1';
@@ -1995,8 +2179,24 @@
             updateObjectMetrics(true);
           });
         } else {
-          input.value = value;
-          input.addEventListener('change', () => applyPropertyInput(input));
+          if (isMixedPropertyValue(value)) {
+            input.addEventListener('focus', () => {
+              input.dataset.changedDuringFocus = '0';
+              input.value = '';
+              input.classList.remove('mixed-value');
+            });
+            input.addEventListener('blur', () => {
+              if (input.dataset.changedDuringFocus === '1') {
+                input.dataset.changedDuringFocus = '0';
+                return;
+              }
+              updateObjectMetrics(true);
+            });
+          }
+          input.addEventListener('change', () => {
+            input.dataset.changedDuringFocus = '1';
+            applyPropertyInput(input);
+          });
         }
       }
       input.dataset.prop = def.key;
@@ -2020,11 +2220,17 @@
     }
 
     function updateDimensionCustomTextInputState() {
-      const o = getSingleSelectedObject();
-      const disabled = !(o && o.type === 'dimension' && (o.dimensionTextMode || 'auto') === 'custom');
+      const selected = getSelectedObjects();
+      let disabled = true;
+      if (selected.length === 1) {
+        const o = selected[0];
+        disabled = !(o && o.type === 'dimension' && (o.dimensionTextMode || 'auto') === 'custom');
+      } else if (selected.length > 1 && selected.every(o => o.type === 'dimension')) {
+        disabled = !selected.every(o => (o.dimensionTextMode || 'auto') === 'custom');
+      }
       document.querySelectorAll('[data-prop="dimensionCustomText"]').forEach(input => {
         input.disabled = disabled;
-        input.title = disabled ? '自动模式下保留内容，但不参与显示' : '';
+        input.title = disabled ? '自动或混合模式下保留内容，但不参与显示' : '';
       });
     }
 
@@ -2100,12 +2306,12 @@
       pop.setAttribute('aria-hidden', 'true');
     }
 
-    function openMorePopover(anchor, defs, obj) {
+    function openMorePopover(anchor, defs, obj, valueGetter = null) {
       const pop = document.getElementById('propMorePopover');
       if (!pop) return;
       closeColorPopover();
       pop.innerHTML = '';
-      defs.forEach(def => pop.appendChild(buildPropertyField(def, getPropertyValue(obj, def.key))));
+      defs.forEach(def => pop.appendChild(buildPropertyField(def, valueGetter ? valueGetter(def) : getPropertyValue(obj, def.key))));
       updateDimensionCustomTextInputState();
       const r = anchor.getBoundingClientRect();
       const left = Math.min(window.innerWidth - 372, Math.max(8, r.left - 220));
@@ -2116,7 +2322,7 @@
       pop.setAttribute('aria-hidden', 'false');
     }
 
-    function buildMoreButton(moreDefs, obj) {
+    function buildMoreButton(moreDefs, obj, valueGetter = null) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'prop-more-btn';
@@ -2126,16 +2332,18 @@
         e.stopPropagation();
         const pop = document.getElementById('propMorePopover');
         if (pop && !pop.classList.contains('hidden')) closeMorePopover();
-        else openMorePopover(btn, moreDefs, obj);
+        else openMorePopover(btn, moreDefs, obj, valueGetter);
       });
       return btn;
     }
 
     function updateObjectMetrics(forceRebuild = false) {
-      const o = getSingleSelectedObject();
       const fields = document.getElementById('propertyFields');
-      const isBrushToolMetrics = state.tool === 'eraser' && state.selectedIds.length === 0;
-      if ((!o || state.selectedIds.length !== 1) && !isBrushToolMetrics) {
+      const selectedObjects = getSelectedObjects();
+      const isBrushToolMetrics = state.tool === 'eraser' && selectedObjects.length === 0;
+      const isMultiMetrics = selectedObjects.length > 1;
+      const o = selectedObjects.length === 1 ? selectedObjects[0] : null;
+      if (!o && !isBrushToolMetrics && !isMultiMetrics) {
         closeColorPopover();
         closeMorePopover();
         els.objectMetrics.classList.add('property-empty');
@@ -2143,18 +2351,23 @@
         fields.dataset.signature = '';
         return;
       }
-      const defs = isBrushToolMetrics ? getBrushToolPropertyDefs() : getPropertyDefs(o);
+      const defs = isBrushToolMetrics ? getBrushToolPropertyDefs() : isMultiMetrics ? getMultiPropertyDefs(selectedObjects) : getPropertyDefs(o);
       const expanded = els.objectMetrics.classList.contains('expanded');
       const { direct, more } = splitPropertyDefs(defs, expanded);
+      const selectedSignature = selectedObjects.map(obj => obj.id).join('|');
+      const typeSignature = isMultiMetrics ? [...new Set(selectedObjects.map(obj => obj.type === 'erase' ? 'brush' : obj.type))].join('|') : (o ? o.type : 'brush-tool');
+      const disabledSignature = defs.map(d => `${d.key}${d.disabled ? ':disabled' : ''}`).join(',');
       const signature = isBrushToolMetrics
         ? `tool:brush:${expanded ? '2' : '1'}:${direct.map(d=>d.key).join(',')}:${more.map(d=>d.key).join(',')}`
-        : `${o.id}:${o.type}:${expanded ? '2' : '1'}:${direct.map(d=>`${d.key}${d.disabled ? ':disabled' : ''}`).join(',')}:${more.map(d=>`${d.key}${d.disabled ? ':disabled' : ''}`).join(',')}`;
-      const getValue = def => isBrushToolMetrics ? getBrushToolPropertyValue(def.key) : getPropertyValue(o, def.key);
+        : isMultiMetrics
+          ? `multi:${typeSignature}:${selectedSignature}:${expanded ? '2' : '1'}:${disabledSignature}:${direct.map(d=>d.key).join(',')}:${more.map(d=>d.key).join(',')}`
+          : `${o.id}:${o.type}:${expanded ? '2' : '1'}:${direct.map(d=>`${d.key}${d.disabled ? ':disabled' : ''}`).join(',')}:${more.map(d=>`${d.key}${d.disabled ? ':disabled' : ''}`).join(',')}`;
+      const getValue = def => isBrushToolMetrics ? getBrushToolPropertyValue(def.key) : isMultiMetrics ? getMultiPropertyValue(selectedObjects, def) : getPropertyValue(o, def.key);
       els.objectMetrics.classList.remove('property-empty');
       if (forceRebuild || fields.dataset.signature !== signature) {
         fields.innerHTML = '';
         direct.forEach(def => fields.appendChild(buildPropertyField(def, getValue(def))));
-        if (more.length) fields.appendChild(buildMoreButton(more, o));
+        if (more.length) fields.appendChild(buildMoreButton(more, o, getValue));
         fields.dataset.signature = signature;
         closeMorePopover();
         updateDimensionCustomTextInputState();
@@ -2164,16 +2377,27 @@
         const value = getValue(def);
         if (def.type === 'swatches') {
           const btn = fields.querySelector(`[data-prop="${def.key}"]`);
-          if (btn) {
-            btn.dataset.value = value;
-            btn.style.background = value;
-            btn.title = `当前颜色：${value}`;
-          }
+          updateColorPropertyButton(btn, value);
           return;
         }
         const input = fields.querySelector(`[data-prop="${def.key}"]`);
         if (input && document.activeElement !== input) {
-          if (input.tagName === 'SELECT') input.value = value;
+          if (input.tagName === 'SELECT') {
+            if (isMixedPropertyValue(value)) {
+              if (!input.querySelector(`option[value="${MIXED_PROPERTY_VALUE}"]`)) {
+                const mixedOpt = document.createElement('option');
+                mixedOpt.value = MIXED_PROPERTY_VALUE;
+                mixedOpt.textContent = MIXED_PROPERTY_LABEL;
+                mixedOpt.disabled = true;
+                input.insertBefore(mixedOpt, input.firstChild);
+              }
+              input.value = MIXED_PROPERTY_VALUE;
+              input.classList.add('mixed-value');
+            } else {
+              input.value = value;
+              input.classList.remove('mixed-value');
+            }
+          }
           else setPropertyInputDisplayValue(input, value, input.dataset.unit || '');
         }
       });
@@ -2181,14 +2405,17 @@
     }
 
     function applyPropertyInput(input) {
-      const o = getSingleSelectedObject();
+      const selectedObjects = getSelectedObjects();
+      const o = selectedObjects.length === 1 ? selectedObjects[0] : null;
       if (!input) return;
+      if (selectedObjects.length > 1) { applyMultiPropertyInput(input); return; }
       if (!o && state.tool === 'eraser') { applyBrushToolPropertyInput(input); return; }
       if (!o) return;
       const key = input.dataset.prop;
       const raw = input.dataset.value ?? input.value;
+      if (isMixedPropertyValue(raw) || String(raw ?? '').trim() === MIXED_PROPERTY_LABEL) { updateObjectMetrics(true); return; }
       const n = Number(raw);
-      if (['length','angle','width','height','lineWidth','wallThickness','fontSize','arrowSize','fillOpacity','brushObjectWidth','brushObjectOpacity'].includes(key) && !Number.isFinite(n)) { updateObjectMetrics(true); return; }
+      if (isNumericPropertyKey(key) && !Number.isFinite(n)) { updateObjectMetrics(true); return; }
       saveHistory();
       if (key === 'length') {
         if (n > 0 && isEditableLineObject(o)) {
@@ -2212,50 +2439,19 @@
         }
       } else if (key === 'text') {
         o.text = String(raw).trim() || '文字';
-      } else if (key === 'color') {
-        o.color = raw;
-      } else if (key === 'lineWidth') {
-        o.lineWidth = Math.max(1, n);
-      } else if (key === 'brushObjectWidth') {
-        o.width = Math.max(1, n);
-      } else if (key === 'brushObjectOpacity') {
-        o.opacity = Math.max(0, Math.min(100, n)) / 100;
-      } else if (key === 'fillOpacity') {
-        o.fillOpacity = Math.max(0, Math.min(100, n)) / 100;
-      } else if (key === 'wallThickness') {
-        o.wallThickness = Math.max(4, n);
-      } else if (key === 'wallStyle') {
-        o.wallStyle = raw;
-      } else if (key === 'openingThicknessMode') {
-        o.openingThicknessMode = raw;
-        o.openingUseWallThickness = raw === 'wall';
-        if (raw === 'wall') o.wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 10) || 10;
-      } else if (key === 'doorSwing') {
-        o.doorSwing = raw === 'left' ? 'left' : 'right';
-        o.swing = o.doorSwing;
-      } else if (key === 'fontSize') {
-        o.fontSize = Math.max(8, n);
-      } else if (key === 'arrowMode') {
-        o.arrowMode = raw;
-      } else if (key === 'arrowSize') {
-        o.arrowSize = Math.max(4, n);
-      } else if (key === 'dimensionTextMode') {
-        o.dimensionTextMode = raw === 'custom' ? 'custom' : 'auto';
-      } else if (key === 'dimensionCustomText') {
-        o.dimensionCustomText = String(raw || '').trim();
-      } else if (key === 'dimensionLabelMode') {
-        o.dimensionLabelMode = ['inline','above','below'].includes(raw) ? raw : 'inline';
-      } else if (key === 'layer') {
-        o.layer = raw;
+      } else {
+        applyObjectProperty(o, key, raw, n);
       }
       draw();
       updateObjectMetrics(key === 'dimensionTextMode');
       updateDimensionCustomTextInputState();
+      markProjectDirty();
     }
 
     function applyBrushToolPropertyInput(input) {
       const key = input.dataset.prop;
       const raw = input.dataset.value ?? input.value;
+      if (isMixedPropertyValue(raw) || String(raw ?? '').trim() === MIXED_PROPERTY_LABEL) { updateObjectMetrics(true); return; }
       const n = Number(raw);
       if (key === 'brushColor') {
         state.brushColor = raw || '#ffffff';
