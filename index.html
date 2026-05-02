@@ -950,6 +950,390 @@
       opacity: .45;
       cursor: default;
     }
+    .text-dialog-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #475569;
+    }
+    .text-align-segment {
+      display: inline-flex;
+      gap: 0;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .text-align-segment button {
+      min-height: 30px;
+      padding: 0 10px;
+      border: 0;
+      border-right: 1px solid #e2e8f0;
+      background: #fff;
+      color: #0f172a;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .text-align-segment button:last-child {
+      border-right: 0;
+    }
+    .text-align-segment button.active {
+      background: #1d4ed8;
+      color: #fff;
+      font-weight: 700;
+    }
+    .text-dialog-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #475569;
+      flex-wrap: wrap;
+    }
+    .text-dialog-row-label {
+      width: 64px;
+      min-width: 64px;
+      font-weight: 700;
+      color: #475569;
+    }
+    .text-style-segment {
+      display: inline-flex;
+      gap: 0;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      overflow: hidden;
+      background: #fff;
+      flex-wrap: nowrap;
+    }
+    .text-style-segment button {
+      min-height: 30px;
+      padding: 0 10px;
+      border: 0;
+      border-right: 1px solid #e2e8f0;
+      background: #fff;
+      color: #0f172a;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .text-style-segment button:last-child {
+      border-right: 0;
+    }
+    .text-style-segment button.active {
+      background: #1d4ed8;
+      color: #fff;
+      font-weight: 700;
+    }
+    .text-style-swatch {
+      width: 14px;
+      height: 14px;
+      border: 1px solid #94a3b8;
+      border-radius: 4px;
+      display: inline-block;
+      background: #fff;
+    }
+    .text-style-swatch.none {
+      background: linear-gradient(45deg, #fff 0 42%, #ef4444 42% 58%, #fff 58% 100%);
+    }
+    .text-custom-palette {
+      display: none;
+      grid-template-columns: repeat(8, 22px);
+      gap: 6px;
+      margin: -2px 0 10px 72px;
+    }
+    .text-custom-palette.visible {
+      display: grid;
+    }
+    .text-custom-palette button {
+      width: 22px;
+      height: 22px;
+      min-width: 22px;
+      min-height: 22px;
+      padding: 0;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      cursor: pointer;
+    }
+    .text-custom-palette button.active {
+      border-color: #1d4ed8;
+      box-shadow: 0 0 0 2px rgba(37,99,235,.22);
+    }
+
+    .text-dialog-box-v95 {
+      width: min(560px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      overflow: visible;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(15,23,42,.28);
+      padding: 18px;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      color: #111827;
+      position: fixed;
+      z-index: 20001;
+    }
+    .text-dialog-title-v95 {
+      font-size: 15px;
+      font-weight: 800;
+      margin: 0;
+      padding: 0;
+      cursor: move;
+      user-select: none;
+      touch-action: none;
+      line-height: 1;
+    }
+    .text-dialog-titlebar-v97 {
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: -18px -18px 14px;
+      padding: 0 14px 0 16px;
+      border-bottom: 1px solid #e5ebf3;
+      background: #fbfdff;
+      border-radius: 16px 16px 0 0;
+    }
+    .text-dialog-close-v97 {
+      width: 28px;
+      height: 28px;
+      border: 1px solid #dbe3ee;
+      border-radius: 8px;
+      background: #fff;
+      color: #64748b;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .text-dialog-close-v97:hover {
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .text-dialog-section-v97 {
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #e5ebf3;
+    }
+    .text-dialog-content-label-v97 {
+      font-size: 12px;
+      color: #64748b;
+      margin: 0 0 6px;
+    }
+    .text-dialog-footer-v97 {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 12px -18px -18px;
+      padding: 10px 16px 14px;
+      border-top: 1px solid #e5ebf3;
+      background: #fbfdff;
+      border-radius: 0 0 16px 16px;
+    }
+    .text-dialog-size-input-v97 {
+      width: 132px;
+      min-width: 132px;
+      max-width: 132px;
+      flex: 0 0 132px;
+      height: 30px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 0 9px;
+      font-size: 13px;
+      color: #0f172a;
+      background: #fff;
+      text-align: center;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .text-dialog-size-input-v97:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 2px rgba(147,197,253,.25);
+    }
+    .text-align-segment-v98 button {
+      width: 64px;
+      min-width: 64px;
+      text-align: center;
+      justify-content: center;
+    }
+    .text-style-group-v102 .text-style-btn-v96 {
+      width: 40px;
+      min-width: 40px;
+      flex: 0 0 40px;
+      box-sizing: border-box;
+    }
+    .text-fonttype-segment-v102 button {
+      width: 63px;
+      min-width: 63px;
+      flex: 0 0 63px;
+      text-align: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    .text-align-segment-v102 button {
+      width: 63px;
+      min-width: 63px;
+      flex: 0 0 63px;
+      text-align: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    .text-dialog-style-row-v95 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #475569;
+      flex-wrap: nowrap;
+    }
+    .text-dialog-style-row-v95 .row-label {
+      width: 64px;
+      min-width: 64px;
+      font-weight: 700;
+      color: #475569;
+    }
+    .text-swatch-segment-v95 {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+    .text-swatch-btn-v95 {
+      width: 40px;
+      min-width: 40px;
+      flex: 0 0 40px;
+      height: 30px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      border-radius: 8px;
+      padding: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    .text-swatch-btn-v95.active {
+      border-color: #1d4ed8;
+      box-shadow: 0 0 0 2px rgba(37,99,235,.20);
+    }
+    .text-swatch-btn-v95:hover {
+      border-color: #93c5fd;
+      background: #f8fafc;
+    }
+    .text-swatch-chip-v95 {
+      width: 20px;
+      height: 18px;
+      border: 1px solid #94a3b8;
+      border-radius: 5px;
+      display: block;
+      background: #fff;
+      position: relative;
+    }
+    .text-swatch-chip-v95.none::after {
+      content: "";
+      position: absolute;
+      left: 1px;
+      top: 8px;
+      width: 21px;
+      height: 2px;
+      background: #dc2626;
+      transform: rotate(-38deg);
+      transform-origin: center;
+      border-radius: 2px;
+    }
+
+    .text-swatch-chip-v95.none::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border: 1px solid #94a3b8;
+      border-radius: 5px;
+      pointer-events: none;
+    }
+    .text-dialog-style-row-v95 .row-label {
+      width: 68px;
+      min-width: 68px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #475569;
+      text-align: left;
+    }
+    .text-style-btn-v96 {
+      min-width: 34px;
+      height: 30px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      border-radius: 8px;
+      padding: 0;
+      cursor: pointer;
+      color: #0f172a;
+      font-size: 14px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    .text-style-btn-v96.active {
+      border-color: #1d4ed8;
+      background: #1d4ed8;
+      color: #fff;
+      box-shadow: 0 0 0 2px rgba(37,99,235,.16);
+      font-weight: 800;
+    }
+    .text-style-btn-v96.bold {
+      font-weight: 900;
+    }
+    .text-style-btn-v96.italic {
+      font-style: italic;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+    .text-style-btn-v96.underline {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      font-weight: 700;
+    }
+    .text-floating-palette-v95 {
+      position: fixed;
+      z-index: 25000;
+      display: grid;
+      grid-template-columns: repeat(8, 24px);
+      gap: 6px;
+      padding: 8px;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      box-shadow: 0 18px 44px rgba(15,23,42,.20);
+    }
+    .text-floating-palette-v95.hidden {
+      display: none;
+    }
+    .text-floating-palette-v95 button {
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      min-height: 24px;
+      border-radius: 7px;
+      border: 1px solid #cbd5e1;
+      padding: 0;
+      cursor: pointer;
+    }
+    .text-floating-palette-v95 button.active {
+      border-color: #1d4ed8;
+      box-shadow: 0 0 0 2px rgba(37,99,235,.22);
+    }
     .canvas-zoom {
       display: inline-flex;
       align-items: center;
@@ -1150,8 +1534,12 @@
             <input id="fontSize" type="number" min="8" max="96" value="20" />
           </div>
           <div class="row">
-            <label>文字内容</label>
-            <input id="textInput" type="text" value="文本" placeholder="输入文字标签" />
+            <label>字体类型</label>
+            <select id="textFontType">
+              <option value="default" selected>默认</option>
+              <option value="monospace">等宽</option>
+            </select>
+            <input id="textInput" type="hidden" value="文本" />
           </div>
           <button id="editTextBtn" class="full">编辑选中文字</button>
           <div class="row">
@@ -1380,6 +1768,9 @@
             <div>拖动方 / 圆角点时，按 Shift 可保持比例</div>
             <div>绘制区域时，按 Enter 完成闭合；按 Esc 取消绘制</div>
             <div>拖动节点或控制点时，按 Esc 可取消本次调整</div>
+            <div>拖动对象时，Shift 可锁定水平 / 垂直；Alt / Option 可复制拖动</div>
+            <div>Alt / Option + Shift 拖动：复制并水平 / 垂直约束移动</div>
+            <div>文字编辑框：Enter 换行；Ctrl / Command + Enter 确定；Esc 取消</div>
             <div>方向键微调 1 px；Shift+方向键移动 10 px，不受吸附限制</div>
             <div>Ctrl+C / Ctrl+V 复制粘贴</div>
             <div>Ctrl+G 组合；Ctrl+Shift+G 取消组合</div>
@@ -1406,7 +1797,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v91';
+    const APP_VERSION = 'v105';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1438,6 +1829,10 @@
       resizeAreaVertexIndex: null,
       resizingObjectId: null,
       dragHistorySaved: false,
+      dragCopied: false,
+      dragCopySourceIds: [],
+      dragCopyCreatedIds: [],
+      dragGuide: null,
       resizeHistorySaved: false,
       start: null,
       current: null,
@@ -1491,6 +1886,7 @@
       unitName: document.getElementById('unitName'),
       scaleFactor: document.getElementById('scaleFactor'),
       textInput: document.getElementById('textInput'),
+      textFontType: document.getElementById('textFontType'),
       exportFormat: document.getElementById('exportFormat'),
       exportScale: document.getElementById('exportScale'),
       exportBackground: document.getElementById('exportBackground'),
@@ -1866,15 +2262,107 @@
       return text.split('\n').map(line => line.trim()).filter(Boolean).join(' / ') || text.replace(/\n+/g, ' / ');
     }
 
-    function measureTextBlock(text, fontSize) {
+    function measureTextBlock(text, fontSize, bold = false, italic = false, fontType = 'default') {
       const size = fontSize || 20;
       const lines = getTextLines(text);
       ctx.save();
-      ctx.font = `${size}px Arial, Microsoft YaHei, sans-serif`;
+      ctx.font = getTextFontString(size, bold, italic, fontType);
       const width = Math.max(24, ...lines.map(line => ctx.measureText(line || ' ').width));
       ctx.restore();
       const lineHeight = getTextLineHeight(size);
       return { width, height: lineHeight * lines.length, lineHeight, lines };
+    }
+
+    function normalizeTextAlign(value) {
+      return ['left', 'center', 'right'].includes(value) ? value : 'left';
+    }
+
+    function normalizeTextStyleFlag(value) {
+      return value === true || value === 'true' || value === 1 || value === '1';
+    }
+
+    function normalizeFontType(value) {
+      return value === 'monospace' ? 'monospace' : 'default';
+    }
+
+    function getFontFamilyByType(fontType) {
+      return normalizeFontType(fontType) === 'monospace'
+        ? '"SFMono-Regular", Menlo, Consolas, "Liberation Mono", "Courier New", monospace'
+        : PDF_TEXT_FONT_FAMILY;
+    }
+
+    function getTextFontString(fontSize = 20, bold = false, italic = false, fontType = 'default') {
+      const parts = [];
+      if (italic) parts.push('italic');
+      if (bold) parts.push('700');
+      parts.push(`${fontSize || 20}px`);
+      parts.push(getFontFamilyByType(fontType));
+      return parts.join(' ');
+    }
+
+    function canvasTextAlignFromBlockAlign(value) {
+      const align = normalizeTextAlign(value);
+      if (align === 'center') return 'center';
+      if (align === 'right') return 'right';
+      return 'left';
+    }
+
+    function svgTextAnchorFromBlockAlign(value) {
+      const align = normalizeTextAlign(value);
+      if (align === 'center') return 'middle';
+      if (align === 'right') return 'end';
+      return 'start';
+    }
+
+    function normalizeHexColor(value, fallback = '#000000') {
+      const text = String(value || '').trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(text)) return text.toLowerCase();
+      return fallback;
+    }
+
+    function normalizeTextBackgroundMode(value) {
+      return ['none', 'white', 'yellow', 'custom'].includes(value) ? value : 'none';
+    }
+
+    function getTextBackgroundColor(o) {
+      const mode = normalizeTextBackgroundMode(o && o.textBackgroundMode);
+      if (mode === 'white') return '#ffffff';
+      if (mode === 'yellow') return '#ffff00';
+      if (mode === 'custom') return normalizeHexColor(o.textBackgroundColor, '#ffffff');
+      return null;
+    }
+
+    function getTextBackgroundPadding(fontSize = 20) {
+      const size = fontSize || 20;
+      // Canvas 的 textBaseline='top' 与字体真实可见区域并不完全重合；
+      // lineHeight 还会在下方留下额外视觉空间。这里采用视觉补偿：
+      // 上方留白略多、下方留白略少，让黑色/彩色文字背景看起来上下更均衡。
+      return {
+        x: Math.max(5, Math.round(size * 0.32)),
+        top: Math.max(5, Math.round(size * 0.28)),
+        bottom: Math.max(2, Math.round(size * 0.06))
+      };
+    }
+
+    function getTextBackgroundBox(o) {
+      const fontSize = o.fontSize || 20;
+      const m = measureTextBlock(o.text || '文字', fontSize, !!o.textBold, !!o.textItalic, o.fontType);
+      const pad = getTextBackgroundPadding(fontSize);
+      return {
+        x: o.x - pad.x,
+        y: o.y - pad.top,
+        w: m.width + pad.x * 2,
+        h: m.height + pad.top + pad.bottom
+      };
+    }
+
+    function getTextAnchorPoint(o) {
+      const m = measureTextBlock(o.text || '文字', o.fontSize || 20, !!o.textBold, !!o.textItalic, o.fontType);
+      const align = normalizeTextAlign(o.textAlign || 'left');
+      let x = o.x;
+      if (align === 'center') x = o.x + m.width / 2;
+      else if (align === 'right') x = o.x + m.width;
+      return { x, y: o.y, width: m.width, height: m.height, align };
     }
 
     function currentStyle() {
@@ -1883,6 +2371,7 @@
         lineWidth: getInputNumber(els.lineWidth, 2) || 2,
         areaOpacity: getDefaultAreaFillOpacity(),
         fontSize: getInputNumber(els.fontSize, 20) || 20,
+        fontType: normalizeFontType(els.textFontType ? els.textFontType.value : 'default'),
         arrowMode: els.arrowMode.value || 'end',
         arrowSize: getInputNumber(els.arrowSize, 14) || 14,
         dimensionLabelMode: els.dimensionLabelMode.value || 'inline',
@@ -1926,6 +2415,7 @@
         if (obj.id && state.selectedIds.includes(obj.id) && obj.type !== 'erase') drawSelection(ctx, obj);
       });
       if (state.boxSelecting && state.selectionBox) drawSelectionBox(ctx);
+      drawShiftDragGuide(ctx);
       if (state.tool === 'eraser' && (state.current || state.eraserPreview)) drawBrushCursor(ctx);
       drawSnapIndicator(ctx);
       ctx.restore();
@@ -2037,7 +2527,9 @@
         defs.push({ key:'width', label:'宽', type:'number', unit:'px' });
         defs.push({ key:'height', label:'高', type:'number', unit:'px' });
       }
-      if (o.type === 'text') defs.push({ key:'textPreview', label:'内容', type:'readonlyText' });
+      if (o.type === 'text') {
+        defs.push({ key:'textPreview', label:'内容', type:'readonlyText' });
+      }
       defs.push({ key:'color', label:'颜色', type:'swatches' });
       if (['wall','line','arrow','rect','ellipse','dimension','door','window','area'].includes(o.type)) defs.push({ key:'lineWidth', label:'线宽', type:'number', unit:'px' });
       if (o.type === 'area') defs.push({ key:'fillOpacity', label:'透明', type:'number', unit:'%' });
@@ -2053,6 +2545,7 @@
         defs.push({ key:'dimensionCustomText', label:'内容', type:'text', disabled: !customTextEnabled, disabledTitle: '自动模式下保留内容，但不参与显示' });
       }
       if (['text','dimension'].includes(o.type)) defs.push({ key:'fontSize', label:'字号', type:'number', unit:'px' });
+      if (o.type === 'text') defs.push({ key:'fontType', label:'类型', type:'select', options:[['default','默认'],['monospace','等宽']], title:'字体类型' });
       if (o.type === 'arrow') {
         defs.push({ key:'arrowSize', label:'箭头', type:'number', unit:'px' });
         defs.push({ key:'arrowMode', label:'类型', type:'select', options:[['end','单箭头'],['both','双箭头']] });
@@ -2149,7 +2642,10 @@
         defs.push({ key:'arrowSize', label:'箭头', type:'number', unit:'px' });
         defs.push({ key:'dimensionLabelMode', label:'位置', type:'select', options:[['inline','压线'],['above','上方'],['below','下方']] });
       }
-      if (type === 'text') defs.push({ key:'fontSize', label:'字号', type:'number', unit:'px' });
+      if (type === 'text') {
+        defs.push({ key:'fontSize', label:'字号', type:'number', unit:'px' });
+        defs.push({ key:'fontType', label:'类型', type:'select', options:[['default','默认'],['monospace','等宽']], title:'字体类型' });
+      }
       return defs;
     }
 
@@ -2172,6 +2668,7 @@
       if (key === 'openingThicknessMode') return o.type === 'door' || o.type === 'window';
       if (key === 'doorSwing') return o.type === 'door';
       if (key === 'fontSize') return o.type === 'text' || o.type === 'dimension';
+      if (key === 'fontType') return o.type === 'text';
       if (key === 'arrowMode') return o.type === 'arrow';
       if (key === 'arrowSize') return o.type === 'arrow' || o.type === 'dimension';
       if (key === 'dimensionTextMode' || key === 'dimensionCustomText' || key === 'dimensionLabelMode') return o.type === 'dimension';
@@ -2203,6 +2700,8 @@
         o.swing = o.doorSwing;
       } else if (key === 'fontSize') {
         o.fontSize = Math.max(8, n);
+      } else if (key === 'fontType') {
+        o.fontType = normalizeFontType(raw);
       } else if (key === 'arrowMode') {
         o.arrowMode = raw;
       } else if (key === 'arrowSize') {
@@ -2374,6 +2873,7 @@
       const label = document.createElement('span');
       label.className = 'metric-label';
       label.textContent = def.label;
+      if (def.title) label.title = def.title;
       group.appendChild(label);
       let input;
       if (def.type === 'swatches') {
@@ -3066,7 +3566,18 @@
         const b = getObjectBox(o);
         items = [{ kind: 'ellipse', cx: b.x + b.w / 2, cy: b.y + b.h / 2, rx: Math.abs(b.w / 2), ry: Math.abs(b.h / 2), fill: null, stroke: color, lineWidth: width }];
       } else if (o.type === 'dimension') items = buildDimensionRenderItems(o);
-      else if (o.type === 'text') items = [renderText(o.text || '文字', o.x, o.y, color, o.fontSize || 20, { textAlign: 'start', textBaseline: 'top' })];
+      else if (o.type === 'text') {
+        const fontSize = o.fontSize || 20;
+        const anchor = getTextAnchorPoint(o);
+        const textItems = [];
+        const bgColor = getTextBackgroundColor(o);
+        if (bgColor) {
+          const bgBox = getTextBackgroundBox(o);
+          textItems.push(renderRect(bgBox.x, bgBox.y, bgBox.w, bgBox.h, bgColor, null, 0));
+        }
+        textItems.push(renderText(o.text || '文字', anchor.x, anchor.y, color, fontSize, { textAlign: canvasTextAlignFromBlockAlign(o.textAlign), textBaseline: 'top', fontWeight: o.textBold ? '700' : '400', fontStyle: o.textItalic ? 'italic' : 'normal', textUnderline: !!o.textUnderline, fontType: normalizeFontType(o.fontType) }));
+        items = textItems;
+      }
       else if (o.type === 'door') items = buildDoorRenderItems(o);
       else if (o.type === 'window') items = buildWindowRenderItems(o);
       else if (o.type === 'brush' || o.type === 'erase') items = [renderPolyline(o.points || [], o.color || '#ffffff', o.width || 22, 'round', 'round', { opacity: Number.isFinite(Number(o.opacity)) ? Math.max(0, Math.min(1, Number(o.opacity))) : 1 })];
@@ -3188,7 +3699,7 @@
         c.stroke();
       } else if (item.kind === 'text') {
         c.fillStyle = item.fill || '#111827';
-        c.font = `${item.fontSize || 20}px ${PDF_TEXT_FONT_FAMILY}`;
+        c.font = getTextFontString(item.fontSize || 20, item.fontWeight === '700', item.fontStyle === 'italic', item.fontType || 'default');
         c.textAlign = item.textAlign || 'start';
         const baseline = item.textBaseline || 'top';
         const lines = getTextLines(item.text || '');
@@ -3197,7 +3708,26 @@
         if (baseline === 'middle') y -= ((lines.length - 1) * lineHeight) / 2;
         else if (baseline === 'bottom') y -= (lines.length - 1) * lineHeight;
         c.textBaseline = baseline;
-        lines.forEach((line, index) => c.fillText(line || ' ', item.x || 0, y + index * lineHeight));
+        lines.forEach((line, index) => {
+          const lineText = line || ' ';
+          const lineY = y + index * lineHeight;
+          c.fillText(lineText, item.x || 0, lineY);
+          if (item.textUnderline) {
+            const metrics = c.measureText(lineText);
+            let startX = item.x || 0;
+            if (c.textAlign === 'center') startX -= metrics.width / 2;
+            else if (c.textAlign === 'right' || c.textAlign === 'end') startX -= metrics.width;
+            const underlineY = lineY + (item.fontSize || 20) * 1.08;
+            c.save();
+            c.strokeStyle = item.fill || '#111827';
+            c.lineWidth = Math.max(1, (item.fontSize || 20) / 16);
+            c.beginPath();
+            c.moveTo(startX, underlineY);
+            c.lineTo(startX + metrics.width, underlineY);
+            c.stroke();
+            c.restore();
+          }
+        });
       }
       if (transformed) c.restore();
       c.setLineDash([]);
@@ -3274,7 +3804,10 @@
         if (baseline === 'middle') y -= ((lines.length - 1) * lineHeight) / 2;
         else if (baseline === 'bottom') y -= (lines.length - 1) * lineHeight;
         const tspans = lines.map((line, index) => `<tspan x="${svgNum(item.x || 0)}" dy="${index === 0 ? 0 : svgNum(lineHeight)}">${escapeSvg(line || ' ')}</tspan>`).join('');
-        return `<text x="${svgNum(item.x || 0)}" y="${svgNum(y)}" fill="${escapeSvg(item.fill || '#111827')}" font-size="${svgNum(item.fontSize || 20)}" font-family="${escapeSvg(PDF_TEXT_FONT_FAMILY)}" text-anchor="${svgTextAnchor(item.textAlign)}" dominant-baseline="${svgTextBaseline(baseline)}"${transform}>${tspans}</text>`;
+        const fontWeight = item.fontWeight === '700' ? ' font-weight="700"' : '';
+        const fontStyle = item.fontStyle === 'italic' ? ' font-style="italic"' : '';
+        const decoration = item.textUnderline ? ' text-decoration="underline"' : '';
+        return `<text x="${svgNum(item.x || 0)}" y="${svgNum(y)}" fill="${escapeSvg(item.fill || '#111827')}" font-size="${svgNum(item.fontSize || 20)}" font-family="${escapeSvg(getFontFamilyByType(item.fontType || 'default'))}"${fontWeight}${fontStyle}${decoration} text-anchor="${svgTextAnchor(item.textAlign)}" dominant-baseline="${svgTextBaseline(baseline)}"${transform}>${tspans}</text>`;
       }
       return '';
     }
@@ -3450,9 +3983,10 @@
       c.setLineDash([]);
       const r = Math.max(4 / state.zoom, 3);
       points.forEach((pt, i) => {
+        const isStartPoint = i === 0 && points.length >= 3;
         c.beginPath();
-        c.fillStyle = i === 0 && points.length >= 3 ? '#eff6ff' : '#ffffff';
-        c.strokeStyle = color;
+        c.fillStyle = isStartPoint ? '#fff7ed' : '#ffffff';
+        c.strokeStyle = isStartPoint ? '#f97316' : color;
         c.lineWidth = 1.5 / state.zoom;
         c.arc(pt.x, pt.y, r, 0, Math.PI * 2);
         c.fill();
@@ -3501,7 +4035,15 @@
       }
       if(o.type==='area') { const pts=Array.isArray(o.points)?o.points:[]; if(!pts.length)return {x:0,y:0,w:0,h:0}; const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y); const pad=Math.max(6,(o.lineWidth||2)+4); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys); return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
       if(o.type==='brush'||o.type==='erase') { const pts=Array.isArray(o.points)?o.points:[]; if(!pts.length)return {x:0,y:0,w:0,h:0}; const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y); const pad=Math.max(6,(o.width||22)/2+4); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys); return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
-      if(o.type==='text') { const m = measureTextBlock(o.text || '文字', o.fontSize || 20); return {x:o.x,y:o.y,w:m.width,h:m.height}; }
+      if(o.type==='text') {
+        const fontSize = o.fontSize || 20;
+        const m = measureTextBlock(o.text || '文字', fontSize, !!o.textBold, !!o.textItalic, o.fontType);
+        const bgColor = getTextBackgroundColor(o);
+        if (bgColor) {
+          return getTextBackgroundBox(o);
+        }
+        return {x:o.x,y:o.y,w:m.width,h:m.height};
+      }
       if(o.type==='door') {
         const a = Math.atan2(o.y2-o.y1, o.x2-o.x1);
         const len = Math.hypot(o.x2-o.x1, o.y2-o.y1);
@@ -3646,6 +4188,29 @@
       c.restore();
     }
     function drawSelectionBox(c){ const b=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); c.save(); c.fillStyle='rgba(37,99,235,.08)'; c.strokeStyle='#2563eb'; c.setLineDash([5,4]); c.lineWidth=1.5/state.zoom; c.fillRect(b.x,b.y,b.w,b.h); c.strokeRect(b.x,b.y,b.w,b.h); c.restore(); }
+    function drawShiftDragGuide(c) {
+      const g = state.dragGuide;
+      if (!g || !state.dragging) return;
+      const x1 = -state.panX / state.zoom;
+      const y1 = -state.panY / state.zoom;
+      const x2 = (canvas.clientWidth - state.panX) / state.zoom;
+      const y2 = (canvas.clientHeight - state.panY) / state.zoom;
+      c.save();
+      c.setLineDash([8 / state.zoom, 6 / state.zoom]);
+      c.strokeStyle = 'rgba(249,115,22,.95)';
+      c.lineWidth = Math.max(1.4 / state.zoom, 0.8);
+      c.beginPath();
+      if (g.axis === 'h') {
+        c.moveTo(x1, g.y);
+        c.lineTo(x2, g.y);
+      } else {
+        c.moveTo(g.x, y1);
+        c.lineTo(g.x, y2);
+      }
+      c.stroke();
+      c.restore();
+    }
+
     function drawBrushCursor(c, point = state.current || state.eraserPreview){
       if (!point) return;
       c.save();
@@ -3838,6 +4403,82 @@
     function restoreDragOriginals(){ if(!state.dragOriginals)return; state.objects=state.objects.map(o=>state.dragOriginals.has(o.id)?JSON.parse(JSON.stringify(state.dragOriginals.get(o.id))):o); }
     function moveObject(o,dx,dy){ if(o.type==='text'){o.x+=dx;o.y+=dy;} else if(o.type==='erase'||o.type==='brush'||o.type==='area'){(o.points||[]).forEach(p=>{p.x+=dx;p.y+=dy;});} else {o.x1+=dx;o.y1+=dy;o.x2+=dx;o.y2+=dy;} }
 
+    function constrainDeltaToAxis(dx, dy) {
+      return Math.abs(dx) >= Math.abs(dy) ? { dx, dy: 0 } : { dx: 0, dy };
+    }
+
+    function duplicateSelectedForDrag() {
+      const sourceIds = [...(state.selectedIds || [])];
+      if (!sourceIds.length) return false;
+      const sourceSet = new Set(sourceIds);
+      const groupMap = {};
+      const clones = [];
+      state.objects.forEach(src => {
+        if (!sourceSet.has(src.id)) return;
+        const clone = JSON.parse(JSON.stringify(src));
+        const oldGroupId = clone.groupId;
+        clone.id = uid();
+        if (oldGroupId) {
+          if (!groupMap[oldGroupId]) groupMap[oldGroupId] = uid();
+          clone.groupId = groupMap[oldGroupId];
+        }
+        clones.push(clone);
+      });
+      if (!clones.length) return false;
+      state.dragCopySourceIds = sourceIds;
+      state.dragCopyCreatedIds = clones.map(o => o.id);
+      state.objects.push(...clones);
+      state.selectedIds = state.dragCopyCreatedIds.slice();
+      state.dragOriginals = captureSelectedOriginals();
+      state.dragCopied = true;
+      return true;
+    }
+
+    function cancelDragCopyIfNeeded() {
+      if (!state.dragCopied) return;
+      const created = new Set(state.dragCopyCreatedIds || []);
+      state.objects = state.objects.filter(o => !created.has(o.id));
+      state.selectedIds = [...(state.dragCopySourceIds || [])];
+      state.dragCopied = false;
+      state.dragCopySourceIds = [];
+      state.dragCopyCreatedIds = [];
+      state.dragOriginals = captureSelectedOriginals();
+    }
+
+    function getDragOriginalBounds() {
+      if (!state.dragOriginals || !state.dragOriginals.size) return null;
+      const boxes = [];
+      state.dragOriginals.forEach(o => boxes.push(getObjectBox(o)));
+      if (!boxes.length) return null;
+      const left = Math.min(...boxes.map(b => b.x));
+      const right = Math.max(...boxes.map(b => b.x + b.w));
+      const top = Math.min(...boxes.map(b => b.y));
+      const bottom = Math.max(...boxes.map(b => b.y + b.h));
+      return { x: left, y: top, w: right - left, h: bottom - top };
+    }
+
+    function updateShiftDragGuide(dx, dy) {
+      const distance = Math.hypot(dx, dy);
+      if (!state.dragging || distance < 4) {
+        state.dragGuide = null;
+        return;
+      }
+      const b = getDragOriginalBounds();
+      if (!b) {
+        state.dragGuide = null;
+        return;
+      }
+      state.dragGuide = {
+        axis: Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v',
+        x: b.x + b.w / 2,
+        y: b.y + b.h / 2
+      };
+    }
+
+    function clearDragGuide() {
+      state.dragGuide = null;
+    }
+
     const activePointers = new Map();
     const touchInteraction = {
       primaryId: null,
@@ -3909,6 +4550,10 @@
       state.resizeAreaVertexIndex = null;
       state.resizingObjectId = null;
       state.dragHistorySaved = false;
+      state.dragCopied = false;
+      state.dragCopySourceIds = [];
+      state.dragCopyCreatedIds = [];
+      state.dragGuide = null;
       state.resizeHistorySaved = false;
       state.start = null;
       state.current = null;
@@ -3974,7 +4619,7 @@
         return;
       }
       if(state.tool==='text'){
-        addObject({type:'text',x:p.x,y:p.y,text:normalizeTextContent(els.textInput.value, '文字'),layer:'text'});
+        addObject({type:'text',x:p.x,y:p.y,text:normalizeTextContent(els.textInput.value, '文字'),textAlign:'left',textBackgroundMode:'none',textBackgroundColor:'#ffffff',textBold:false,textItalic:false,textUnderline:false,fontType:normalizeFontType(els.textFontType ? els.textFontType.value : 'default'),layer:'text'});
         updateCursor(e);
         return;
       }
@@ -4007,9 +4652,15 @@
         const found=hitTest(raw);
         if(found){
           let ids=expandSelectionWithGroup(found.id);
-          if(e.shiftKey || touchInteraction.multiSelectMode){
+          if(touchInteraction.multiSelectMode){
             const set=new Set(state.selectedIds);
             ids.forEach(id=>set.has(id)?set.delete(id):set.add(id));
+            state.selectedIds=[...set];
+          }
+          else if(e.shiftKey){
+            const set=new Set(state.selectedIds);
+            const alreadySelected = ids.some(id => set.has(id));
+            if (!alreadySelected) ids.forEach(id => set.add(id));
             state.selectedIds=[...set];
           }
           else if(!state.selectedIds.includes(found.id)) state.selectedIds=ids;
@@ -4017,6 +4668,9 @@
           if(state.selectedIds.length){
             state.dragging=true;
             state.dragHistorySaved=false;
+            state.dragCopied=false;
+            state.dragCopySourceIds=[];
+            state.dragCopyCreatedIds=[];
             state.dragStartRaw=raw;
             state.dragOriginals=captureSelectedOriginals();
           }
@@ -4116,11 +4770,30 @@
       if(state.boxSelecting&&state.selectionBox){ state.selectionBox.x2=raw.x; state.selectionBox.y2=raw.y; const box=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); state.selectedIds=state.objects.filter(o=>o.type!=='erase'&&isLayerVisible(o)&&boxIntersectsObject(box,o)).map(o=>o.id); draw(); updateCursor(e); return; }
       if(state.dragging&&state.selectedIds.length){
         let dx=raw.x-state.dragStartRaw.x,dy=raw.y-state.dragStartRaw.y;
-        if(isGridSnapEnabled()){ const g=getInputNumber(els.gridSize, 20)||20; dx=Math.round(dx/g)*g; dy=Math.round(dy/g)*g; }
+        const hadGuide = !!state.dragGuide;
+        if(e.shiftKey){
+          const locked = constrainDeltaToAxis(dx, dy);
+          dx = locked.dx;
+          dy = locked.dy;
+          updateShiftDragGuide(dx, dy);
+        } else {
+          clearDragGuide();
+          if(isGridSnapEnabled()){
+            const g=getInputNumber(els.gridSize, 20)||20;
+            dx=Math.round(dx/g)*g;
+            dy=Math.round(dy/g)*g;
+          }
+        }
         if(dx !== 0 || dy !== 0){
-          if(!state.dragHistorySaved){ saveHistory(); state.dragHistorySaved = true; }
+          if(!state.dragHistorySaved){
+            saveHistory();
+            if(e.altKey && !isTouchLike(e)) duplicateSelectedForDrag();
+            state.dragHistorySaved = true;
+          }
           restoreDragOriginals();
           state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))moveObject(o,dx,dy); });
+          draw();
+        } else if (hadGuide || state.dragGuide) {
           draw();
         }
         updateCursor(e); return;
@@ -4196,6 +4869,12 @@
           if (!isInteractiveEditingAllowedTarget(e.target)) e.preventDefault();
         }, { passive: false });
       });
+      ['gesturestart','gesturechange','gestureend'].forEach(type => {
+        canvasWrapForTouchGuards.addEventListener(type, e => {
+          if (e.target && e.target.closest && e.target.closest('.canvas-float-bar')) return;
+          if (!isInteractiveEditingAllowedTarget(e.target)) e.preventDefault();
+        }, { passive: false });
+      });
     }
     canvas.addEventListener('pointerleave', () => {
       let needsDraw = false;
@@ -4231,7 +4910,7 @@
       }
       if(state.erasing){ state.erasing=false; state.current=null; state.eraserPreview=rawScreenToWorld(e); clearSnapIndicator(); draw(); updateCursor(e); return; }
       if(state.boxSelecting){ state.boxSelecting=false; state.selectionBox=null; clearSnapIndicator(); draw(); updateCursor(e); return; }
-      if(!state.drawing){ state.dragging=false; state.dragHistorySaved=false; state.dragStartRaw=null; state.dragOriginals=null; clearSnapIndicator(); updateCursor(e); return; }
+      if(!state.drawing){ state.dragging=false; state.dragHistorySaved=false; state.dragCopied=false; state.dragCopySourceIds=[]; state.dragCopyCreatedIds=[]; clearDragGuide(); state.dragStartRaw=null; state.dragOriginals=null; clearSnapIndicator(); updateCursor(e); return; }
       let p=screenToWorld(e);
       if(['line','arrow','wall','dimension','door','window'].includes(state.tool) && e.shiftKey) p = constrainToAngle(state.start, p, 45);
       if(state.tool==='wall') p = snapWallEndpoint(p);
@@ -4254,10 +4933,33 @@
     }
 
     async function editTextObject(o){
-      const v = await showMultilineTextDialog('编辑文字', '请输入新的文字内容：', o.text || '', '文字标签');
-      if(v === null) return;
+      const original = JSON.parse(JSON.stringify(o));
+      const restoreOriginal = snapshot => {
+        Object.keys(o).forEach(key => delete o[key]);
+        Object.assign(o, JSON.parse(JSON.stringify(snapshot)));
+        state.selectedIds = [o.id];
+        draw();
+        updateObjectMetrics(true);
+      };
+      const previewUpdate = () => {
+        state.selectedIds = [o.id];
+        draw();
+        updateObjectMetrics(true);
+      };
+      const result = await showMultilineTextDialog('编辑文字', '', o.text || '', '文字标签', o.textAlign || 'left', o.color || '#111827', o.textBackgroundMode || 'none', o.textBackgroundColor || '#ffffff', { previewTarget: o, originalSnapshot: original, onPreview: previewUpdate, onRestore: restoreOriginal, initialBold: o.textBold, initialItalic: o.textItalic, initialUnderline: o.textUnderline, initialFontSize: o.fontSize || 20, initialFontType: o.fontType || 'default' });
+      if(result === null) return;
+      restoreOriginal(original);
       saveHistory();
-      o.text = normalizeTextContent(v, '文字');
+      o.text = normalizeTextContent(result.text, '文字');
+      o.textAlign = normalizeTextAlign(result.align);
+      o.color = normalizeHexColor(result.color, o.color || '#111827');
+      o.textBackgroundMode = normalizeTextBackgroundMode(result.backgroundMode);
+      o.textBackgroundColor = normalizeHexColor(result.backgroundColor, '#ffffff');
+      o.textBold = normalizeTextStyleFlag(result.bold);
+      o.textItalic = normalizeTextStyleFlag(result.italic);
+      o.textUnderline = normalizeTextStyleFlag(result.underline);
+      o.fontSize = Math.max(1, Number(result.fontSize) || o.fontSize || 20);
+      o.fontType = normalizeFontType(result.fontType);
       state.selectedIds = [o.id];
       draw();
       updateObjectMetrics(true);
@@ -4443,6 +5145,17 @@
     document.getElementById('pasteBtn').onclick=pasteClipboard;
     document.getElementById('applyStyleBtn').onclick=applyStyle;
     document.getElementById('editTextBtn').onclick=editSelectedTextObject;
+    if (els.textFontType) {
+      els.textFontType.addEventListener('change', () => {
+        const selectedText = state.objects.filter(o => state.selectedIds.includes(o.id) && o.type === 'text');
+        if (!selectedText.length) return;
+        saveHistory();
+        selectedText.forEach(o => { o.fontType = normalizeFontType(els.textFontType.value); });
+        draw();
+        updateObjectMetrics(true);
+        markProjectDirty();
+      });
+    }
     document.getElementById('groupSidebarBtn').onclick=groupSelected;
     document.getElementById('ungroupSidebarBtn').onclick=ungroupSelected;
     document.getElementById('alignLeftBtn').onclick=()=>alignSelected('left');
@@ -4537,6 +5250,14 @@
       state.pageW=w; state.pageH=h;
       updateAspectRatioFromPage();
       els.pageWidth.value=w; els.pageHeight.value=h;
+      if (els.textFontType) {
+        const selectedText = state.objects.filter(o => state.selectedIds.includes(o.id) && o.type === 'text');
+        if (selectedText.length) {
+          const ft = normalizeFontType(selectedText[0].fontType);
+          const allSame = selectedText.every(o => normalizeFontType(o.fontType) === ft);
+          els.textFontType.value = allSame ? ft : 'default';
+        }
+      }
       refreshSidebarUnitizedInputs();
       rememberPageSelectorValues();
       resizeCanvas();
@@ -5018,7 +5739,7 @@
           o.width = o.width || 22;
           o.layer = o.layer || 'annotations';
         }
-        if(o.type === 'text') { o.text = normalizeTextContent(o.text, '文字'); }
+        if(o.type === 'text') { o.text = normalizeTextContent(o.text, '文字'); o.textAlign = normalizeTextAlign(o.textAlign); o.color = normalizeHexColor(o.color, '#111827'); o.textBackgroundMode = normalizeTextBackgroundMode(o.textBackgroundMode); o.textBackgroundColor = normalizeHexColor(o.textBackgroundColor, '#ffffff'); o.textBold = normalizeTextStyleFlag(o.textBold); o.textItalic = normalizeTextStyleFlag(o.textItalic); o.textUnderline = normalizeTextStyleFlag(o.textUnderline); o.fontType = normalizeFontType(o.fontType); }
         if(o.type === 'brush') {
           o.points = Array.isArray(o.points) ? o.points : [];
           o.color = o.color || DEFAULT_STROKE_COLOR;
@@ -5198,23 +5919,279 @@
       });
     }
 
-    function showMultilineTextDialog(title, message, initialValue = '', placeholder = '') {
+    function showMultilineTextDialog(title, message, initialValue = '', placeholder = '', initialAlign = 'left', initialColor = '#111827', initialBgMode = 'none', initialBgColor = '#ffffff', options = {}) {
       return new Promise(resolve => {
+        const previewTarget = options.previewTarget || null;
+        const originalSnapshot = options.originalSnapshot ? JSON.parse(JSON.stringify(options.originalSnapshot)) : null;
+        const onPreview = typeof options.onPreview === 'function' ? options.onPreview : null;
+        const onRestore = typeof options.onRestore === 'function' ? options.onRestore : null;
+
         const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;padding:20px;';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(15,23,42,.20);padding:0;';
         const box = document.createElement('div');
-        box.style.cssText = 'width:min(560px,100%);background:#fff;border:1px solid #cbd5e1;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.28);padding:18px;font-family:Arial,"Microsoft YaHei",sans-serif;color:#111827;';
+        box.className = 'text-dialog-box-v95';
+        const titlebar = document.createElement('div');
+        titlebar.className = 'text-dialog-titlebar-v97';
         const h = document.createElement('div');
+        h.className = 'text-dialog-title-v95';
         h.textContent = title;
-        h.style.cssText = 'font-size:16px;font-weight:800;margin-bottom:8px;';
-        const p = document.createElement('div');
-        p.textContent = message || '';
-        p.style.cssText = 'font-size:13px;line-height:1.6;color:#475569;margin-bottom:12px;white-space:pre-line;';
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'text-dialog-close-v97';
+        closeBtn.textContent = '×';
+        closeBtn.title = '关闭';
+        titlebar.appendChild(h);
+        titlebar.appendChild(closeBtn);
+
+        let textAlignValue = normalizeTextAlign(initialAlign);
+        let textColorValue = normalizeHexColor(initialColor, '#111827');
+        let backgroundModeValue = normalizeTextBackgroundMode(initialBgMode);
+        let backgroundColorValue = normalizeHexColor(initialBgColor, '#ffffff');
+        let textBoldValue = normalizeTextStyleFlag(options.initialBold);
+        let textItalicValue = normalizeTextStyleFlag(options.initialItalic);
+        let textUnderlineValue = normalizeTextStyleFlag(options.initialUnderline);
+        let fontSizeValue = Math.max(1, Number(options.initialFontSize || 20) || 20);
+        let fontTypeValue = normalizeFontType(options.initialFontType);
+
         const input = document.createElement('textarea');
         input.value = String(initialValue || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         input.placeholder = placeholder || '';
         input.rows = 7;
         input.style.cssText = 'width:100%;min-height:150px;resize:vertical;border:1px solid #cbd5e1;border-radius:9px;padding:9px 10px;font-size:13px;line-height:1.45;margin-bottom:12px;outline:none;font-family:Arial,"Microsoft YaHei",sans-serif;';
+
+        function currentResult() {
+          return {
+            text: input.value,
+            align: textAlignValue,
+            color: textColorValue,
+            backgroundMode: backgroundModeValue,
+            backgroundColor: backgroundColorValue,
+            bold: textBoldValue,
+            italic: textItalicValue,
+            underline: textUnderlineValue,
+            fontSize: fontSizeValue,
+            fontType: fontTypeValue
+          };
+        }
+
+        function applyPreview() {
+          if (!previewTarget || !onPreview) return;
+          const result = currentResult();
+          previewTarget.text = normalizeTextContent(result.text, '文字');
+          previewTarget.textAlign = normalizeTextAlign(result.align);
+          previewTarget.color = normalizeHexColor(result.color, previewTarget.color || '#111827');
+          previewTarget.textBackgroundMode = normalizeTextBackgroundMode(result.backgroundMode);
+          previewTarget.textBackgroundColor = normalizeHexColor(result.backgroundColor, '#ffffff');
+          previewTarget.textBold = normalizeTextStyleFlag(result.bold);
+          previewTarget.textItalic = normalizeTextStyleFlag(result.italic);
+          previewTarget.textUnderline = normalizeTextStyleFlag(result.underline);
+          previewTarget.fontSize = Math.max(1, Number(result.fontSize) || previewTarget.fontSize || 20);
+          previewTarget.fontType = normalizeFontType(result.fontType);
+          onPreview(previewTarget);
+        }
+
+        function restoreOriginal() {
+          if (previewTarget && originalSnapshot && onRestore) onRestore(originalSnapshot);
+        }
+
+        function makeRow(labelText) {
+          const row = document.createElement('div');
+          row.className = 'text-dialog-style-row-v95';
+          const label = document.createElement('span');
+          label.className = 'row-label';
+          label.textContent = labelText;
+          row.appendChild(label);
+          return row;
+        }
+
+        function makeSwatchButton(value, titleText, color, isNone = false) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'text-swatch-btn-v95';
+          btn.dataset.value = value;
+          btn.title = titleText;
+          const chip = document.createElement('span');
+          chip.className = 'text-swatch-chip-v95' + (isNone ? ' none' : '');
+          if (color) chip.style.background = color;
+          btn.appendChild(chip);
+          return btn;
+        }
+
+        let activeTextPalette = null;
+        function closeFloatingPalette() {
+          if (activeTextPalette) {
+            activeTextPalette.remove();
+            activeTextPalette = null;
+          }
+          document.removeEventListener('pointerdown', outsidePaletteHandler, true);
+        }
+        function outsidePaletteHandler(e) {
+          if (activeTextPalette && !activeTextPalette.contains(e.target)) closeFloatingPalette();
+        }
+
+        function showFloatingPalette(anchor, currentColor, onSelect) {
+          closeFloatingPalette();
+          const palette = document.createElement('div');
+          palette.className = 'text-floating-palette-v95';
+          colors.forEach(c => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.style.background = c;
+            b.title = c;
+            b.dataset.color = c.toLowerCase();
+            b.className = String(currentColor || '').toLowerCase() === c.toLowerCase() ? 'active' : '';
+            b.addEventListener('click', e => {
+              e.stopPropagation();
+              onSelect(c.toLowerCase());
+              applyPreview();
+              closeFloatingPalette();
+            });
+            palette.appendChild(b);
+          });
+          document.body.appendChild(palette);
+          const r = anchor.getBoundingClientRect();
+          const left = Math.min(window.innerWidth - 230, Math.max(8, r.left));
+          const top = Math.min(window.innerHeight - 130, Math.max(8, r.bottom + 8));
+          palette.style.left = left + 'px';
+          palette.style.top = top + 'px';
+          activeTextPalette = palette;
+          setTimeout(() => document.addEventListener('pointerdown', outsidePaletteHandler, true), 0);
+        }
+
+        const bgRow = makeRow('背景颜色');
+        const bgGroup = document.createElement('div');
+        bgGroup.className = 'text-swatch-segment-v95';
+        const bgColorBtn = makeSwatchButton('color', '背景颜色', getTextBackgroundColor({ textBackgroundMode: backgroundModeValue, textBackgroundColor: backgroundColorValue }) || '#ffffff');
+        const bgNoneBtn = makeSwatchButton('none', '无背景', null, true);
+        bgGroup.appendChild(bgColorBtn);
+        bgGroup.appendChild(bgNoneBtn);
+        bgRow.appendChild(bgGroup);
+
+        const colorRow = makeRow('文字颜色');
+        const colorGroup = document.createElement('div');
+        colorGroup.className = 'text-swatch-segment-v95';
+        const textColorBtn = makeSwatchButton('color', '文字颜色', textColorValue);
+        colorGroup.appendChild(textColorBtn);
+        colorRow.appendChild(colorGroup);
+
+        const styleRow = makeRow('文字样式');
+        const styleGroup = document.createElement('div');
+        styleGroup.className = 'text-swatch-segment-v95 text-style-group-v102';
+        const boldBtn = document.createElement('button');
+        boldBtn.type = 'button';
+        boldBtn.className = 'text-style-btn-v96 bold';
+        boldBtn.textContent = 'B';
+        boldBtn.title = '粗体';
+        const italicBtn = document.createElement('button');
+        italicBtn.type = 'button';
+        italicBtn.className = 'text-style-btn-v96 italic';
+        italicBtn.textContent = 'I';
+        italicBtn.title = '斜体';
+        const underlineBtn = document.createElement('button');
+        underlineBtn.type = 'button';
+        underlineBtn.className = 'text-style-btn-v96 underline';
+        underlineBtn.textContent = 'U';
+        underlineBtn.title = '下划线';
+        [boldBtn, italicBtn, underlineBtn].forEach(btn => styleGroup.appendChild(btn));
+        styleRow.appendChild(styleGroup);
+
+        const fontTypeRow = makeRow('字体类型');
+        const fontTypeGroup = document.createElement('div');
+        fontTypeGroup.className = 'text-align-segment text-fonttype-segment-v102';
+        [['default','默认'],['monospace','等宽']].forEach(([value, label]) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = label;
+          b.dataset.fontType = value;
+          b.className = value === fontTypeValue ? 'active' : '';
+          b.addEventListener('click', () => {
+            fontTypeValue = value;
+            fontTypeGroup.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.fontType === value));
+            applyPreview();
+          });
+          fontTypeGroup.appendChild(b);
+        });
+        fontTypeRow.appendChild(fontTypeGroup);
+
+        const sizeRow = makeRow('字号');
+        const sizeInput = document.createElement('input');
+        sizeInput.type = 'text';
+        sizeInput.className = 'text-dialog-size-input-v97';
+        sizeInput.value = `${fontSizeValue} px`;
+        sizeInput.inputMode = 'decimal';
+        sizeInput.addEventListener('focus', () => {
+          sizeInput.value = String(fontSizeValue);
+          sizeInput.select();
+        });
+        sizeInput.addEventListener('input', () => {
+          const raw = String(sizeInput.value || '').replace(/px/i, '').trim();
+          const n = Number(raw);
+          if (Number.isFinite(n) && n > 0) {
+            fontSizeValue = n;
+            applyPreview();
+          }
+        });
+        sizeInput.addEventListener('blur', () => {
+          sizeInput.value = `${Math.round(fontSizeValue * 100) / 100} px`;
+        });
+        sizeRow.appendChild(sizeInput);
+
+        const alignRow = makeRow('对齐方式');
+        const alignGroup = document.createElement('div');
+        alignGroup.className = 'text-align-segment text-align-segment-v102';
+        [['left','左对齐'],['center','居中'],['right','右对齐']].forEach(([value, label]) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = label;
+          b.dataset.align = value;
+          b.className = value === textAlignValue ? 'active' : '';
+          b.addEventListener('click', () => {
+            textAlignValue = value;
+            alignGroup.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.align === value));
+            applyPreview();
+          });
+          alignGroup.appendChild(b);
+        });
+        alignRow.appendChild(alignGroup);
+
+        function refreshStyleButtons() {
+          boldBtn.classList.toggle('active', textBoldValue);
+          italicBtn.classList.toggle('active', textItalicValue);
+          underlineBtn.classList.toggle('active', textUnderlineValue);
+        }
+        function refreshColorButtons() {
+          textColorBtn.querySelector('.text-swatch-chip-v95').style.background = textColorValue;
+          const bgColor = getTextBackgroundColor({ textBackgroundMode: backgroundModeValue, textBackgroundColor: backgroundColorValue }) || '#ffffff';
+          bgColorBtn.querySelector('.text-swatch-chip-v95').style.background = bgColor;
+          bgColorBtn.classList.toggle('active', backgroundModeValue !== 'none');
+          bgNoneBtn.classList.toggle('active', backgroundModeValue === 'none');
+        }
+
+        bgColorBtn.addEventListener('click', () => {
+          showFloatingPalette(bgColorBtn, backgroundColorValue, c => {
+            backgroundColorValue = c;
+            backgroundModeValue = 'custom';
+            refreshColorButtons();
+          });
+        });
+        bgNoneBtn.addEventListener('click', () => {
+          backgroundModeValue = 'none';
+          closeFloatingPalette();
+          refreshColorButtons();
+          applyPreview();
+        });
+        textColorBtn.addEventListener('click', () => {
+          showFloatingPalette(textColorBtn, textColorValue, c => {
+            textColorValue = c;
+            refreshColorButtons();
+          });
+        });
+        boldBtn.addEventListener('click', () => { textBoldValue = !textBoldValue; refreshStyleButtons(); applyPreview(); });
+        italicBtn.addEventListener('click', () => { textItalicValue = !textItalicValue; refreshStyleButtons(); applyPreview(); });
+        underlineBtn.addEventListener('click', () => { textUnderlineValue = !textUnderlineValue; refreshStyleButtons(); applyPreview(); });
+        refreshColorButtons();
+        refreshStyleButtons();
+
         const helper = document.createElement('div');
         helper.textContent = 'Enter 换行；Ctrl / Command + Enter 确定；Esc 取消';
         helper.style.cssText = 'font-size:12px;color:#64748b;margin-bottom:14px;';
@@ -5228,22 +6205,98 @@
         okBtn.type = 'button';
         okBtn.textContent = '确定';
         okBtn.style.cssText = 'min-height:34px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;font-weight:700;';
-        const finish = value => { overlay.remove(); resolve(value); };
+        const finish = value => {
+          closeFloatingPalette();
+          overlay.remove();
+          if (value === null) {
+            restoreOriginal();
+            resolve(null);
+          } else {
+            resolve(currentResult());
+          }
+        };
         cancelBtn.addEventListener('click', () => finish(null));
+        closeBtn.addEventListener('pointerdown', e => e.stopPropagation());
+        closeBtn.addEventListener('click', () => finish(null));
         okBtn.addEventListener('click', () => finish(input.value));
+        input.addEventListener('input', applyPreview);
         input.addEventListener('keydown', e => {
           if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); finish(input.value); }
           if (e.key === 'Escape') { e.preventDefault(); finish(null); }
         });
+
         row.appendChild(cancelBtn);
         row.appendChild(okBtn);
-        box.appendChild(h);
-        if (message) box.appendChild(p);
+        const attrSection = document.createElement('div');
+        attrSection.className = 'text-dialog-section-v97';
+        attrSection.appendChild(bgRow);
+        attrSection.appendChild(colorRow);
+        attrSection.appendChild(styleRow);
+        attrSection.appendChild(fontTypeRow);
+        attrSection.appendChild(sizeRow);
+        attrSection.appendChild(alignRow);
+        const contentLabel = document.createElement('div');
+        contentLabel.className = 'text-dialog-content-label-v97';
+        contentLabel.textContent = '内容';
+        const footer = document.createElement('div');
+        footer.className = 'text-dialog-footer-v97';
+        footer.appendChild(helper);
+        footer.appendChild(row);
+        box.appendChild(titlebar);
+        box.appendChild(attrSection);
+        box.appendChild(contentLabel);
         box.appendChild(input);
-        box.appendChild(helper);
-        box.appendChild(row);
+        box.appendChild(footer);
         overlay.appendChild(box);
         document.body.appendChild(overlay);
+
+        function placeBoxCenter() {
+          const rect = box.getBoundingClientRect();
+          const left = Math.max(8, (window.innerWidth - rect.width) / 2);
+          const top = Math.max(8, (window.innerHeight - rect.height) / 2);
+          box.style.left = `${left}px`;
+          box.style.top = `${top}px`;
+        }
+        function clampBoxPosition(left, top) {
+          const rect = box.getBoundingClientRect();
+          const maxLeft = Math.max(8, window.innerWidth - rect.width - 8);
+          const maxTop = Math.max(8, window.innerHeight - rect.height - 8);
+          return { left: Math.min(maxLeft, Math.max(8, left)), top: Math.min(maxTop, Math.max(8, top)) };
+        }
+        placeBoxCenter();
+
+        let draggingDialog = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        titlebar.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          closeFloatingPalette();
+          const rect = box.getBoundingClientRect();
+          draggingDialog = true;
+          dragOffsetX = e.clientX - rect.left;
+          dragOffsetY = e.clientY - rect.top;
+          try { titlebar.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+        titlebar.addEventListener('pointermove', e => {
+          if (!draggingDialog) return;
+          e.preventDefault();
+          const pos = clampBoxPosition(e.clientX - dragOffsetX, e.clientY - dragOffsetY);
+          box.style.left = `${pos.left}px`;
+          box.style.top = `${pos.top}px`;
+        });
+        titlebar.addEventListener('pointerup', e => {
+          draggingDialog = false;
+          try { titlebar.releasePointerCapture(e.pointerId); } catch (err) {}
+        });
+        titlebar.addEventListener('pointercancel', () => { draggingDialog = false; });
+        window.addEventListener('resize', () => {
+          const rect = box.getBoundingClientRect();
+          const pos = clampBoxPosition(rect.left, rect.top);
+          box.style.left = `${pos.left}px`;
+          box.style.top = `${pos.top}px`;
+        }, { passive: true });
+
+        applyPreview();
         setTimeout(() => {
           input.focus();
           const end = input.value.length;
@@ -5840,10 +6893,15 @@
       }
       if (state.dragging) {
         restoreDragOriginals();
+        cancelDragCopyIfNeeded();
         state.dragging = false;
         state.dragStartRaw = null;
         state.dragOriginals = null;
         state.dragHistorySaved = false;
+        state.dragCopied = false;
+        state.dragCopySourceIds = [];
+        state.dragCopyCreatedIds = [];
+        clearDragGuide();
         handled = true;
       }
       if (state.drawing) {
@@ -5909,12 +6967,6 @@
     document.addEventListener('contextmenu', e => {
       if (hasTouchLikeInput && shouldSuppressTouchBrowserUI(e.target)) e.preventDefault();
     }, { passive: false });
-
-    ['gesturestart', 'gesturechange', 'gestureend'].forEach(type => {
-      document.addEventListener(type, e => {
-        if (!isInteractiveEditingAllowedTarget(e.target)) e.preventDefault();
-      }, { passive: false });
-    });
 
     function isMacLikePlatform() {
       const platform = String((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '');
