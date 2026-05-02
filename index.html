@@ -1406,7 +1406,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v90';
+    const APP_VERSION = 'v91';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -3390,6 +3390,7 @@
       state.areaDrawing = false;
       state.areaPoints = [];
       state.areaPreview = null;
+      clearSnapIndicator();
       if (shouldDraw) draw();
     }
 
@@ -3447,14 +3448,12 @@
       if (points.length >= 3) c.lineTo(points[0].x, points[0].y);
       c.stroke();
       c.setLineDash([]);
-      const baseR = Math.max(4 / state.zoom, 3);
+      const r = Math.max(4 / state.zoom, 3);
       points.forEach((pt, i) => {
-        const isStartClosePoint = i === 0 && points.length >= 3;
-        const r = isStartClosePoint && touchControlMode ? Math.max(8 / state.zoom, 6) : baseR;
         c.beginPath();
-        c.fillStyle = isStartClosePoint ? '#eff6ff' : '#ffffff';
-        c.strokeStyle = isStartClosePoint && touchControlMode ? '#1d4ed8' : color;
-        c.lineWidth = (isStartClosePoint && touchControlMode ? 2.2 : 1.5) / state.zoom;
+        c.fillStyle = i === 0 && points.length >= 3 ? '#eff6ff' : '#ffffff';
+        c.strokeStyle = color;
+        c.lineWidth = 1.5 / state.zoom;
         c.arc(pt.x, pt.y, r, 0, Math.PI * 2);
         c.fill();
         c.stroke();
@@ -4193,6 +4192,7 @@
     if (canvasWrapForTouchGuards) {
       ['touchstart','touchmove'].forEach(type => {
         canvasWrapForTouchGuards.addEventListener(type, e => {
+          if (e.target && e.target.closest && e.target.closest('.canvas-float-bar')) return;
           if (!isInteractiveEditingAllowedTarget(e.target)) e.preventDefault();
         }, { passive: false });
       });
@@ -4275,7 +4275,7 @@
       updateCursor();
     }
     document.querySelectorAll('[data-tool]').forEach(btn=>btn.addEventListener('click',()=>setTool(btn.dataset.tool)));
-    els.status.addEventListener('click', e => {
+    function handleStatusAction(e) {
       const target = e.target.closest('[data-status-action]');
       if (!target) return;
       const action = target.dataset.statusAction;
@@ -4284,6 +4284,7 @@
       if (action === 'complete-area') {
         if (!target.disabled && state.tool === 'area' && state.areaDrawing) {
           completeAreaDraft();
+          clearSnapIndicator();
           updateCursor();
         }
         return;
@@ -4301,7 +4302,8 @@
         draw();
         updateCursor();
       }
-    });
+    }
+    els.status.addEventListener('pointerdown', handleStatusAction);
 
     function deleteSelected(){ if(!state.selectedIds.length)return; saveHistory(); state.objects=state.objects.filter(o=>!state.selectedIds.includes(o.id)); state.selectedIds=[]; draw(); }
     function copySelected(){ state.clipboard=state.objects.filter(o=>state.selectedIds.includes(o.id)).map(o=>JSON.parse(JSON.stringify(o))); }
