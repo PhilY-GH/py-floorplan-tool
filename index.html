@@ -291,7 +291,7 @@
       border-color: #d6dee9;
       border-radius: 8px;
     }
-    .tool-btn svg, .toolbar-btn svg { width: 17px; height: 17px; display: block; flex: 0 0 auto; }
+    .tool-btn svg, .toolbar-btn svg { width: 18px; height: 18px; display: block; flex: 0 0 auto; }
     .toolbar-btn svg { stroke-width: 1.8; }
     .tool-btn.active, .tool-btn.active .mini-icon { color: #ffffff; border-color: rgba(255,255,255,.75); }
     .small-btn { min-width: 34px; padding-left: 8px; padding-right: 8px; }
@@ -547,6 +547,51 @@
       border-color: #1d4ed8;
       box-shadow: 0 0 0 2px rgba(37,99,235,.24), inset 0 0 0 1px rgba(255,255,255,.85);
     }
+    .metric-group.text-preview-group {
+      grid-column: span 2;
+      width: 214px;
+      min-width: 214px;
+      max-width: 214px;
+      gap: 3px;
+      overflow: visible;
+    }
+    .metric-group.text-preview-group .metric-label {
+      width: 32px;
+      min-width: 32px;
+      font-size: 12px;
+    }
+    .prop-text-preview {
+      display: inline-block;
+      width: 179px;
+      min-width: 179px;
+      max-width: 179px;
+      height: 34px;
+      min-height: 34px;
+      max-height: 34px;
+      padding: 5px 8px;
+      color: #0f172a;
+      background: #ffffff;
+      border: 1px solid #d6dee9;
+      border-radius: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 20px;
+      box-sizing: border-box;
+      vertical-align: middle;
+    }
+    .prop-text-preview:hover {
+      background: #f8fafc;
+      color: #0f172a;
+      border-color: #cbd5e1;
+    }
+    .prop-text-preview.placeholder {
+      color: #94a3b8;
+    }
+
     .prop-more-btn {
       height: var(--prop-control-height) !important;
       min-height: var(--prop-control-height) !important;
@@ -627,26 +672,33 @@
     }
     .mini-icon {
       position: relative;
-      display: inline-block;
-      width: 16px;
-      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 17px;
+      height: 17px;
       color: #334155;
       flex: 0 0 auto;
+      vertical-align: middle;
     }
     .line-icon::before, .wall-icon::before, .arrow-icon::before, .dimension-icon::before, .window-icon::before {
-      content: ""; position: absolute; left: 1px; right: 1px; top: 7px; border-top: 2px solid currentColor; transform: rotate(-28deg);
+      content: ""; position: absolute; left: 1px; right: 1px; top: 7px; border-top: 2px solid currentColor; transform: rotate(-28deg); transform-origin: center;
     }
     .wall-icon::before { border-top-width: 5px; top: 6px; opacity: .9; }
-    .arrow-icon::after { content: ""; position: absolute; right: 0px; top: 3px; width: 7px; height: 7px; border-right: 2px solid currentColor; border-top: 2px solid currentColor; transform: rotate(18deg); }
-    .rect-icon { border: 2px solid currentColor; border-radius: 2px; }
+    .arrow-icon::after { content: ""; position: absolute; right: 0px; top: 2px; width: 6px; height: 6px; border-right: 2px solid currentColor; border-top: 2px solid currentColor; transform: rotate(17deg); transform-origin: center; }
+    .rect-icon { border: 2px solid currentColor; border-radius: 2px; width: 14px; height: 12px; }
     .ellipse-icon { border: 2px solid currentColor; border-radius: 50%; }
-    .area-icon svg { width: 17px; height: 17px; display: block; }
-    .door-icon::before { content: ""; position:absolute; left:2px; bottom:2px; width:10px; height:10px; border-left:2px solid currentColor; border-bottom:2px solid currentColor; border-radius:0 0 10px 0; }
-    .window-icon::before { transform: none; top: 5px; box-shadow: 0 5px 0 currentColor; border-top-width: 2px; }
-    .dimension-icon::after { content: ""; position:absolute; left:1px; right:1px; top:4px; bottom:4px; border-left:2px solid currentColor; border-right:2px solid currentColor; }
-    .text-icon { font-weight: 800; font-size: 14px; line-height: 16px; text-align:center; }
+    .area-icon svg { width: 18px; height: 18px; display: block; overflow: visible; }
+    .door-icon::before { content: ""; position:absolute; left:3px; bottom:2px; width:11px; height:12px; border-left:2px solid currentColor; border-bottom:2px solid currentColor; border-radius:0 0 12px 0; }
+    .window-icon::before { transform: none; top: 5px; left: 1px; right: 1px; box-shadow: 0 5px 0 currentColor; border-top-width: 2px; }
+    .dimension-icon::after { content: ""; position:absolute; left:0px; right:0px; top:3px; bottom:3px; border-left:2px solid currentColor; border-right:2px solid currentColor; }
+    .text-icon { font-weight: 800; font-size: 14px; line-height: 16px; text-align:center; display:flex; align-items:center; justify-content:center; }
     .eraser-icon { transform: rotate(-25deg); border: 2px solid currentColor; border-radius: 3px; width: 15px; height: 10px; margin-top: 3px; }
-    .brush-icon svg { width: 17px; height: 17px; display: block; }
+    .brush-icon svg { width: 18px; height: 18px; display: block; overflow: visible; }
+    .arrow-svg-v81 { width: 17px !important; height: 17px !important; }
+    .door-svg-large { width: 19px !important; height: 19px !important; margin-left: -1px; margin-right: -1px; }
+    .dimension-svg-wide { width: 21px !important; height: 17px !important; margin-left: -2px; margin-right: -2px; }
+
     .save-icon { border: 2px solid currentColor; border-radius: 3px; }
     .save-icon::before { content:""; position:absolute; left:3px; right:3px; bottom:2px; height:4px; border:1.5px solid currentColor; border-radius:1px; }
     .open-icon::before { content:""; position:absolute; left:1px; top:5px; width:14px; height:8px; border:2px solid currentColor; border-radius:2px; transform:skewX(-10deg); }
@@ -806,20 +858,22 @@
       gap: 4px;
       line-height: 1.55;
     }
-    .status {
+    .canvas-float-bar {
       position: absolute;
-      left: 14px;
       top: 14px;
-      background: rgba(255,255,255,0.72);
-      border: 1px solid rgba(209,213,219,0.78);
+      background: rgba(255,255,255,0.60);
+      border: 1px solid rgba(209,213,219,0.72);
       border-radius: 10px;
       padding: 8px 10px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.05);
       font-size: 13px;
       z-index: 2;
       pointer-events: auto;
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
+    }
+    .status {
+      left: 14px;
     }
     .status-select-count {
       display: inline-flex;
@@ -839,6 +893,41 @@
       background: #eff6ff;
       color: #1d4ed8;
       font-weight: 800;
+    }
+    .canvas-zoom {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+    .canvas-zoom-btn {
+      height: 26px;
+      min-width: 28px;
+      padding: 0 7px;
+      border: 1px solid rgba(203,213,225,0.86);
+      border-radius: 7px;
+      background: rgba(255,255,255,0.74);
+      color: #0f172a;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .canvas-zoom-btn:hover {
+      background: rgba(239,246,255,0.86);
+      border-color: rgba(147,197,253,0.9);
+      color: #1d4ed8;
+    }
+    .canvas-zoom .zoom-input {
+      height: 26px;
+      min-height: 26px;
+      width: 58px;
+      min-width: 58px;
+      max-width: 58px;
+      flex: 0 0 58px;
+      padding: 2px 5px;
+      border-radius: 7px;
+      background: rgba(255,255,255,0.74);
+      font-size: 13px;
     }
     .pill {
       display: inline-flex;
@@ -896,16 +985,16 @@
             <span>选择</span>
           </button>
           <button data-tool="line" class="tool-btn" title="直线"><span class="mini-icon line-icon"></span><span>线</span></button>
-          <button data-tool="arrow" class="tool-btn" title="箭头"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><path d="M13 4h7v7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 7l3-3" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg><span>箭</span></button>
+          <button data-tool="arrow" class="tool-btn" title="箭头"><svg class="arrow-svg-v81" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><path d="M13 4h7v7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 7l3-3" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg><span>箭</span></button>
           <button data-tool="rect" class="tool-btn" title="矩形"><span class="mini-icon rect-icon"></span><span>方</span></button>
           <button data-tool="ellipse" class="tool-btn" title="椭圆"><span class="mini-icon ellipse-icon"></span><span>圆</span></button>
-          <button data-tool="area" class="tool-btn" title="区域"><span class="mini-icon area-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l8 5.8-3 9.2H7L4 9.3z" fill="currentColor" opacity="0.18"/><path d="M12 3.5l8 5.8-3 9.2H7L4 9.3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span><span>区域</span></button>
+          <button data-tool="area" class="tool-btn" title="区域"><span class="mini-icon area-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3L20 8.8 17.2 19H6.8L4 8.8z" fill="currentColor" opacity="0.18"/><path d="M12 3L20 8.8 17.2 19H6.8L4 8.8z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/></svg></span><span>区域</span></button>
           <button data-tool="wall" class="tool-btn" title="墙体"><span class="mini-icon wall-icon"></span><span>墙</span></button>
-          <button data-tool="door" class="tool-btn" title="门"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18V6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 18H18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 6A12 12 0 0 1 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>门</span></button>
+          <button data-tool="door" class="tool-btn" title="门"><svg class="door-svg-large" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18V6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 18H18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 6A12 12 0 0 1 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>门</span></button>
           <button data-tool="window" class="tool-btn" title="窗"><span class="mini-icon window-icon"></span><span>窗</span></button>
-          <button data-tool="dimension" class="tool-btn" title="标尺"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12v8M20 12v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 16v3M12 16v4M16 16v3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>尺</span></button>
-          <button data-tool="text" class="tool-btn" title="文字"><span class="mini-icon text-icon">T</span><span>字</span></button>
-          <button data-tool="eraser" class="tool-btn" title="笔刷"><span class="mini-icon brush-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16C7 8 10 8 12 13C13.5 17 15.5 15.5 17.5 10C18.7 6.5 20.5 6.4 21.2 8.3" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>笔</span></button>
+          <button data-tool="dimension" class="tool-btn" title="标尺"><svg class="dimension-svg-wide" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 12v8M21 12v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7.5 16v3M12 16v4M16.5 16v3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>尺</span></button>
+          <button data-tool="text" class="tool-btn" title="文字"><span class="mini-icon text-icon">A</span><span>字</span></button>
+          <button data-tool="eraser" class="tool-btn" title="笔刷"><span class="mini-icon brush-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16.6C6.4 10.7 8.7 10.1 10.5 13.8C11.7 16.3 13.2 16 15.1 11.4C16.5 8 18.5 7.2 20.2 8.7" fill="none" stroke="currentColor" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>笔</span></button>
         </div>
       </div>
 
@@ -915,16 +1004,6 @@
           <button id="propertyExpandBtn" class="property-expand-btn" title="展开 / 收起属性栏">▾</button>
         </div>
         <div class="tool-strip property-strip" id="propertyFields"></div>
-      </div>
-
-      <div class="toolbar-section zoom-section">
-        <div class="section-label">缩放</div>
-        <div class="tool-strip">
-          <button id="zoomOut" class="toolbar-btn small-btn">−</button>
-          <input id="zoomInput" class="zoom-input" type="text" value="100%" inputmode="numeric" aria-label="缩放比例" title="可输入缩放比例，例如 125 或 125%" />
-          <button id="zoomIn" class="toolbar-btn small-btn">＋</button>
-          <button id="zoomReset" class="toolbar-btn">重置</button>
-        </div>
       </div>
 
       <div class="toolbar-section command-section">
@@ -1255,7 +1334,13 @@
       </aside>
 
       <main class="canvas-wrap">
-        <div class="status" id="status">当前工具：选择</div>
+        <div class="canvas-float-bar status" id="status">当前工具：选择</div>
+        <div class="canvas-float-bar canvas-zoom" id="canvasZoomControls" aria-label="画布缩放">
+          <button id="zoomOut" class="canvas-zoom-btn" title="缩小">−</button>
+          <input id="zoomInput" class="zoom-input" type="text" value="100%" inputmode="numeric" aria-label="缩放比例" title="可输入缩放比例，例如 125 或 125%" />
+          <button id="zoomIn" class="canvas-zoom-btn" title="放大">＋</button>
+          <button id="zoomReset" class="canvas-zoom-btn" title="重置为 100%">重置</button>
+        </div>
         <canvas id="canvas"></canvas>
       </main>
     </div>
@@ -1265,7 +1350,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v81';
+    const APP_VERSION = 'v89';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1312,7 +1397,7 @@
       backgroundImage: null,
       snapIndicator: null,
       eraserPreview: null,
-      brushColor: '#ffffff',
+      brushColor: '#000000',
       brushOpacity: 1,
       history: [],
       redoHistory: []
@@ -1367,6 +1452,8 @@
 
     const DEFAULT_STROKE_COLOR = '#000000';
     const DEFAULT_AREA_COLOR = DEFAULT_STROKE_COLOR;
+    const BRUSH_SETTINGS_STORAGE_KEY = 'pyFloorPlan.brushTool.v82';
+    const PROPERTY_EXPANDED_STORAGE_KEY = 'pyFloorPlan.propertyExpanded.v82';
     // 统一色板：第一行为经典高饱和纯色，第二行为对应版专业深色，第三行为区域高亮浅色。
     // 左侧默认样式色板和顶部属性栏颜色弹窗共用这一套数据，避免分别维护造成遗漏。
     const colors = [
@@ -1393,6 +1480,46 @@
       if (label) label.textContent = APP_VERSION;
     }
 
+    function getDefaultBrushColor() {
+      return (state.brushColor && String(state.brushColor).trim()) || (els.strokeColor && els.strokeColor.value) || DEFAULT_STROKE_COLOR;
+    }
+
+    function saveBrushToolSettingsToStorage() {
+      try {
+        const payload = {
+          color: getDefaultBrushColor(),
+          width: getInputNumber(els.eraserWidth, 22) || 22,
+          opacity: getBrushOpacityPercent()
+        };
+        localStorage.setItem(BRUSH_SETTINGS_STORAGE_KEY, JSON.stringify(payload));
+      } catch (err) {
+        console.warn('笔刷设置保存失败', err);
+      }
+    }
+
+    function initBrushToolSettingsFromStorage() {
+      try {
+        const raw = localStorage.getItem(BRUSH_SETTINGS_STORAGE_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          state.brushColor = (saved && typeof saved.color === 'string' && saved.color.trim()) ? saved.color : ((els.strokeColor && els.strokeColor.value) || DEFAULT_STROKE_COLOR);
+          if (saved && saved.width !== undefined) els.eraserWidth.value = Math.max(4, Math.min(120, parseInputNumber(saved.width, 22)));
+          if (saved && saved.opacity !== undefined) setBrushOpacityFromPercent(parseInputNumber(saved.opacity, 100));
+          return;
+        }
+      } catch (err) {
+        console.warn('笔刷设置读取失败', err);
+      }
+      state.brushColor = (els.strokeColor && els.strokeColor.value) || DEFAULT_STROKE_COLOR;
+    }
+
+    function setPropertyExpanded(expanded, persist = true) {
+      els.objectMetrics.classList.toggle('expanded', expanded);
+      document.querySelector('.app').classList.toggle('property-expanded', expanded);
+      if (persist) localStorage.setItem(PROPERTY_EXPANDED_STORAGE_KEY, expanded ? '1' : '0');
+      resizeCanvas();
+    }
+
     function uid() { return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()); }
 
     function initSwatches() {
@@ -1417,6 +1544,7 @@
       canvas.height = Math.ceil(displayH * devicePixelRatio);
       canvas.style.width = displayW + 'px';
       canvas.style.height = displayH + 'px';
+      updateCanvasFloatBars();
       draw();
     }
 
@@ -1655,10 +1783,42 @@
     }
 
     function getBrushToolPropertyValue(key) {
-      if (key === 'brushColor') return state.brushColor || '#ffffff';
+      if (key === 'brushColor') return state.brushColor || (els.strokeColor && els.strokeColor.value) || DEFAULT_STROKE_COLOR;
       if (key === 'brushWidth') return getInputNumber(els.eraserWidth, 22) || 22;
       if (key === 'brushOpacity') return getBrushOpacityPercent();
       return '';
+    }
+
+    function normalizeTextContent(value, fallback = '文字') {
+      const normalized = String(value ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      return normalized.trim() ? normalized.replace(/^\n+|\n+$/g, '') : fallback;
+    }
+
+    function getTextLines(value) {
+      const text = normalizeTextContent(value, '文字');
+      const lines = String(text).split('\n');
+      return lines.length ? lines : ['文字'];
+    }
+
+    function getTextLineHeight(fontSize) {
+      return Math.max(8, fontSize || 20) * 1.25;
+    }
+
+    function formatTextPreview(value) {
+      const text = String(value ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+      if (!text) return '';
+      return text.split('\n').map(line => line.trim()).filter(Boolean).join(' / ') || text.replace(/\n+/g, ' / ');
+    }
+
+    function measureTextBlock(text, fontSize) {
+      const size = fontSize || 20;
+      const lines = getTextLines(text);
+      ctx.save();
+      ctx.font = `${size}px Arial, Microsoft YaHei, sans-serif`;
+      const width = Math.max(24, ...lines.map(line => ctx.measureText(line || ' ').width));
+      ctx.restore();
+      const lineHeight = getTextLineHeight(size);
+      return { width, height: lineHeight * lines.length, lineHeight, lines };
     }
 
     function currentStyle() {
@@ -1724,6 +1884,45 @@
       updateObjectMetrics();
     }
 
+    function updateCanvasFloatBars() {
+      const wrap = document.querySelector('.canvas-wrap');
+      const statusBar = els.status;
+      const zoomBar = document.getElementById('canvasZoomControls');
+      if (!wrap) return;
+
+      const pad = 14;
+      const top = wrap.scrollTop + pad;
+
+      if (statusBar) {
+        statusBar.style.left = `${wrap.scrollLeft + pad}px`;
+        statusBar.style.top = `${top}px`;
+      }
+
+      if (zoomBar) {
+        const zoomWidth = zoomBar.offsetWidth || 0;
+        const left = wrap.scrollLeft + Math.max(pad, wrap.clientWidth - zoomWidth - pad);
+        zoomBar.style.left = `${left}px`;
+        zoomBar.style.top = `${top}px`;
+      }
+    }
+
+    let canvasFloatBarUpdateQueued = false;
+    function scheduleCanvasFloatBarUpdate() {
+      if (canvasFloatBarUpdateQueued) return;
+      canvasFloatBarUpdateQueued = true;
+      requestAnimationFrame(() => {
+        canvasFloatBarUpdateQueued = false;
+        updateCanvasFloatBars();
+      });
+    }
+
+    function scheduleCanvasFloatBarSettledUpdates() {
+      scheduleCanvasFloatBarUpdate();
+      setTimeout(scheduleCanvasFloatBarUpdate, 60);
+      setTimeout(scheduleCanvasFloatBarUpdate, 140);
+      setTimeout(scheduleCanvasFloatBarUpdate, 240);
+    }
+
     function isEditableLineObject(o) {
       return o && ['line','arrow','wall','dimension','door','window'].includes(o.type);
     }
@@ -1775,7 +1974,7 @@
         defs.push({ key:'width', label:'宽', type:'number', unit:'px' });
         defs.push({ key:'height', label:'高', type:'number', unit:'px' });
       }
-      if (o.type === 'text') defs.push({ key:'text', label:'文字', type:'text' });
+      if (o.type === 'text') defs.push({ key:'textPreview', label:'内容', type:'readonlyText' });
       defs.push({ key:'color', label:'颜色', type:'swatches' });
       if (['wall','line','arrow','rect','ellipse','dimension','door','window','area'].includes(o.type)) defs.push({ key:'lineWidth', label:'线宽', type:'number', unit:'px' });
       if (o.type === 'area') defs.push({ key:'fillOpacity', label:'透明', type:'number', unit:'%' });
@@ -1810,6 +2009,7 @@
         const b = getObjectBox(o);
         return formatNumber(key === 'width' ? Math.abs(b.w) : Math.abs(b.h));
       }
+      if (key === 'textPreview') return o.text || '文字';
       if (key === 'text') return o.text || '文字';
       if (key === 'color') return o.color || '#111827';
       if (key === 'lineWidth') return o.lineWidth || 2;
@@ -2129,6 +2329,20 @@
         group.appendChild(picker);
         return group;
       }
+      if (def.type === 'readonlyText') {
+        group.classList.add('text-preview-group');
+        const preview = document.createElement('span');
+        const previewText = formatTextPreview(value);
+        preview.className = 'prop-text-preview' + (previewText ? '' : ' placeholder');
+        preview.textContent = previewText || '点击编辑文字';
+        preview.title = previewText || '点击编辑文字';
+        preview.addEventListener('click', e => {
+          e.stopPropagation();
+          editSelectedTextObject();
+        });
+        group.appendChild(preview);
+        return group;
+      }
       if (def.type === 'select') {
         input = document.createElement('select');
         input.className = 'metric-input prop-select';
@@ -2380,6 +2594,16 @@
           updateColorPropertyButton(btn, value);
           return;
         }
+        if (def.type === 'readonlyText') {
+          const preview = fields.querySelector('.prop-text-preview');
+          if (preview) {
+            const previewText = formatTextPreview(value);
+            preview.textContent = previewText || '点击编辑文字';
+            preview.title = previewText || '点击编辑文字';
+            preview.classList.toggle('placeholder', !previewText);
+          }
+          return;
+        }
         const input = fields.querySelector(`[data-prop="${def.key}"]`);
         if (input && document.activeElement !== input) {
           if (input.tagName === 'SELECT') {
@@ -2438,7 +2662,7 @@
           if (key === 'height') o.y2 = o.y1 + Math.sign((o.y2 - o.y1) || 1) * n;
         }
       } else if (key === 'text') {
-        o.text = String(raw).trim() || '文字';
+        o.text = normalizeTextContent(raw, '文字');
       } else {
         applyObjectProperty(o, key, raw, n);
       }
@@ -2454,7 +2678,7 @@
       if (isMixedPropertyValue(raw) || String(raw ?? '').trim() === MIXED_PROPERTY_LABEL) { updateObjectMetrics(true); return; }
       const n = Number(raw);
       if (key === 'brushColor') {
-        state.brushColor = raw || '#ffffff';
+        state.brushColor = raw || (els.strokeColor && els.strokeColor.value) || DEFAULT_STROKE_COLOR;
       } else if (key === 'brushWidth') {
         if (!Number.isFinite(n)) { updateObjectMetrics(true); return; }
         const next = Math.max(4, Math.min(120, n));
@@ -2464,6 +2688,7 @@
         if (!Number.isFinite(n)) { updateObjectMetrics(true); return; }
         setBrushOpacityFromPercent(n);
       }
+      saveBrushToolSettingsToStorage();
       markProjectDirty();
       draw();
       updateObjectMetrics();
@@ -2902,8 +3127,14 @@
         c.fillStyle = item.fill || '#111827';
         c.font = `${item.fontSize || 20}px ${PDF_TEXT_FONT_FAMILY}`;
         c.textAlign = item.textAlign || 'start';
-        c.textBaseline = item.textBaseline || 'top';
-        c.fillText(item.text || '', item.x || 0, item.y || 0);
+        const baseline = item.textBaseline || 'top';
+        const lines = getTextLines(item.text || '');
+        const lineHeight = item.lineHeight || getTextLineHeight(item.fontSize || 20);
+        let y = item.y || 0;
+        if (baseline === 'middle') y -= ((lines.length - 1) * lineHeight) / 2;
+        else if (baseline === 'bottom') y -= (lines.length - 1) * lineHeight;
+        c.textBaseline = baseline;
+        lines.forEach((line, index) => c.fillText(line || ' ', item.x || 0, y + index * lineHeight));
       }
       if (transformed) c.restore();
       c.setLineDash([]);
@@ -2973,7 +3204,14 @@
         return `<path d="${d}" ${strokeBase} fill="none"${transform} />`;
       }
       if (item.kind === 'text') {
-        return `<text x="${svgNum(item.x || 0)}" y="${svgNum(item.y || 0)}" fill="${escapeSvg(item.fill || '#111827')}" font-size="${svgNum(item.fontSize || 20)}" font-family="${escapeSvg(PDF_TEXT_FONT_FAMILY)}" text-anchor="${svgTextAnchor(item.textAlign)}" dominant-baseline="${svgTextBaseline(item.textBaseline)}"${transform}>${escapeSvg(item.text || '')}</text>`;
+        const lines = getTextLines(item.text || '');
+        const lineHeight = item.lineHeight || getTextLineHeight(item.fontSize || 20);
+        let y = Number(item.y || 0);
+        const baseline = item.textBaseline || 'top';
+        if (baseline === 'middle') y -= ((lines.length - 1) * lineHeight) / 2;
+        else if (baseline === 'bottom') y -= (lines.length - 1) * lineHeight;
+        const tspans = lines.map((line, index) => `<tspan x="${svgNum(item.x || 0)}" dy="${index === 0 ? 0 : svgNum(lineHeight)}">${escapeSvg(line || ' ')}</tspan>`).join('');
+        return `<text x="${svgNum(item.x || 0)}" y="${svgNum(y)}" fill="${escapeSvg(item.fill || '#111827')}" font-size="${svgNum(item.fontSize || 20)}" font-family="${escapeSvg(PDF_TEXT_FONT_FAMILY)}" text-anchor="${svgTextAnchor(item.textAlign)}" dominant-baseline="${svgTextBaseline(baseline)}"${transform}>${tspans}</text>`;
       }
       return '';
     }
@@ -3197,7 +3435,7 @@
       }
       if(o.type==='area') { const pts=Array.isArray(o.points)?o.points:[]; if(!pts.length)return {x:0,y:0,w:0,h:0}; const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y); const pad=Math.max(6,(o.lineWidth||2)+4); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys); return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
       if(o.type==='brush'||o.type==='erase') { const pts=Array.isArray(o.points)?o.points:[]; if(!pts.length)return {x:0,y:0,w:0,h:0}; const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y); const pad=Math.max(6,(o.width||22)/2+4); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys); return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
-      if(o.type==='text') { ctx.save(); ctx.font=`${o.fontSize||20}px Arial, Microsoft YaHei, sans-serif`; const w=Math.max(ctx.measureText(o.text||'文字').width,24); ctx.restore(); return {x:o.x,y:o.y,w,h:(o.fontSize||20)*1.25}; }
+      if(o.type==='text') { const m = measureTextBlock(o.text || '文字', o.fontSize || 20); return {x:o.x,y:o.y,w:m.width,h:m.height}; }
       if(o.type==='door') {
         const a = Math.atan2(o.y2-o.y1, o.x2-o.x1);
         const len = Math.hypot(o.x2-o.x1, o.y2-o.y1);
@@ -3680,7 +3918,7 @@
         return;
       }
       if(state.tool==='text'){
-        addObject({type:'text',x:p.x,y:p.y,text:els.textInput.value.trim()||'文字',layer:'text'});
+        addObject({type:'text',x:p.x,y:p.y,text:normalizeTextContent(els.textInput.value, '文字'),layer:'text'});
         updateCursor(e);
         return;
       }
@@ -3689,7 +3927,7 @@
         state.erasing=true;
         state.current=raw;
         state.eraserPreview=raw;
-        state.objects.push({id:uid(),type:'brush',points:[raw],width:getInputNumber(els.eraserWidth, 22)||22,color:state.brushColor||'#ffffff',opacity:Number.isFinite(Number(state.brushOpacity))?Math.max(0,Math.min(1,Number(state.brushOpacity))):1,layer:'annotations'});
+        state.objects.push({id:uid(),type:'brush',points:[raw],width:getInputNumber(els.eraserWidth, 22)||22,color:state.brushColor || (els.strokeColor && els.strokeColor.value) || DEFAULT_STROKE_COLOR,opacity:Number.isFinite(Number(state.brushOpacity))?Math.max(0,Math.min(1,Number(state.brushOpacity))):1,layer:'annotations'});
         draw();
         updateCursor(e);
         return;
@@ -3941,13 +4179,24 @@
       state.drawing=false; state.start=null; state.current=null; clearSnapIndicator(); draw(); updateCursor(e);
     }
 
+    function editSelectedTextObject() {
+      const o = state.objects.find(x => state.selectedIds.includes(x.id) && x.type === 'text');
+      if (!o) {
+        showMessageDialog('未选择文字', '请先选中一个文字标签。');
+        return;
+      }
+      editTextObject(o);
+    }
+
     async function editTextObject(o){
-      const v = await showTextInputDialog('编辑文字', '请输入新的文字内容：', o.text || '', '文字标签');
+      const v = await showMultilineTextDialog('编辑文字', '请输入新的文字内容：', o.text || '', '文字标签');
       if(v === null) return;
       saveHistory();
-      o.text = v.trim() || '文字';
+      o.text = normalizeTextContent(v, '文字');
       state.selectedIds = [o.id];
       draw();
+      updateObjectMetrics(true);
+      markProjectDirty();
     }
 
     function setTool(tool) {
@@ -4108,7 +4357,7 @@
     document.getElementById('copyBtn').onclick=copySelected;
     document.getElementById('pasteBtn').onclick=pasteClipboard;
     document.getElementById('applyStyleBtn').onclick=applyStyle;
-    document.getElementById('editTextBtn').onclick=()=>{ const o=state.objects.find(x=>state.selectedIds.includes(x.id)&&x.type==='text'); if(!o)showMessageDialog('未选择文字', '请先选中一个文字标签。'); else editTextObject(o); };
+    document.getElementById('editTextBtn').onclick=editSelectedTextObject;
     document.getElementById('groupSidebarBtn').onclick=groupSelected;
     document.getElementById('ungroupSidebarBtn').onclick=ungroupSelected;
     document.getElementById('alignLeftBtn').onclick=()=>alignSelected('left');
@@ -4263,7 +4512,7 @@
 
     document.getElementById('zoomIn').onclick=()=>setZoom(state.zoom*1.10);
     document.getElementById('zoomOut').onclick=()=>setZoom(state.zoom/1.10);
-    document.getElementById('zoomReset').onclick=()=>{ state.zoom=1; state.panX=20; state.panY=20; resizeCanvas(); };
+    document.getElementById('zoomReset').onclick=()=>{ state.zoom=1; state.panX=20; state.panY=20; resizeCanvas(); updateCursor(); };
 
     function adjustEraserWidthBySteps(direction, stepSize, stepCount = 1) {
       const def = sidebarUnitizedInputDefs.find(d => d.id === 'eraserWidth') || { min: 4, max: 120, fallback: 22 };
@@ -4326,6 +4575,16 @@
 
     let wheelZoomAccumulator = 0;
     let wheelZoomResetTimer = null;
+    const canvasWrapElement = document.querySelector('.canvas-wrap');
+    if (canvasWrapElement) {
+      canvasWrapElement.addEventListener('scroll', scheduleCanvasFloatBarUpdate, { passive: true });
+      if ('ResizeObserver' in window) {
+        const canvasFloatResizeObserver = new ResizeObserver(scheduleCanvasFloatBarSettledUpdates);
+        canvasFloatResizeObserver.observe(canvasWrapElement);
+      }
+    }
+    window.addEventListener('resize', scheduleCanvasFloatBarSettledUpdates, { passive: true });
+
     document.querySelector('.canvas-wrap').addEventListener('wheel', e => {
       if (state.tool === 'eraser' && e.altKey && !(e.ctrlKey || e.metaKey)) {
         handleEraserWheelResize(e);
@@ -4487,23 +4746,45 @@
       return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg/i.test(ua);
     }
 
-    function downloadBlob(blob, filename){
+    function isMobileSafariBrowser() {
+      const ua = navigator.userAgent || '';
+      return isSafariBrowser() && /iP(ad|hone|od)/i.test(ua);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function openSafariPreviewPage(blob, filename, url) {
+      const win = window.open('', '_blank');
+      if (!win) return false;
+      const isImage = blob.type.startsWith('image/');
+      let content = '';
+      let headerText = `Safari 预览模式：请使用“文件 > 存储为”。建议文件名：${filename}`;
+      if (isImage) {
+        headerText = `Safari 预览模式：请长按或共享图片保存，或使用“文件 > 存储为”。建议文件名：${filename}`;
+        content = `<img src="${url}" style="display:block;max-width:100%;height:auto;margin:18px auto;background:white;box-shadow:0 8px 24px rgba(0,0,0,.12);">`;
+      } else {
+        const text = await blob.text();
+        content = `<pre style="margin:0;padding:18px;white-space:pre-wrap;word-break:break-word;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#0f172a;">${escapeHtml(text)}</pre>`;
+      }
+      win.document.write(`<!doctype html><html><head><meta charset="UTF-8"><title>${escapeHtml(filename)}</title><style>body{margin:0;background:#f3f4f6;font-family:Arial,"Microsoft YaHei",sans-serif;}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:10px 14px;font-size:13px;color:#374151;z-index:1;}</style></head><body><header>${headerText}</header>${content}</body></html>`);
+      win.document.close();
+      setTimeout(()=>URL.revokeObjectURL(url), 10 * 60 * 1000);
+      return true;
+    }
+
+    async function downloadBlob(blob, filename){
       const url = URL.createObjectURL(blob);
 
-      // Safari 在本地 file:// 页面下载 blob 时，容易生成 .download 并报“无法移动文件”。
-      // JPG/PNG/JSON 在 Safari 下改为打开预览页，由用户手动保存，避免临时下载文件卡住。
-      if(isSafariBrowser()){
-        const win = window.open('', '_blank');
-        if(win){
-          const isImage = blob.type.startsWith('image/');
-          const content = isImage
-            ? `<img src="${url}" style="display:block;max-width:100%;height:auto;margin:18px auto;background:white;box-shadow:0 8px 24px rgba(0,0,0,.12);">`
-            : `<p style="padding:18px">Safari 预览模式：请使用页面另存为。建议文件名：${filename}</p>`;
-          win.document.write(`<!doctype html><html><head><meta charset="UTF-8"><title>${filename}</title><style>body{margin:0;background:#f3f4f6;font-family:Arial,"Microsoft YaHei",sans-serif;}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:10px 14px;font-size:13px;color:#374151;z-index:1;}</style></head><body><header>Safari 预览模式：请右键图片选择“将图像存储到‘下载’”，或使用“文件 > 存储为”。建议文件名：${filename}</header>${content}</body></html>`);
-          win.document.close();
-          setTimeout(()=>URL.revokeObjectURL(url), 10 * 60 * 1000);
-          return;
-        }
+      if(isMobileSafariBrowser()){
+        const handled = await openSafariPreviewPage(blob, filename, url);
+        if (handled) return;
       }
 
       const link = document.createElement('a');
@@ -4513,7 +4794,6 @@
       link.style.display = 'none';
       document.body.appendChild(link);
 
-      // 非 Safari：保持自动下载。延迟移除链接和释放 URL，避免大文件还没完成就失效。
       setTimeout(()=>{
         link.click();
         setTimeout(()=>link.remove(), 120000);
@@ -4611,7 +4891,7 @@
           arrowSize: getInputNumber(els.arrowSize, 14),
           dimensionLabelMode: els.dimensionLabelMode.value,
           eraserWidth: getInputNumber(els.eraserWidth, 22),
-          brushColor: state.brushColor || '#ffffff',
+          brushColor: state.brushColor || (els.strokeColor && els.strokeColor.value) || DEFAULT_STROKE_COLOR,
           brushOpacity: getBrushOpacityPercent()
         },
         view: {
@@ -4653,9 +4933,10 @@
           o.width = o.width || 22;
           o.layer = o.layer || 'annotations';
         }
+        if(o.type === 'text') { o.text = normalizeTextContent(o.text, '文字'); }
         if(o.type === 'brush') {
           o.points = Array.isArray(o.points) ? o.points : [];
-          o.color = o.color || '#ffffff';
+          o.color = o.color || DEFAULT_STROKE_COLOR;
           o.opacity = Number.isFinite(Number(o.opacity)) ? Math.max(0, Math.min(1, Number(o.opacity))) : 1;
           o.width = o.width || 22;
           o.layer = o.layer || 'annotations';
@@ -4707,6 +4988,7 @@
       if(defaults.eraserWidth) els.eraserWidth.value = defaults.eraserWidth;
       if(defaults.brushColor) state.brushColor = defaults.brushColor;
       if(defaults.brushOpacity !== undefined) setBrushOpacityFromPercent(parseInputNumber(defaults.brushOpacity, 100));
+      saveBrushToolSettingsToStorage();
 
       if(view.unitName || data.unitName) els.unitName.value = view.unitName || data.unitName;
       if(view.scaleFactor || data.scaleFactor) els.scaleFactor.value = view.scaleFactor || data.scaleFactor;
@@ -4828,6 +5110,60 @@
         overlay.appendChild(box);
         document.body.appendChild(overlay);
         setTimeout(() => { input.focus(); input.select(); }, 0);
+      });
+    }
+
+    function showMultilineTextDialog(title, message, initialValue = '', placeholder = '') {
+      return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;padding:20px;';
+        const box = document.createElement('div');
+        box.style.cssText = 'width:min(560px,100%);background:#fff;border:1px solid #cbd5e1;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.28);padding:18px;font-family:Arial,"Microsoft YaHei",sans-serif;color:#111827;';
+        const h = document.createElement('div');
+        h.textContent = title;
+        h.style.cssText = 'font-size:16px;font-weight:800;margin-bottom:8px;';
+        const p = document.createElement('div');
+        p.textContent = message || '';
+        p.style.cssText = 'font-size:13px;line-height:1.6;color:#475569;margin-bottom:12px;white-space:pre-line;';
+        const input = document.createElement('textarea');
+        input.value = String(initialValue || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        input.placeholder = placeholder || '';
+        input.rows = 7;
+        input.style.cssText = 'width:100%;min-height:150px;resize:vertical;border:1px solid #cbd5e1;border-radius:9px;padding:9px 10px;font-size:13px;line-height:1.45;margin-bottom:12px;outline:none;font-family:Arial,"Microsoft YaHei",sans-serif;';
+        const helper = document.createElement('div');
+        helper.textContent = 'Enter 换行；Ctrl / Command + Enter 确定；Esc 取消';
+        helper.style.cssText = 'font-size:12px;color:#64748b;margin-bottom:14px;';
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.textContent = '取消';
+        cancelBtn.style.cssText = 'min-height:34px;border:1px solid #cbd5e1;background:#f8fafc;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;';
+        const okBtn = document.createElement('button');
+        okBtn.type = 'button';
+        okBtn.textContent = '确定';
+        okBtn.style.cssText = 'min-height:34px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;font-weight:700;';
+        const finish = value => { overlay.remove(); resolve(value); };
+        cancelBtn.addEventListener('click', () => finish(null));
+        okBtn.addEventListener('click', () => finish(input.value));
+        input.addEventListener('keydown', e => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); finish(input.value); }
+          if (e.key === 'Escape') { e.preventDefault(); finish(null); }
+        });
+        row.appendChild(cancelBtn);
+        row.appendChild(okBtn);
+        box.appendChild(h);
+        if (message) box.appendChild(p);
+        box.appendChild(input);
+        box.appendChild(helper);
+        box.appendChild(row);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        setTimeout(() => {
+          input.focus();
+          const end = input.value.length;
+          try { input.setSelectionRange(end, end); } catch (err) {}
+        }, 0);
       });
     }
 
@@ -5506,6 +5842,9 @@
     if (els.endpointSnapMode) {
       els.endpointSnapMode.addEventListener('change', () => { clearSnapIndicator(); draw(); });
     }
+    if (els.eraserWidth) {
+      ['input', 'change'].forEach(evt => els.eraserWidth.addEventListener(evt, () => saveBrushToolSettingsToStorage()));
+    }
     [els.exportFormat, els.exportScale, els.exportBackground].forEach(el=>{
       if(!el) return;
       el.addEventListener('change', () => { updateExportOptions(); syncSegmentedControls(el.id); markProjectDirty(); });
@@ -5513,19 +5852,20 @@
 
 
     els.propertyExpandBtn.addEventListener('click', () => {
-      const expanded = els.objectMetrics.classList.toggle('expanded');
-      document.querySelector('.app').classList.toggle('property-expanded', expanded);
-      resizeCanvas();
+      setPropertyExpanded(!els.objectMetrics.classList.contains('expanded'));
     });
 
     updateAppVersionLabel();
     initSwatches();
+    initBrushToolSettingsFromStorage();
     initSidebarUnitizedInputs();
     syncSegmentedControls();
     updateAspectRatioLockVisual();
     updateAspectRatioFromPage();
     rememberPageSelectorValues();
+    setPropertyExpanded(localStorage.getItem(PROPERTY_EXPANDED_STORAGE_KEY) === '1', false);
     resizeCanvas();
+    updateCanvasFloatBars();
     updateCursor();
     updateHistoryButtons();
   
@@ -5543,6 +5883,7 @@
         if (persist) localStorage.setItem(sidebarCollapsedKey, collapsed ? '1' : '0');
         requestAnimationFrame(() => {
           resizeCanvas();
+          scheduleCanvasFloatBarSettledUpdates();
           draw();
         });
       }
