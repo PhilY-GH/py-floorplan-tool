@@ -469,6 +469,13 @@
       border-color: #2563eb;
       box-shadow: 0 0 0 3px rgba(37, 99, 235, .14);
     }
+    .metric-input:disabled {
+      color: #94a3b8;
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+      cursor: not-allowed;
+      opacity: 1;
+    }
     .metric-input.prop-text {
       width: 69px !important;
       min-width: 69px !important;
@@ -565,8 +572,10 @@
       display: flex;
       flex-direction: column;
       gap: 9px;
-      width: 240px;
+      width: 282px;
       max-width: calc(100vw - 24px);
+      max-height: calc(100vh - 24px);
+      overflow-y: auto;
       padding: 12px;
       background: #ffffff;
       border: 1px solid #cbd5e1;
@@ -594,6 +603,9 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 6px;
+    }
+    .bg-position-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
     .bg-opacity-row button.active {
       background: #1d4ed8;
@@ -625,6 +637,7 @@
     .dimension-icon::after { content: ""; position:absolute; left:1px; right:1px; top:4px; bottom:4px; border-left:2px solid currentColor; border-right:2px solid currentColor; }
     .text-icon { font-weight: 800; font-size: 14px; line-height: 16px; text-align:center; }
     .eraser-icon { transform: rotate(-25deg); border: 2px solid currentColor; border-radius: 3px; width: 15px; height: 10px; margin-top: 3px; }
+    .brush-icon svg { width: 17px; height: 17px; display: block; }
     .save-icon { border: 2px solid currentColor; border-radius: 3px; }
     .save-icon::before { content:""; position:absolute; left:3px; right:3px; bottom:2px; height:4px; border:1.5px solid currentColor; border-radius:1px; }
     .open-icon::before { content:""; position:absolute; left:1px; top:5px; width:14px; height:8px; border:2px solid currentColor; border-radius:2px; transform:skewX(-10deg); }
@@ -795,9 +808,28 @@
       box-shadow: 0 4px 14px rgba(0,0,0,0.06);
       font-size: 13px;
       z-index: 2;
-      pointer-events: none;
+      pointer-events: auto;
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
+    }
+    .status-select-count {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 5px;
+      margin: -2px -3px;
+      border-radius: 7px;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: background .15s ease, color .15s ease;
+    }
+    .status-select-count:hover {
+      background: rgba(37,99,235,.10);
+      color: #1d4ed8;
+    }
+    .status.multi-select .status-select-count {
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-weight: 800;
     }
     .pill {
       display: inline-flex;
@@ -864,7 +896,7 @@
           <button data-tool="window" class="tool-btn" title="窗"><span class="mini-icon window-icon"></span><span>窗</span></button>
           <button data-tool="dimension" class="tool-btn" title="标尺"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12v8M20 12v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 16v3M12 16v4M16 16v3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>尺</span></button>
           <button data-tool="text" class="tool-btn" title="文字"><span class="mini-icon text-icon">T</span><span>字</span></button>
-          <button data-tool="eraser" class="tool-btn" title="橡皮 / 擦除"><span class="mini-icon eraser-icon"></span><span>擦</span></button>
+          <button data-tool="eraser" class="tool-btn" title="笔刷"><span class="mini-icon brush-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16C7 8 10 8 12 13C13.5 17 15.5 15.5 17.5 10C18.7 6.5 20.5 6.4 21.2 8.3" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>笔</span></button>
         </div>
       </div>
 
@@ -1007,7 +1039,7 @@
             </div>
           </div>
           <div class="row">
-            <label>橡皮宽度</label>
+            <label>笔刷大小</label>
             <input id="eraserWidth" type="number" min="4" max="120" value="22" />
           </div>
           <button id="applyStyleBtn" class="full">应用到选中对象</button>
@@ -1021,7 +1053,18 @@
           </div>
           <div class="group-body">
           <div class="row">
-            <label>吸附网格</label>
+            <label>端点吸附</label>
+            <select id="endpointSnapMode" class="hidden-input">
+              <option value="on" selected>开启</option>
+              <option value="off">关闭</option>
+            </select>
+            <div class="segmented" data-segment-target="endpointSnapMode">
+              <button type="button" data-value="on" class="active">开</button>
+              <button type="button" data-value="off">关</button>
+            </div>
+          </div>
+          <div class="row">
+            <label>网格吸附</label>
             <select id="snapMode" class="hidden-input">
               <option value="on" selected>开启</option>
               <option value="off">关闭</option>
@@ -1212,7 +1255,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v72';
+    const APP_VERSION = 'v80';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1257,6 +1300,10 @@
       pageH: 850,
       aspectRatio: 1100 / 850,
       backgroundImage: null,
+      snapIndicator: null,
+      eraserPreview: null,
+      brushColor: '#ffffff',
+      brushOpacity: 1,
       history: [],
       redoHistory: []
     };
@@ -1287,6 +1334,7 @@
       arrowSize: document.getElementById('arrowSize'),
       dimensionLabelMode: document.getElementById('dimensionLabelMode'),
       eraserWidth: document.getElementById('eraserWidth'),
+      endpointSnapMode: document.getElementById('endpointSnapMode'),
       snapMode: document.getElementById('snapMode'),
       gridSize: document.getElementById('gridSize'),
       unitName: document.getElementById('unitName'),
@@ -1300,11 +1348,11 @@
     };
 
     const toolNames = {
-      select: '选择', wall: '墙体', line: '直线', area: '区域', arrow: '箭头线', rect: '矩形', ellipse: '椭圆', dimension: '标尺', text: '文字', door: '门', window: '窗', eraser: '橡皮擦'
+      select: '选择', wall: '墙体', line: '直线', area: '区域', arrow: '箭头线', rect: '矩形', ellipse: '椭圆', dimension: '标尺', text: '文字', door: '门', window: '窗', eraser: '笔刷'
     };
 
     const toolLayer = {
-      area: 'areas', wall: 'walls', line: 'shapes', rect: 'shapes', ellipse: 'shapes', arrow: 'annotations', dimension: 'annotations', text: 'text', door: 'symbols', window: 'symbols', eraser: 'annotations'
+      area: 'areas', wall: 'walls', line: 'shapes', rect: 'shapes', ellipse: 'shapes', arrow: 'annotations', dimension: 'annotations', text: 'text', door: 'symbols', window: 'symbols', eraser: 'annotations', brush: 'annotations'
     };
 
     const DEFAULT_STROKE_COLOR = '#000000';
@@ -1387,17 +1435,119 @@
 
     window.addEventListener('resize', resizeCanvas);
 
+    function snapGridPoint(p) {
+      const g = getInputNumber(els.gridSize, 20) || 20;
+      return {
+        x: Math.round(p.x / g) * g,
+        y: Math.round(p.y / g) * g
+      };
+    }
+
+    function addSnapPoint(points, x, y, objectId, kind = 'endpoint') {
+      const px = Number(x), py = Number(y);
+      if (!Number.isFinite(px) || !Number.isFinite(py)) return;
+      points.push({ x: px, y: py, objectId, kind });
+    }
+
+    function getSnapEndpointCandidates(excludeObjectId = null) {
+      const points = [];
+      state.objects.forEach(o => {
+        if (!o || o.id === excludeObjectId || !isLayerVisible(o)) return;
+        if (['line', 'arrow', 'wall', 'dimension', 'door', 'window'].includes(o.type)) {
+          addSnapPoint(points, o.x1, o.y1, o.id, 'endpoint');
+          addSnapPoint(points, o.x2, o.y2, o.id, 'endpoint');
+          return;
+        }
+        if (o.type === 'area') {
+          (Array.isArray(o.points) ? o.points : []).forEach(pt => addSnapPoint(points, pt.x, pt.y, o.id, 'vertex'));
+          return;
+        }
+        if (o.type === 'rect') {
+          const b = getBoxBounds(o);
+          addSnapPoint(points, b.left, b.top, o.id, 'corner');
+          addSnapPoint(points, b.right, b.top, o.id, 'corner');
+          addSnapPoint(points, b.right, b.bottom, o.id, 'corner');
+          addSnapPoint(points, b.left, b.bottom, o.id, 'corner');
+          return;
+        }
+        if (o.type === 'ellipse') {
+          const b = getBoxBounds(o);
+          const cx = (b.left + b.right) / 2;
+          const cy = (b.top + b.bottom) / 2;
+          addSnapPoint(points, cx, b.top, o.id, 'ellipse-control');
+          addSnapPoint(points, b.right, cy, o.id, 'ellipse-control');
+          addSnapPoint(points, cx, b.bottom, o.id, 'ellipse-control');
+          addSnapPoint(points, b.left, cy, o.id, 'ellipse-control');
+        }
+      });
+      return points;
+    }
+
+    function isEndpointSnapEnabled() {
+      return !!(els.endpointSnapMode && els.endpointSnapMode.value !== 'off');
+    }
+
+    function isGridSnapEnabled() {
+      return !!(els.snapMode && els.snapMode.value !== 'off');
+    }
+
+    function clearSnapIndicator() {
+      state.snapIndicator = null;
+    }
+
+    function setSnapIndicator(point) {
+      state.snapIndicator = point ? { x: point.x, y: point.y } : null;
+    }
+
+    function snapObjectEndpoint(p, options = {}) {
+      if (!p || !isEndpointSnapEnabled()) return null;
+      const threshold = Math.max(12 / state.zoom, 6);
+      let best = null;
+      let bestDist = Infinity;
+      getSnapEndpointCandidates(options.excludeObjectId || null).forEach(ep => {
+        const d = Math.hypot(p.x - ep.x, p.y - ep.y);
+        if (d <= threshold && d < bestDist) {
+          best = ep;
+          bestDist = d;
+        }
+      });
+      return best ? { x: best.x, y: best.y, objectId: best.objectId } : null;
+    }
+
+    function isEndpointSnapDrawingTool(tool = state.tool) {
+      return ['line','arrow','wall','dimension','door','window','rect','ellipse','area'].includes(tool);
+    }
+
+    function snapWorldPoint(p, options = {}) {
+      if (!p) { clearSnapIndicator(); return p; }
+      const endpoint = snapObjectEndpoint(p, options);
+      if (endpoint) {
+        setSnapIndicator(endpoint);
+        return { x: endpoint.x, y: endpoint.y };
+      }
+      clearSnapIndicator();
+      if (isGridSnapEnabled()) return snapGridPoint(p);
+      return p;
+    }
+
     function screenToWorld(e, useSnap = true) {
       const rect = canvas.getBoundingClientRect();
-      let x = (e.clientX - rect.left - state.panX) / state.zoom;
-      let y = (e.clientY - rect.top - state.panY) / state.zoom;
-      if (useSnap && els.snapMode.value === 'on') {
-        const g = getInputNumber(els.gridSize, 20) || 20;
-        x = Math.round(x / g) * g;
-        y = Math.round(y / g) * g;
-      }
-      return { x, y };
+      const p = {
+        x: (e.clientX - rect.left - state.panX) / state.zoom,
+        y: (e.clientY - rect.top - state.panY) / state.zoom
+      };
+      return useSnap ? snapWorldPoint(p) : p;
     }
+
+    function screenToWorldWithSnapOptions(e, options = {}) {
+      const rect = canvas.getBoundingClientRect();
+      const p = {
+        x: (e.clientX - rect.left - state.panX) / state.zoom,
+        y: (e.clientY - rect.top - state.panY) / state.zoom
+      };
+      return snapWorldPoint(p, options);
+    }
+
     function rawScreenToWorld(e) { return screenToWorld(e, false); }
 
     function createHistorySnapshot(includeBackground = false) {
@@ -1475,6 +1625,32 @@
       return Math.max(0, Math.min(100, raw)) / 100;
     }
 
+    function getBrushOpacityPercent() {
+      const raw = Number(state.brushOpacity);
+      const opacity = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 1;
+      return Math.round(opacity * 100);
+    }
+
+    function setBrushOpacityFromPercent(value) {
+      const n = Number(value);
+      state.brushOpacity = Number.isFinite(n) ? Math.max(0, Math.min(100, n)) / 100 : 1;
+    }
+
+    function getBrushToolPropertyDefs() {
+      return [
+        { key:'brushColor', label:'颜色', type:'swatches' },
+        { key:'brushWidth', label:'大小', type:'number', unit:'px' },
+        { key:'brushOpacity', label:'透明', type:'number', unit:'%' }
+      ];
+    }
+
+    function getBrushToolPropertyValue(key) {
+      if (key === 'brushColor') return state.brushColor || '#ffffff';
+      if (key === 'brushWidth') return getInputNumber(els.eraserWidth, 22) || 22;
+      if (key === 'brushOpacity') return getBrushOpacityPercent();
+      return '';
+    }
+
     function currentStyle() {
       return {
         color: els.strokeColor.value,
@@ -1524,13 +1700,16 @@
         if (obj.id && state.selectedIds.includes(obj.id) && obj.type !== 'erase') drawSelection(ctx, obj);
       });
       if (state.boxSelecting && state.selectionBox) drawSelectionBox(ctx);
-      if (state.erasing && state.current) drawEraserCursor(ctx);
+      if (state.tool === 'eraser' && (state.current || state.eraserPreview)) drawBrushCursor(ctx);
+      drawSnapIndicator(ctx);
       ctx.restore();
       updateStatus();
     }
 
     function updateStatus() {
-      els.status.textContent = `当前工具：${toolNames[state.tool]}｜已选 ${state.selectedIds.length} 个对象`;
+      const count = state.selectedIds.length;
+      els.status.classList.toggle('multi-select', !!touchInteraction.multiSelectMode);
+      els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">已选 ${count} 个对象</span>`;
       if (document.activeElement !== els.zoomInput) els.zoomInput.value = `${Math.round(state.zoom * 100)}%`;
       updateObjectMetrics();
     }
@@ -1569,6 +1748,14 @@
 
     function getPropertyDefs(o) {
       if (!o || o.type === 'erase') return [];
+      if (o.type === 'brush') {
+        return [
+          { key:'color', label:'颜色', type:'swatches' },
+          { key:'brushObjectWidth', label:'大小', type:'number', unit:'px' },
+          { key:'brushObjectOpacity', label:'透明', type:'number', unit:'%' },
+          { key:'layer', label:'图层', type:'select', options:[['areas','区域'],['walls','墙体'],['symbols','门窗'],['shapes','图形'],['annotations','标注'],['text','文字']] }
+        ];
+      }
       const defs = [];
       if (isEditableLineObject(o)) {
         defs.push({ key:'length', label:'长度', type:'number', unit: els.unitName.value.trim() || 'unit' });
@@ -1588,14 +1775,19 @@
       }
       if (['door','window'].includes(o.type)) defs.push({ key:'openingThicknessMode', label:'厚度', type:'select', options:[['linear','线性'],['wall','墙体']] });
       if (o.type === 'door') defs.push({ key:'doorSwing', label:'开向', type:'select', options:[['right','右开'],['left','左开']] });
+      if (o.type === 'dimension') {
+        const customTextEnabled = (o.dimensionTextMode || 'auto') === 'custom';
+        defs.push({ key:'dimensionTextMode', label:'模式', type:'select', options:[['auto','自动'],['custom','自定义']] });
+        defs.push({ key:'dimensionCustomText', label:'内容', type:'text', disabled: !customTextEnabled, disabledTitle: '自动模式下保留内容，但不参与显示' });
+      }
       if (['text','dimension'].includes(o.type)) defs.push({ key:'fontSize', label:'字号', type:'number', unit:'px' });
       if (o.type === 'arrow') {
-        defs.push({ key:'arrowMode', label:'箭头', type:'select', options:[['end','单箭头'],['both','双箭头']] });
-        defs.push({ key:'arrowSize', label:'大小', type:'number', unit:'px' });
+        defs.push({ key:'arrowSize', label:'箭头', type:'number', unit:'px' });
+        defs.push({ key:'arrowMode', label:'类型', type:'select', options:[['end','单箭头'],['both','双箭头']] });
       }
       if (o.type === 'dimension') {
-        defs.push({ key:'arrowSize', label:'大小', type:'number', unit:'px' });
-        defs.push({ key:'dimensionLabelMode', label:'文字', type:'select', options:[['inline','压线'],['above','上方'],['below','下方']] });
+        defs.push({ key:'arrowSize', label:'箭头', type:'number', unit:'px' });
+        defs.push({ key:'dimensionLabelMode', label:'位置', type:'select', options:[['inline','压线'],['above','上方'],['below','下方']] });
       }
       defs.push({ key:'layer', label:'图层', type:'select', options:[['areas','区域'],['walls','墙体'],['symbols','门窗'],['shapes','图形'],['annotations','标注'],['text','文字']] });
       return defs;
@@ -1611,6 +1803,8 @@
       if (key === 'text') return o.text || '文字';
       if (key === 'color') return o.color || '#111827';
       if (key === 'lineWidth') return o.lineWidth || 2;
+      if (key === 'brushObjectWidth') return o.width || 22;
+      if (key === 'brushObjectOpacity') return Math.round((Number.isFinite(Number(o.opacity)) ? Math.max(0, Math.min(1, Number(o.opacity))) : 1) * 100);
       if (key === 'fillOpacity') return Math.round(getAreaFillOpacity(o) * 100);
       if (key === 'wallThickness') return o.wallThickness || 10;
       if (key === 'wallStyle') return o.wallStyle || 'hollow';
@@ -1619,6 +1813,8 @@
       if (key === 'fontSize') return o.fontSize || 20;
       if (key === 'arrowMode') return o.arrowMode || 'end';
       if (key === 'arrowSize') return o.arrowSize || 14;
+      if (key === 'dimensionTextMode') return o.dimensionTextMode || 'auto';
+      if (key === 'dimensionCustomText') return o.dimensionCustomText || '';
       if (key === 'dimensionLabelMode') return o.dimensionLabelMode || 'inline';
       if (key === 'layer') return o.layer || toolLayer[o.type] || 'walls';
       return o[key] ?? '';
@@ -1805,6 +2001,10 @@
       }
       input.dataset.prop = def.key;
       if (def.unit) input.dataset.unit = def.unit;
+      if (def.disabled) {
+        input.disabled = true;
+        input.title = def.disabledTitle || '当前模式下不可编辑';
+      }
       input.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); input.blur(); }
         if (e.key === 'Escape') {
@@ -1817,6 +2017,15 @@
       });
       group.appendChild(input);
       return group;
+    }
+
+    function updateDimensionCustomTextInputState() {
+      const o = getSingleSelectedObject();
+      const disabled = !(o && o.type === 'dimension' && (o.dimensionTextMode || 'auto') === 'custom');
+      document.querySelectorAll('[data-prop="dimensionCustomText"]').forEach(input => {
+        input.disabled = disabled;
+        input.title = disabled ? '自动模式下保留内容，但不参与显示' : '';
+      });
     }
 
     let activeColorAnchor = null;
@@ -1897,6 +2106,7 @@
       closeColorPopover();
       pop.innerHTML = '';
       defs.forEach(def => pop.appendChild(buildPropertyField(def, getPropertyValue(obj, def.key))));
+      updateDimensionCustomTextInputState();
       const r = anchor.getBoundingClientRect();
       const left = Math.min(window.innerWidth - 372, Math.max(8, r.left - 220));
       const top = Math.min(window.innerHeight - 140, r.bottom + 8);
@@ -1924,7 +2134,8 @@
     function updateObjectMetrics(forceRebuild = false) {
       const o = getSingleSelectedObject();
       const fields = document.getElementById('propertyFields');
-      if (!o || state.selectedIds.length !== 1) {
+      const isBrushToolMetrics = state.tool === 'eraser' && state.selectedIds.length === 0;
+      if ((!o || state.selectedIds.length !== 1) && !isBrushToolMetrics) {
         closeColorPopover();
         closeMorePopover();
         els.objectMetrics.classList.add('property-empty');
@@ -1932,21 +2143,25 @@
         fields.dataset.signature = '';
         return;
       }
-      const defs = getPropertyDefs(o);
+      const defs = isBrushToolMetrics ? getBrushToolPropertyDefs() : getPropertyDefs(o);
       const expanded = els.objectMetrics.classList.contains('expanded');
       const { direct, more } = splitPropertyDefs(defs, expanded);
-      const signature = `${o.id}:${o.type}:${expanded ? '2' : '1'}:${direct.map(d=>d.key).join(',')}:${more.map(d=>d.key).join(',')}`;
+      const signature = isBrushToolMetrics
+        ? `tool:brush:${expanded ? '2' : '1'}:${direct.map(d=>d.key).join(',')}:${more.map(d=>d.key).join(',')}`
+        : `${o.id}:${o.type}:${expanded ? '2' : '1'}:${direct.map(d=>`${d.key}${d.disabled ? ':disabled' : ''}`).join(',')}:${more.map(d=>`${d.key}${d.disabled ? ':disabled' : ''}`).join(',')}`;
+      const getValue = def => isBrushToolMetrics ? getBrushToolPropertyValue(def.key) : getPropertyValue(o, def.key);
       els.objectMetrics.classList.remove('property-empty');
       if (forceRebuild || fields.dataset.signature !== signature) {
         fields.innerHTML = '';
-        direct.forEach(def => fields.appendChild(buildPropertyField(def, getPropertyValue(o, def.key))));
+        direct.forEach(def => fields.appendChild(buildPropertyField(def, getValue(def))));
         if (more.length) fields.appendChild(buildMoreButton(more, o));
         fields.dataset.signature = signature;
         closeMorePopover();
+        updateDimensionCustomTextInputState();
         return;
       }
       direct.forEach(def => {
-        const value = getPropertyValue(o, def.key);
+        const value = getValue(def);
         if (def.type === 'swatches') {
           const btn = fields.querySelector(`[data-prop="${def.key}"]`);
           if (btn) {
@@ -1962,15 +2177,18 @@
           else setPropertyInputDisplayValue(input, value, input.dataset.unit || '');
         }
       });
+      updateDimensionCustomTextInputState();
     }
 
     function applyPropertyInput(input) {
       const o = getSingleSelectedObject();
-      if (!o || !input) return;
+      if (!input) return;
+      if (!o && state.tool === 'eraser') { applyBrushToolPropertyInput(input); return; }
+      if (!o) return;
       const key = input.dataset.prop;
       const raw = input.dataset.value ?? input.value;
       const n = Number(raw);
-      if (['length','angle','width','height','lineWidth','wallThickness','fontSize','arrowSize','fillOpacity'].includes(key) && !Number.isFinite(n)) { updateObjectMetrics(true); return; }
+      if (['length','angle','width','height','lineWidth','wallThickness','fontSize','arrowSize','fillOpacity','brushObjectWidth','brushObjectOpacity'].includes(key) && !Number.isFinite(n)) { updateObjectMetrics(true); return; }
       saveHistory();
       if (key === 'length') {
         if (n > 0 && isEditableLineObject(o)) {
@@ -1998,6 +2216,10 @@
         o.color = raw;
       } else if (key === 'lineWidth') {
         o.lineWidth = Math.max(1, n);
+      } else if (key === 'brushObjectWidth') {
+        o.width = Math.max(1, n);
+      } else if (key === 'brushObjectOpacity') {
+        o.opacity = Math.max(0, Math.min(100, n)) / 100;
       } else if (key === 'fillOpacity') {
         o.fillOpacity = Math.max(0, Math.min(100, n)) / 100;
       } else if (key === 'wallThickness') {
@@ -2017,11 +2239,36 @@
         o.arrowMode = raw;
       } else if (key === 'arrowSize') {
         o.arrowSize = Math.max(4, n);
+      } else if (key === 'dimensionTextMode') {
+        o.dimensionTextMode = raw === 'custom' ? 'custom' : 'auto';
+      } else if (key === 'dimensionCustomText') {
+        o.dimensionCustomText = String(raw || '').trim();
       } else if (key === 'dimensionLabelMode') {
         o.dimensionLabelMode = ['inline','above','below'].includes(raw) ? raw : 'inline';
       } else if (key === 'layer') {
         o.layer = raw;
       }
+      draw();
+      updateObjectMetrics(key === 'dimensionTextMode');
+      updateDimensionCustomTextInputState();
+    }
+
+    function applyBrushToolPropertyInput(input) {
+      const key = input.dataset.prop;
+      const raw = input.dataset.value ?? input.value;
+      const n = Number(raw);
+      if (key === 'brushColor') {
+        state.brushColor = raw || '#ffffff';
+      } else if (key === 'brushWidth') {
+        if (!Number.isFinite(n)) { updateObjectMetrics(true); return; }
+        const next = Math.max(4, Math.min(120, n));
+        els.eraserWidth.value = String(next);
+        normalizeSidebarUnitizedInput(els.eraserWidth, document.activeElement !== els.eraserWidth);
+      } else if (key === 'brushOpacity') {
+        if (!Number.isFinite(n)) { updateObjectMetrics(true); return; }
+        setBrushOpacityFromPercent(n);
+      }
+      markProjectDirty();
       draw();
       updateObjectMetrics();
     }
@@ -2257,6 +2504,16 @@
       return lineLength >= required ? 'inline' : 'above';
     }
 
+    function getDimensionAutoLabel(px) {
+      return `${formatNumber(px * (getInputNumber(els.scaleFactor, 1) || 1))} ${els.unitName.value.trim() || 'unit'}`;
+    }
+
+    function getDimensionDisplayLabel(o, px) {
+      const custom = String(o && o.dimensionCustomText || '').trim();
+      if ((o && o.dimensionTextMode) === 'custom' && custom) return custom;
+      return getDimensionAutoLabel(px);
+    }
+
     function buildDimensionRenderItems(o) {
       const a = Math.atan2(o.y2 - o.y1, o.x2 - o.x1);
       const px = Math.hypot(o.x2 - o.x1, o.y2 - o.y1);
@@ -2267,7 +2524,7 @@
       const color = o.color || '#111827';
       const width = o.lineWidth || 2;
       const fontSize = o.fontSize || 20;
-      const label = `${formatNumber(px * (getInputNumber(els.scaleFactor, 1) || 1))} ${els.unitName.value.trim() || 'unit'}`;
+      const label = getDimensionDisplayLabel(o, px);
       const labelWidth = measureRenderTextWidth(label, fontSize);
       const labelMode = resolveDimensionLabelMode(o.dimensionLabelMode || 'inline', px, labelWidth, arrowSize, a, fontSize);
       const cx = (o.x1 + o.x2) / 2;
@@ -2328,20 +2585,42 @@
       else if (o.type === 'text') items = [renderText(o.text || '文字', o.x, o.y, color, o.fontSize || 20, { textAlign: 'start', textBaseline: 'top' })];
       else if (o.type === 'door') items = buildDoorRenderItems(o);
       else if (o.type === 'window') items = buildWindowRenderItems(o);
-      else if (o.type === 'erase') items = [renderPolyline(o.points || [], '#ffffff', o.width || 22)];
+      else if (o.type === 'brush' || o.type === 'erase') items = [renderPolyline(o.points || [], o.color || '#ffffff', o.width || 22, 'round', 'round', { opacity: Number.isFinite(Number(o.opacity)) ? Math.max(0, Math.min(1, Number(o.opacity))) : 1 })];
       return applyPreviewDash(o, items);
     }
 
-    function buildRenderItems(objects = state.objects) {
-      const list = objects || [];
+    function buildLayeredRenderItems(list = []) {
       const items = [];
       list.forEach(o => { if (isLayerVisible(o) && o.type === 'area') items.push(...buildObjectRenderItems(o)); });
       list.forEach(o => { if (isLayerVisible(o) && (o.type === 'wall' || o.type === 'line')) items.push(...buildObjectRenderItems(o)); });
       items.push(...buildWallJointPatchRenderItems(list));
-      list.forEach(o => { if (isLayerVisible(o) && ['rect', 'ellipse', 'erase'].includes(o.type)) items.push(...buildObjectRenderItems(o)); });
+      list.forEach(o => { if (isLayerVisible(o) && ['rect', 'ellipse'].includes(o.type)) items.push(...buildObjectRenderItems(o)); });
       list.forEach(o => { if (isLayerVisible(o) && isOpeningObject(o)) items.push(...buildObjectRenderItems(o)); });
       list.forEach(o => { if (isLayerVisible(o) && ['arrow', 'dimension'].includes(o.type)) items.push(...buildObjectRenderItems(o)); });
       list.forEach(o => { if (isLayerVisible(o) && o.type === 'text') items.push(...buildObjectRenderItems(o)); });
+      return items;
+    }
+
+    function isBrushObject(o) { return o && (o.type === 'brush' || o.type === 'erase'); }
+
+    function buildRenderItems(objects = state.objects) {
+      const list = objects || [];
+      const items = [];
+      let batch = [];
+      const flushBatch = () => {
+        if (!batch.length) return;
+        items.push(...buildLayeredRenderItems(batch));
+        batch = [];
+      };
+      list.forEach(o => {
+        if (isBrushObject(o)) {
+          flushBatch();
+          if (isLayerVisible(o)) items.push(...buildObjectRenderItems(o));
+        } else {
+          batch.push(o);
+        }
+      });
+      flushBatch();
       return items;
     }
 
@@ -2382,10 +2661,13 @@
         c.stroke();
       } else if (item.kind === 'polyline') {
         if (!item.points || item.points.length < 2) { if (transformed) c.restore(); return; }
+        const hasWholeOpacity = item.opacity !== undefined;
+        if (hasWholeOpacity) { c.save(); c.globalAlpha *= getRenderOpacity(item); }
         c.beginPath();
         applyCanvasStrokeStyle(c, item);
         item.points.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
         c.stroke();
+        if (hasWholeOpacity) c.restore();
       } else if (item.kind === 'rect') {
         if (item.fill) { c.save(); c.globalAlpha *= getRenderFillOpacity(item); c.fillStyle = item.fill; c.fillRect(item.x, item.y, item.w, item.h); c.restore(); }
         if (item.stroke) { applyCanvasStrokeStyle(c, item); c.strokeRect(item.x, item.y, item.w, item.h); }
@@ -2467,11 +2749,11 @@
       const strokeBase = item.stroke ? `stroke="${escapeSvg(item.stroke)}" stroke-width="${svgNum(item.lineWidth || 1)}" stroke-linecap="${item.lineCap || 'round'}" stroke-linejoin="${item.lineJoin || 'round'}"${dash}` : 'stroke="none"';
       const fillOpacityAttr = item.fill && item.fillOpacity !== undefined ? ` fill-opacity="${svgNum(getRenderFillOpacity(item))}"` : '';
       const fillBase = item.fill ? `fill="${escapeSvg(item.fill)}"${fillOpacityAttr}` : 'fill="none"';
-      if (item.kind === 'line') return `<line x1="${svgNum(item.x1)}" y1="${svgNum(item.y1)}" x2="${svgNum(item.x2)}" y2="${svgNum(item.y2)}" ${strokeBase} ${fillBase}${transform} />`;
+      if (item.kind === 'line') return `<line x1="${svgNum(item.x1)}" y1="${svgNum(item.y1)}" x2="${svgNum(item.x2)}" y2="${svgNum(item.y2)}" ${strokeBase} ${fillBase}${opacityAttr}${transform} />`;
       if (item.kind === 'polyline') {
         const points = (item.points || []).map(p => `${svgNum(p.x)},${svgNum(p.y)}`).join(' ');
         if (!points) return '';
-        return `<polyline points="${points}" ${strokeBase} ${fillBase}${transform} />`;
+        return `<polyline points="${points}" ${strokeBase} ${fillBase}${opacityAttr}${transform} />`;
       }
       if (item.kind === 'rect') return `<rect x="${svgNum(item.x)}" y="${svgNum(item.y)}" width="${svgNum(item.w)}" height="${svgNum(item.h)}" ${fillBase} ${strokeBase}${transform} />`;
       if (item.kind === 'ellipse') return `<ellipse cx="${svgNum(item.cx)}" cy="${svgNum(item.cy)}" rx="${svgNum(Math.abs(item.rx))}" ry="${svgNum(Math.abs(item.ry))}" ${fillBase} ${strokeBase}${transform} />`;
@@ -2686,17 +2968,13 @@
     // 旧版对象专属 canvas 绘制函数已移除；所有对象统一走 buildObjectRenderItems()。
 
     function snapWallEndpoint(p){
-      const threshold = Math.max(10, (getInputNumber(els.gridSize, 20)||20) * 0.45);
-      let best = null;
-      let bestDist = Infinity;
-      state.objects.forEach(o=>{
-        if(o.type !== 'wall') return;
-        [{x:o.x1,y:o.y1},{x:o.x2,y:o.y2}].forEach(ep=>{
-          const d = Math.hypot(p.x-ep.x, p.y-ep.y);
-          if(d < threshold && d < bestDist){ best = ep; bestDist = d; }
-        });
-      });
-      return best ? {x:best.x, y:best.y} : p;
+      if (!isEndpointSnapEnabled()) return p;
+      const endpoint = snapObjectEndpoint(p);
+      if (endpoint) {
+        setSnapIndicator(endpoint);
+        return { x: endpoint.x, y: endpoint.y };
+      }
+      return p;
     }
 
     function constrainToAngle(start, end, stepDegrees){
@@ -2722,6 +3000,7 @@
         return {x:b.x-pad,y:b.y-pad,w:b.w+pad*2,h:b.h+pad*2};
       }
       if(o.type==='area') { const pts=Array.isArray(o.points)?o.points:[]; if(!pts.length)return {x:0,y:0,w:0,h:0}; const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y); const pad=Math.max(6,(o.lineWidth||2)+4); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys); return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
+      if(o.type==='brush'||o.type==='erase') { const pts=Array.isArray(o.points)?o.points:[]; if(!pts.length)return {x:0,y:0,w:0,h:0}; const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y); const pad=Math.max(6,(o.width||22)/2+4); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys); return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
       if(o.type==='text') { ctx.save(); ctx.font=`${o.fontSize||20}px Arial, Microsoft YaHei, sans-serif`; const w=Math.max(ctx.measureText(o.text||'文字').width,24); ctx.restore(); return {x:o.x,y:o.y,w,h:(o.fontSize||20)*1.25}; }
       if(o.type==='door') {
         const a = Math.atan2(o.y2-o.y1, o.x2-o.x1);
@@ -2867,10 +3146,37 @@
       c.restore();
     }
     function drawSelectionBox(c){ const b=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); c.save(); c.fillStyle='rgba(37,99,235,.08)'; c.strokeStyle='#2563eb'; c.setLineDash([5,4]); c.lineWidth=1.5/state.zoom; c.fillRect(b.x,b.y,b.w,b.h); c.strokeRect(b.x,b.y,b.w,b.h); c.restore(); }
-    function drawEraserCursor(c){ c.save(); c.strokeStyle='#94a3b8'; c.setLineDash([4,4]); c.lineWidth=1/state.zoom; c.beginPath(); c.arc(state.current.x,state.current.y,(getInputNumber(els.eraserWidth, 22)||22)/2,0,Math.PI*2); c.stroke(); c.restore(); }
+    function drawBrushCursor(c, point = state.current || state.eraserPreview){
+      if (!point) return;
+      c.save();
+      c.setLineDash([]);
+      c.fillStyle = 'rgba(255,255,255,.16)';
+      c.strokeStyle='rgba(71,85,105,.9)';
+      c.lineWidth=Math.max(1.5/state.zoom, 1);
+      c.beginPath();
+      c.arc(point.x, point.y, (getInputNumber(els.eraserWidth, 22)||22)/2, 0, Math.PI*2);
+      c.fill();
+      c.stroke();
+      c.restore();
+    }
+    function drawSnapIndicator(c){
+      const p = state.snapIndicator;
+      if (!p) return;
+      const r = Math.max(getEndpointHandleRadius(), 6 / state.zoom);
+      c.save();
+      c.setLineDash([]);
+      c.fillStyle = '#ffffff';
+      c.strokeStyle = '#dc2626';
+      c.lineWidth = Math.max(2 / state.zoom, 1.5);
+      c.beginPath();
+      c.arc(p.x, p.y, r, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+      c.restore();
+    }
 
     function hitTest(p){
-      for(let i=state.objects.length-1;i>=0;i--){ const o=state.objects[i]; if(o.type==='erase'||o.type==='area'||!isLayerVisible(o))continue; if(isPointOnObject(p,o))return o; }
+      for(let i=state.objects.length-1;i>=0;i--){ const o=state.objects[i]; if(o.type==='area'||!isLayerVisible(o))continue; if(isPointOnObject(p,o))return o; }
       for(let i=state.objects.length-1;i>=0;i--){ const o=state.objects[i]; if(o.type!=='area'||!isLayerVisible(o))continue; if(isPointOnObject(p,o))return o; }
       return null;
     }
@@ -2882,8 +3188,10 @@
       if(o.type==='ellipse'){ const b=getObjectBox(o), cx=b.x+b.w/2, cy=b.y+b.h/2, rx=Math.max(b.w/2,.0001), ry=Math.max(b.h/2,.0001); const v=((p.x-cx)**2)/(rx**2)+((p.y-cy)**2)/(ry**2); return Math.abs(v-1)<=Math.max(.08,t/Math.max(rx,ry)); }
       if(o.type==='text') return pointInBox(p,getObjectBox(o),t);
       if(o.type==='area') { const pts=Array.isArray(o.points)?o.points:[]; return pts.length>=3 && (pointInPolygon(p,pts) || distanceToClosedPolyline(p,pts)<=t); }
+      if(o.type==='brush'||o.type==='erase') { const pts=Array.isArray(o.points)?o.points:[]; return pts.length>=2 && distanceToPolyline(p,pts)<=((o.width||22)/2+t); }
       return false;
     }
+    function distanceToPolyline(p, points){ if(!points||points.length<2)return Infinity; let best=Infinity; for(let i=0;i<points.length-1;i++){ best=Math.min(best,distanceToSegment(p,points[i],points[i+1])); } return best; }
     function pointInPolygon(p, points){ let inside=false; for(let i=0,j=points.length-1;i<points.length;j=i++){ const xi=points[i].x, yi=points[i].y, xj=points[j].x, yj=points[j].y; const intersect=((yi>p.y)!==(yj>p.y)) && (p.x < (xj-xi)*(p.y-yi)/((yj-yi)||1e-9)+xi); if(intersect)inside=!inside; } return inside; }
     function distanceToClosedPolyline(p, points){ if(!points||points.length<2)return Infinity; let best=Infinity; for(let i=0;i<points.length;i++){ const a=points[i], b=points[(i+1)%points.length]; best=Math.min(best,distanceToSegment(p,a,b)); } return best; }
     function pointInBox(p,b,t=0){ return p.x>=b.x-t&&p.x<=b.x+b.w+t&&p.y>=b.y-t&&p.y<=b.y+b.h+t; }
@@ -2940,7 +3248,9 @@
     function updateCursor(e) {
       let cursor = 'default';
 
-      if (state.tool !== 'select') {
+      if (state.tool === 'eraser') {
+        cursor = 'none';
+      } else if (state.tool !== 'select') {
         cursor = 'crosshair';
       } else if (state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex || state.dragging) {
         cursor = 'grabbing';
@@ -2960,7 +3270,7 @@
     function updateEndpointFromPointer(e) {
       const o = state.objects.find(x => x.id === state.resizingObjectId);
       if (!o) return;
-      let p = screenToWorld(e);
+      let p = screenToWorldWithSnapOptions(e, { excludeObjectId: o.id });
       const fixed = state.resizeEndpointIndex === 1 ? {x:o.x2,y:o.y2} : {x:o.x1,y:o.y1};
       if (e.shiftKey) p = constrainToAngle(fixed, p, 45);
       if (o.type === 'wall') p = snapWallEndpoint(p);
@@ -2976,7 +3286,7 @@
       const original = state.dragOriginals && state.dragOriginals.get(o.id) ? state.dragOriginals.get(o.id) : o;
       const b = getBoxBounds(original);
       let left = b.left, right = b.right, top = b.top, bottom = b.bottom;
-      let p = screenToWorld(e);
+      let p = screenToWorldWithSnapOptions(e, { excludeObjectId: o.id });
 
       if (handle.length === 2 && e.shiftKey) {
         const fixed = {
@@ -3016,7 +3326,7 @@
       const index = state.resizeAreaVertexIndex;
       const pts = Array.isArray(o.points) ? o.points : [];
       if (!Number.isInteger(index) || index < 0 || index >= pts.length) return;
-      const p = screenToWorld(e);
+      const p = screenToWorldWithSnapOptions(e, { excludeObjectId: o.id });
       pts[index].x = p.x;
       pts[index].y = p.y;
     }
@@ -3026,7 +3336,7 @@
 
     function captureSelectedOriginals(){ const m=new Map(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))m.set(o.id,JSON.parse(JSON.stringify(o))); }); return m; }
     function restoreDragOriginals(){ if(!state.dragOriginals)return; state.objects=state.objects.map(o=>state.dragOriginals.has(o.id)?JSON.parse(JSON.stringify(state.dragOriginals.get(o.id))):o); }
-    function moveObject(o,dx,dy){ if(o.type==='text'){o.x+=dx;o.y+=dy;} else if(o.type==='erase'||o.type==='area'){(o.points||[]).forEach(p=>{p.x+=dx;p.y+=dy;});} else {o.x1+=dx;o.y1+=dy;o.x2+=dx;o.y2+=dy;} }
+    function moveObject(o,dx,dy){ if(o.type==='text'){o.x+=dx;o.y+=dy;} else if(o.type==='erase'||o.type==='brush'||o.type==='area'){(o.points||[]).forEach(p=>{p.x+=dx;p.y+=dy;});} else {o.x1+=dx;o.y1+=dy;o.x2+=dx;o.y2+=dy;} }
 
     const activePointers = new Map();
     const touchInteraction = {
@@ -3081,7 +3391,7 @@
         if (state.dragging || state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex) restoreDragOriginals();
         if (state.erasing) {
           const last = state.objects[state.objects.length - 1];
-          if (last && last.type === 'erase') state.objects.pop();
+          if (last && (last.type === 'brush' || last.type === 'erase')) state.objects.pop();
         }
       }
       state.drawing = false;
@@ -3102,9 +3412,11 @@
       state.resizeHistorySaved = false;
       state.start = null;
       state.current = null;
+      state.eraserPreview = null;
       state.dragStartRaw = null;
       state.dragOriginals = null;
       state.selectionBox = null;
+      clearSnapIndicator();
       draw();
     }
 
@@ -3159,7 +3471,7 @@
         }
       }
 
-      let p = screenToWorld(e), raw = rawScreenToWorld(e);
+      let raw = rawScreenToWorld(e), p = state.tool === 'eraser' ? raw : screenToWorld(e);
       updateCursor(e);
       if(state.tool==='wall') p = snapWallEndpoint(p);
       startCanvasInteraction(e, p, raw);
@@ -3180,7 +3492,8 @@
         saveHistory();
         state.erasing=true;
         state.current=raw;
-        state.objects.push({id:uid(),type:'erase',points:[raw],width:getInputNumber(els.eraserWidth, 22)||22,layer:'annotations'});
+        state.eraserPreview=raw;
+        state.objects.push({id:uid(),type:'brush',points:[raw],width:getInputNumber(els.eraserWidth, 22)||22,color:state.brushColor||'#ffffff',opacity:Number.isFinite(Number(state.brushOpacity))?Math.max(0,Math.min(1,Number(state.brushOpacity))):1,layer:'annotations'});
         draw();
         updateCursor(e);
         return;
@@ -3204,7 +3517,7 @@
         const found=hitTest(raw);
         if(found){
           let ids=expandSelectionWithGroup(found.id);
-          if(e.shiftKey || (isTouchLike(e) && touchInteraction.multiSelectMode)){
+          if(e.shiftKey || touchInteraction.multiSelectMode){
             const set=new Set(state.selectedIds);
             ids.forEach(id=>set.has(id)?set.delete(id):set.add(id));
             state.selectedIds=[...set];
@@ -3218,6 +3531,13 @@
             state.dragOriginals=captureSelectedOriginals();
           }
         } else {
+          if (touchInteraction.multiSelectMode) {
+            clearTouchLongPress();
+            touchInteraction.multiSelectMode = false;
+            draw();
+            updateCursor(e);
+            return;
+          }
           if (isTouchLike(e)) {
             clearTouchLongPress();
             touchInteraction.emptyPanCandidate = true;
@@ -3276,8 +3596,20 @@
         }
       }
 
-      let p=screenToWorld(e), raw=rawScreenToWorld(e);
+      let raw=rawScreenToWorld(e), p = state.tool === 'eraser' ? raw : screenToWorld(e);
       updateCursor(e);
+      if(state.tool === 'eraser') {
+        clearSnapIndicator();
+        state.eraserPreview = raw;
+        if(state.erasing){
+          state.current=raw;
+          const er=state.objects[state.objects.length-1];
+          if(er&&(er.type==='brush'||er.type==='erase'))er.points.push(raw);
+        }
+        draw();
+        updateCursor(e);
+        return;
+      }
       if(state.tool==='area' && state.areaDrawing){ state.areaPreview=p; draw(); updateCursor(e); return; }
       if(state.drawing && state.start && ['line','arrow','wall','dimension','door','window'].includes(state.tool) && e.shiftKey) {
         p = constrainToAngle(state.start, p, 45);
@@ -3290,11 +3622,11 @@
         else updateEndpointFromPointer(e);
         draw(); updateCursor(e); return;
       }
-      if(state.erasing){ state.current=raw; const er=state.objects[state.objects.length-1]; if(er&&er.type==='erase')er.points.push(raw); draw(); updateCursor(e); return; }
+      if(state.erasing){ state.current=raw; state.eraserPreview=raw; const er=state.objects[state.objects.length-1]; if(er&&(er.type==='brush'||er.type==='erase'))er.points.push(raw); draw(); updateCursor(e); return; }
       if(state.boxSelecting&&state.selectionBox){ state.selectionBox.x2=raw.x; state.selectionBox.y2=raw.y; const box=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); state.selectedIds=state.objects.filter(o=>o.type!=='erase'&&isLayerVisible(o)&&boxIntersectsObject(box,o)).map(o=>o.id); draw(); updateCursor(e); return; }
       if(state.dragging&&state.selectedIds.length){
         let dx=raw.x-state.dragStartRaw.x,dy=raw.y-state.dragStartRaw.y;
-        if(els.snapMode.value==='on'){ const g=getInputNumber(els.gridSize, 20)||20; dx=Math.round(dx/g)*g; dy=Math.round(dy/g)*g; }
+        if(isGridSnapEnabled()){ const g=getInputNumber(els.gridSize, 20)||20; dx=Math.round(dx/g)*g; dy=Math.round(dy/g)*g; }
         if(dx !== 0 || dy !== 0){
           if(!state.dragHistorySaved){ saveHistory(); state.dragHistorySaved = true; }
           restoreDragOriginals();
@@ -3303,7 +3635,9 @@
         }
         updateCursor(e); return;
       }
-      if(state.drawing){ state.current=p; draw(); updateCursor(e); }
+      if(state.drawing){ state.current=p; draw(); updateCursor(e); return; }
+      if(isEndpointSnapDrawingTool() && isEndpointSnapEnabled()){ draw(); updateCursor(e); return; }
+      if(state.snapIndicator){ clearSnapIndicator(); draw(); updateCursor(e); }
     }
 
     function handlePointerUp(e) {
@@ -3364,6 +3698,18 @@
     canvas.addEventListener('pointermove', handlePointerMove);
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('pointercancel', handlePointerCancel);
+    canvas.addEventListener('pointerleave', () => {
+      let needsDraw = false;
+      if (state.snapIndicator && !state.drawing && !state.resizingEndpoint && !state.resizingBox && !state.resizingAreaVertex) {
+        clearSnapIndicator();
+        needsDraw = true;
+      }
+      if (!state.erasing && state.eraserPreview) {
+        state.eraserPreview = null;
+        needsDraw = true;
+      }
+      if (needsDraw) draw();
+    });
     canvas.addEventListener('lostpointercapture', e => {
       if (activePointers.has(e.pointerId)) handlePointerCancel(e);
     });
@@ -3380,17 +3726,23 @@
         state.resizeAreaVertexIndex=null;
         state.dragOriginals=null;
         state.resizeHistorySaved=false;
+        clearSnapIndicator();
         draw();
         return;
       }
-      if(state.erasing){ state.erasing=false; state.current=null; draw(); updateCursor(e); return; }
-      if(state.boxSelecting){ state.boxSelecting=false; state.selectionBox=null; draw(); updateCursor(e); return; }
-      if(!state.drawing){ state.dragging=false; state.dragHistorySaved=false; state.dragStartRaw=null; state.dragOriginals=null; updateCursor(e); return; }
+      if(state.erasing){ state.erasing=false; state.current=null; state.eraserPreview=rawScreenToWorld(e); clearSnapIndicator(); draw(); updateCursor(e); return; }
+      if(state.boxSelecting){ state.boxSelecting=false; state.selectionBox=null; clearSnapIndicator(); draw(); updateCursor(e); return; }
+      if(!state.drawing){ state.dragging=false; state.dragHistorySaved=false; state.dragStartRaw=null; state.dragOriginals=null; clearSnapIndicator(); updateCursor(e); return; }
       let p=screenToWorld(e);
       if(['line','arrow','wall','dimension','door','window'].includes(state.tool) && e.shiftKey) p = constrainToAngle(state.start, p, 45);
       if(state.tool==='wall') p = snapWallEndpoint(p);
-      if(Math.hypot(p.x-state.start.x,p.y-state.start.y)>3) addObject(buildShapeFromPoints(state.tool,state.start,p,false));
-      state.drawing=false; state.start=null; state.current=null; draw(); updateCursor(e);
+      const shouldCreate = Math.hypot(p.x-state.start.x,p.y-state.start.y)>3;
+      if (shouldCreate) {
+        const obj = buildShapeFromPoints(state.tool,state.start,p,false);
+        clearSnapIndicator();
+        addObject(obj);
+      }
+      state.drawing=false; state.start=null; state.current=null; clearSnapIndicator(); draw(); updateCursor(e);
     }
 
     async function editTextObject(o){
@@ -3404,13 +3756,24 @@
 
     function setTool(tool) {
       if (tool !== state.tool) cancelAreaDraft(false);
+      if (tool !== 'eraser') state.eraserPreview = null;
+      clearSnapIndicator();
       document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active', b.dataset.tool === tool));
       state.tool = tool;
-      if (tool !== 'select') state.selectedIds = [];
+      if (tool !== 'select') { state.selectedIds = []; touchInteraction.multiSelectMode = false; }
       draw();
       updateCursor();
     }
     document.querySelectorAll('[data-tool]').forEach(btn=>btn.addEventListener('click',()=>setTool(btn.dataset.tool)));
+    els.status.addEventListener('click', e => {
+      const target = e.target.closest('[data-status-action="toggle-multiselect"]');
+      if (!target || state.tool !== 'select') return;
+      e.preventDefault();
+      e.stopPropagation();
+      touchInteraction.multiSelectMode = !touchInteraction.multiSelectMode;
+      draw();
+      updateCursor();
+    });
 
     function deleteSelected(){ if(!state.selectedIds.length)return; saveHistory(); state.objects=state.objects.filter(o=>!state.selectedIds.includes(o.id)); state.selectedIds=[]; draw(); }
     function copySelected(){ state.clipboard=state.objects.filter(o=>state.selectedIds.includes(o.id)).map(o=>JSON.parse(JSON.stringify(o))); }
@@ -3706,9 +4069,72 @@
     document.getElementById('zoomOut').onclick=()=>setZoom(state.zoom/1.10);
     document.getElementById('zoomReset').onclick=()=>{ state.zoom=1; state.panX=20; state.panY=20; resizeCanvas(); };
 
+    function adjustEraserWidthBySteps(direction, stepSize, stepCount = 1) {
+      const def = sidebarUnitizedInputDefs.find(d => d.id === 'eraserWidth') || { min: 4, max: 120, fallback: 22 };
+      const current = getInputNumber(els.eraserWidth, def.fallback) || def.fallback;
+      const safeStep = Math.max(1, Number(stepSize) || 2);
+      const safeCount = Math.max(1, Math.min(3, Math.round(Number(stepCount) || 1)));
+      const next = clampSidebarNumber(current + direction * safeStep * safeCount, def);
+      if (Math.abs(next - current) < 0.001) return false;
+      els.eraserWidth.value = String(next);
+      if (state.erasing) {
+        const last = state.objects[state.objects.length - 1];
+        if (last && (last.type === 'brush' || last.type === 'erase')) last.width = next;
+      }
+      normalizeSidebarUnitizedInput(els.eraserWidth, document.activeElement !== els.eraserWidth);
+      markProjectDirty();
+      draw();
+      return true;
+    }
+
+    let eraserWheelAccumulator = 0;
+    let eraserWheelResetTimer = null;
+    let eraserWheelLastSign = 0;
+    let eraserWheelLastShift = false;
+    let eraserWheelLastTime = 0;
+
+    function handleEraserWheelResize(e) {
+      e.preventDefault();
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 320 : 1;
+      const delta = e.deltaY * unit;
+      if (!Number.isFinite(delta)) return;
+
+      // 触控板惯性尾巴常常是连续小 delta，直接忽略，避免停手后笔刷大小还慢慢变。
+      if (Math.abs(delta) < 3) return;
+
+      const now = Date.now();
+      const sign = delta > 0 ? 1 : -1;
+      const stepSize = e.shiftKey ? 10 : 2;
+      const threshold = e.shiftKey ? 110 : 90;
+
+      if (sign !== eraserWheelLastSign || e.shiftKey !== eraserWheelLastShift || now - eraserWheelLastTime > 220) {
+        eraserWheelAccumulator = 0;
+      }
+      eraserWheelLastSign = sign;
+      eraserWheelLastShift = !!e.shiftKey;
+      eraserWheelLastTime = now;
+
+      eraserWheelAccumulator += delta;
+      clearTimeout(eraserWheelResetTimer);
+      eraserWheelResetTimer = setTimeout(() => { eraserWheelAccumulator = 0; }, 180);
+
+      const rawSteps = Math.trunc(Math.abs(eraserWheelAccumulator) / threshold);
+      if (rawSteps < 1) return;
+      const stepCount = Math.min(3, rawSteps);
+      const direction = eraserWheelAccumulator < 0 ? 1 : -1;
+
+      // 达到阈值后按档位变化，并清空累积，避免一次滚动被惯性继续消耗。
+      eraserWheelAccumulator = 0;
+      adjustEraserWidthBySteps(direction, stepSize, stepCount);
+    }
+
     let wheelZoomAccumulator = 0;
     let wheelZoomResetTimer = null;
     document.querySelector('.canvas-wrap').addEventListener('wheel', e => {
+      if (state.tool === 'eraser' && e.altKey && !(e.ctrlKey || e.metaKey)) {
+        handleEraserWheelResize(e);
+        return;
+      }
       if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
 
@@ -3988,10 +4414,13 @@
           arrowMode: els.arrowMode.value,
           arrowSize: getInputNumber(els.arrowSize, 14),
           dimensionLabelMode: els.dimensionLabelMode.value,
-          eraserWidth: getInputNumber(els.eraserWidth, 22)
+          eraserWidth: getInputNumber(els.eraserWidth, 22),
+          brushColor: state.brushColor || '#ffffff',
+          brushOpacity: getBrushOpacityPercent()
         },
         view: {
           visibleLayers: state.visibleLayers,
+          endpointSnapMode: els.endpointSnapMode ? els.endpointSnapMode.value : 'on',
           snapMode: els.snapMode.value,
           gridSize: getInputNumber(els.gridSize, 20),
           unitName: els.unitName.value,
@@ -4016,8 +4445,24 @@
         }
         if(o.type==='door') { o.doorSwing = o.doorSwing || o.swing || 'right'; o.swing = o.doorSwing; }
         if(o.type==='area') { o.layer = o.layer || 'areas'; o.points = Array.isArray(o.points) ? o.points : []; if(o.fillOpacity === undefined) o.fillOpacity = 1; }
-        if(o.type === 'dimension' && !o.dimensionLabelMode) {
-          o.dimensionLabelMode = 'inline';
+        if(o.type === 'dimension') {
+          if(!o.dimensionLabelMode) o.dimensionLabelMode = 'inline';
+          if(!o.dimensionTextMode) o.dimensionTextMode = 'auto';
+          if(o.dimensionCustomText === undefined) o.dimensionCustomText = '';
+        }
+        if(o.type === 'erase') {
+          o.type = 'brush';
+          o.color = o.color || '#ffffff';
+          o.opacity = Number.isFinite(Number(o.opacity)) ? Math.max(0, Math.min(1, Number(o.opacity))) : 1;
+          o.width = o.width || 22;
+          o.layer = o.layer || 'annotations';
+        }
+        if(o.type === 'brush') {
+          o.points = Array.isArray(o.points) ? o.points : [];
+          o.color = o.color || '#ffffff';
+          o.opacity = Number.isFinite(Number(o.opacity)) ? Math.max(0, Math.min(1, Number(o.opacity))) : 1;
+          o.width = o.width || 22;
+          o.layer = o.layer || 'annotations';
         }
         return o;
       });
@@ -4064,10 +4509,13 @@
       if(defaults.arrowSize) els.arrowSize.value = defaults.arrowSize;
       if(defaults.dimensionLabelMode) els.dimensionLabelMode.value = defaults.dimensionLabelMode;
       if(defaults.eraserWidth) els.eraserWidth.value = defaults.eraserWidth;
+      if(defaults.brushColor) state.brushColor = defaults.brushColor;
+      if(defaults.brushOpacity !== undefined) setBrushOpacityFromPercent(parseInputNumber(defaults.brushOpacity, 100));
 
       if(view.unitName || data.unitName) els.unitName.value = view.unitName || data.unitName;
       if(view.scaleFactor || data.scaleFactor) els.scaleFactor.value = view.scaleFactor || data.scaleFactor;
       if(view.gridSize || data.gridSize) els.gridSize.value = view.gridSize || data.gridSize;
+      if(view.endpointSnapMode && els.endpointSnapMode) els.endpointSnapMode.value = view.endpointSnapMode;
       if(view.snapMode || data.snapMode) els.snapMode.value = view.snapMode || data.snapMode;
       if(exportSettings.format) els.exportFormat.value = exportSettings.format;
       if(exportSettings.scale) els.exportScale.value = exportSettings.scale;
@@ -4241,24 +4689,153 @@
       return { dataUrl, img, width: w, height: h };
     }
 
+    function getBackgroundFitPlacement(imgW, imgH, pageW = state.pageW, pageH = state.pageH) {
+      const naturalW = Math.max(1, Number(imgW) || 1);
+      const naturalH = Math.max(1, Number(imgH) || 1);
+      const targetW = Math.max(1, Number(pageW) || 1);
+      const targetH = Math.max(1, Number(pageH) || 1);
+      const scale = Math.min(targetW / naturalW, targetH / naturalH);
+      const width = Math.max(1, naturalW * scale);
+      const height = Math.max(1, naturalH * scale);
+      return {
+        x: (targetW - width) / 2,
+        y: (targetH - height) / 2,
+        width,
+        height
+      };
+    }
+
+    function getBackgroundCenteredPosition(width, height, pageW = state.pageW, pageH = state.pageH) {
+      const w = Math.max(1, Number(width) || 1);
+      const h = Math.max(1, Number(height) || 1);
+      return {
+        x: (Math.max(1, Number(pageW) || 1) - w) / 2,
+        y: (Math.max(1, Number(pageH) || 1) - h) / 2
+      };
+    }
+
+    function applyBackgroundFitCanvas() {
+      const bg = state.backgroundImage;
+      if (!bg) return;
+      const box = getBackgroundFitPlacement(bg.naturalWidth || bg.width, bg.naturalHeight || bg.height);
+      bg.x = box.x;
+      bg.y = box.y;
+      bg.width = box.width;
+      bg.height = box.height;
+    }
+
+    function applyBackgroundOriginalSize(center = true) {
+      const bg = state.backgroundImage;
+      if (!bg) return;
+      const width = Math.max(1, Number(bg.naturalWidth || bg.width) || 1);
+      const height = Math.max(1, Number(bg.naturalHeight || bg.height) || 1);
+      bg.width = width;
+      bg.height = height;
+      if (center) {
+        const pos = getBackgroundCenteredPosition(width, height);
+        bg.x = pos.x;
+        bg.y = pos.y;
+      } else {
+        bg.x = 0;
+        bg.y = 0;
+      }
+    }
+
+    function applyBackgroundFitOriginalPage() {
+      const bg = state.backgroundImage;
+      if (!bg) return;
+      const width = Math.max(1, Number(bg.naturalWidth || bg.width) || 1);
+      const height = Math.max(1, Number(bg.naturalHeight || bg.height) || 1);
+      state.pageW = width;
+      state.pageH = height;
+      state.aspectRatio = state.pageW / Math.max(1, state.pageH);
+      els.pagePreset.value = 'custom';
+      els.pageWidth.value = state.pageW;
+      els.pageHeight.value = state.pageH;
+      refreshSidebarUnitizedInputs();
+      updateAspectRatioFromPage();
+      rememberPageSelectorValues();
+      bg.x = 0;
+      bg.y = 0;
+      bg.width = width;
+      bg.height = height;
+    }
+
+    function getBackgroundAlignedPosition(position, width, height) {
+      const w = Math.max(1, Number(width) || 1);
+      const h = Math.max(1, Number(height) || 1);
+      const map = {
+        center: { x: (state.pageW - w) / 2, y: (state.pageH - h) / 2 },
+        topLeft: { x: 0, y: 0 },
+        topRight: { x: state.pageW - w, y: 0 },
+        bottomLeft: { x: 0, y: state.pageH - h },
+        bottomRight: { x: state.pageW - w, y: state.pageH - h }
+      };
+      return map[position] || map.center;
+    }
+
+    function alignBackground(position) {
+      const bg = state.backgroundImage;
+      if (!bg) return;
+      const pos = getBackgroundAlignedPosition(position, bg.width, bg.height);
+      bg.x = pos.x;
+      bg.y = pos.y;
+    }
+
+    async function rotateBackgroundImageQuarter(direction) {
+      const bg = state.backgroundImage;
+      if (!bg || !bg.dataUrl) return;
+      try {
+        await ensureBackgroundImageLoaded();
+        if (!backgroundImgElement) throw new Error('底图未加载');
+        const src = backgroundImgElement;
+        const out = document.createElement('canvas');
+        out.width = Math.max(1, src.naturalHeight || src.height || 1);
+        out.height = Math.max(1, src.naturalWidth || src.width || 1);
+        const c = out.getContext('2d');
+        if (direction === 'right') {
+          c.translate(out.width, 0);
+          c.rotate(Math.PI / 2);
+        } else {
+          c.translate(0, out.height);
+          c.rotate(-Math.PI / 2);
+        }
+        c.drawImage(src, 0, 0);
+        const dataUrl = out.toDataURL('image/png');
+        const centerX = (Number(bg.x) || 0) + (Number(bg.width) || out.height) / 2;
+        const centerY = (Number(bg.y) || 0) + (Number(bg.height) || out.width) / 2;
+        const nextWidth = Math.max(1, Number(bg.height) || out.width);
+        const nextHeight = Math.max(1, Number(bg.width) || out.height);
+        const opacity = getBackgroundOpacity();
+        state.backgroundImage = {
+          dataUrl,
+          naturalWidth: out.width,
+          naturalHeight: out.height,
+          x: centerX - nextWidth / 2,
+          y: centerY - nextHeight / 2,
+          width: nextWidth,
+          height: nextHeight,
+          opacity
+        };
+        backgroundImgElement = await loadImageFromDataUrl(dataUrl);
+        draw();
+      } catch (err) {
+        await showMessageDialog('底图旋转失败', '底图旋转失败，请尝试重新导入图片。');
+      }
+    }
+
     async function chooseBackgroundCanvasAction(imgW, imgH) {
-      const willClip = imgW > state.pageW || imgH > state.pageH;
-      const message = willClip
-        ? `底图尺寸为 ${imgW} × ${imgH} px，当前画布为 ${state.pageW} × ${state.pageH} px。
+      const message = `底图尺寸为 ${imgW} × ${imgH} px，当前画布为 ${state.pageW} × ${state.pageH} px。
 
-适配底图尺寸：将画布调整为图片尺寸，完整显示底图。
-保持画布尺寸：画布尺寸不变，超出画布的底图部分不会显示或导出。`
-        : `底图尺寸为 ${imgW} × ${imgH} px，当前画布为 ${state.pageW} × ${state.pageH} px。
-
-适配底图尺寸：将画布调整为图片尺寸。
-保持画布尺寸：保留当前画布大小。`;
+适配画布：按比例缩放图片，完整放入画布
+适配原图：画布跟随图片尺寸，图片不缩放`;
       return await showChoiceDialog(
         '导入底图',
         message,
         [
           { label: '取消', value: 'cancel' },
-          { label: '保持画布尺寸', value: 'keep' },
-          { label: '适配底图尺寸', value: 'image', primary: true }
+          { label: '适配画布', value: 'canvas' },
+          { label: '适配原图', value: 'image', primary: true }
         ]
       );
     }
@@ -4274,22 +4851,25 @@
         if (action === 'image') {
           state.pageW = prepared.width;
           state.pageH = prepared.height;
+          els.pagePreset.value = 'custom';
         }
         state.aspectRatio = state.pageW / Math.max(1, state.pageH);
-        els.pagePreset.value = 'custom';
         els.pageWidth.value = state.pageW;
         els.pageHeight.value = state.pageH;
         refreshSidebarUnitizedInputs();
         updateAspectRatioFromPage();
         rememberPageSelectorValues();
+        const fitBox = action === 'canvas'
+          ? getBackgroundFitPlacement(prepared.width, prepared.height)
+          : { x: 0, y: 0, width: prepared.width, height: prepared.height };
         state.backgroundImage = {
           dataUrl: prepared.dataUrl,
           naturalWidth: prepared.width,
           naturalHeight: prepared.height,
-          x: 0,
-          y: 0,
-          width: prepared.width,
-          height: prepared.height,
+          x: fitBox.x,
+          y: fitBox.y,
+          width: fitBox.width,
+          height: fitBox.height,
           opacity: 1
         };
         backgroundImgElement = prepared.img;
@@ -4314,62 +4894,148 @@
       closeColorPopover();
       closeMorePopover();
       pop.innerHTML = '';
-      const title = document.createElement('div');
-      title.className = 'bg-popover-title';
-      title.textContent = state.backgroundImage ? '底图设置' : '底图';
-      pop.appendChild(title);
-      const row = document.createElement('div');
-      row.className = 'bg-popover-row';
-      const replaceBtn = document.createElement('button');
-      replaceBtn.type = 'button';
-      replaceBtn.textContent = state.backgroundImage ? '替换底图' : '导入底图';
-      replaceBtn.addEventListener('click', () => { closeBackgroundPopover(); els.backgroundImageInput.click(); });
-      row.appendChild(replaceBtn);
-      const clearBtn = document.createElement('button');
-      clearBtn.type = 'button';
-      clearBtn.textContent = '清除底图';
-      clearBtn.disabled = !state.backgroundImage;
-      clearBtn.addEventListener('click', async () => {
-        if (!state.backgroundImage) return;
-        const choice = await showChoiceDialog('清除底图', '确定清除当前底图？绘制对象不会被删除。', [
-          { label: '取消', value: 'cancel' },
-          { label: '清除底图', value: 'clear', primary: true }
-        ]);
-        if (choice !== 'clear') return;
-        saveHistory(true);
-        state.backgroundImage = null;
-        backgroundImgElement = null;
-        closeBackgroundPopover();
-        draw();
+      const hasBg = !!state.backgroundImage;
+
+      const addTitle = text => {
+        const title = document.createElement('div');
+        title.className = 'bg-popover-title';
+        title.textContent = text;
+        pop.appendChild(title);
+        return title;
+      };
+
+      const addButton = (row, text, options = {}) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = text;
+        if (options.title) btn.title = options.title;
+        btn.disabled = !!options.disabled;
+        btn.addEventListener('click', options.onClick || (() => {}));
+        row.appendChild(btn);
+        return btn;
+      };
+
+      addTitle('底图');
+      const bgRow = document.createElement('div');
+      bgRow.className = 'bg-popover-row';
+      addButton(bgRow, hasBg ? '替换底图' : '导入底图', {
+        onClick: () => { closeBackgroundPopover(); els.backgroundImageInput.click(); }
       });
-      row.appendChild(clearBtn);
-      pop.appendChild(row);
-      const label = document.createElement('div');
-      label.className = 'bg-popover-title';
-      label.textContent = '透明度（100%为完全显示）';
-      pop.appendChild(label);
+      addButton(bgRow, '清除底图', {
+        disabled: !hasBg,
+        onClick: async () => {
+          if (!state.backgroundImage) return;
+          const choice = await showChoiceDialog('清除底图', '确定清除当前底图？绘制对象不会被删除。', [
+            { label: '取消', value: 'cancel' },
+            { label: '清除底图', value: 'clear', primary: true }
+          ]);
+          if (choice !== 'clear') return;
+          saveHistory(true);
+          state.backgroundImage = null;
+          backgroundImgElement = null;
+          closeBackgroundPopover();
+          draw();
+        }
+      });
+      pop.appendChild(bgRow);
+
+      addTitle('旋转');
+      const rotateRow = document.createElement('div');
+      rotateRow.className = 'bg-popover-row';
+      addButton(rotateRow, '左转 90°', {
+        disabled: !hasBg,
+        onClick: async () => {
+          if (!state.backgroundImage) return;
+          saveHistory(true);
+          await rotateBackgroundImageQuarter('left');
+          openBackgroundPopover(anchor);
+        }
+      });
+      addButton(rotateRow, '右转 90°', {
+        disabled: !hasBg,
+        onClick: async () => {
+          if (!state.backgroundImage) return;
+          saveHistory(true);
+          await rotateBackgroundImageQuarter('right');
+          openBackgroundPopover(anchor);
+        }
+      });
+      pop.appendChild(rotateRow);
+
+      addTitle('适配');
+      const fitRow = document.createElement('div');
+      fitRow.className = 'bg-popover-row';
+      addButton(fitRow, '适配画布', {
+        title: '按比例缩放图片，完整放入画布',
+        disabled: !hasBg,
+        onClick: () => {
+          if (!state.backgroundImage) return;
+          saveHistory(true);
+          applyBackgroundFitCanvas();
+          openBackgroundPopover(anchor);
+          draw();
+        }
+      });
+      addButton(fitRow, '适配原图', {
+        title: '画布跟随图片尺寸，图片不缩放',
+        disabled: !hasBg,
+        onClick: () => {
+          if (!state.backgroundImage) return;
+          saveHistory(true);
+          applyBackgroundFitOriginalPage();
+          openBackgroundPopover(anchor);
+          resizeCanvas();
+          draw();
+        }
+      });
+      pop.appendChild(fitRow);
+
+      addTitle('位置');
+      const positionRow = document.createElement('div');
+      positionRow.className = 'bg-popover-row bg-position-row';
+      [
+        ['左上', 'topLeft'],
+        ['右上', 'topRight'],
+        ['居中', 'center'],
+        ['左下', 'bottomLeft'],
+        ['右下', 'bottomRight']
+      ].forEach(([label, value]) => {
+        addButton(positionRow, label, {
+          disabled: !hasBg,
+          title: '只移动底图，不改变图片大小',
+          onClick: () => {
+            if (!state.backgroundImage) return;
+            saveHistory(true);
+            alignBackground(value);
+            openBackgroundPopover(anchor);
+            draw();
+          }
+        });
+      });
+      pop.appendChild(positionRow);
+
+      addTitle('透明度（100%为完全显示）');
       const opacityRow = document.createElement('div');
       opacityRow.className = 'bg-opacity-row';
       [100, 75, 50, 25].forEach(v => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = v + '%';
-        b.disabled = !state.backgroundImage;
+        const b = addButton(opacityRow, v + '%', {
+          disabled: !hasBg,
+          onClick: () => {
+            if (!state.backgroundImage) return;
+            saveHistory(true);
+            state.backgroundImage.opacity = v / 100;
+            openBackgroundPopover(anchor);
+            draw();
+          }
+        });
         const current = Math.round(getBackgroundOpacity() * 100);
         b.classList.toggle('active', current === v);
-        b.addEventListener('click', () => {
-          if (!state.backgroundImage) return;
-          saveHistory(true);
-          state.backgroundImage.opacity = v / 100;
-          openBackgroundPopover(anchor);
-          draw();
-        });
-        opacityRow.appendChild(b);
       });
       pop.appendChild(opacityRow);
+
       const r = anchor.getBoundingClientRect();
-      const left = Math.min(window.innerWidth - 252, Math.max(8, r.left));
-      const top = Math.min(window.innerHeight - 180, r.bottom + 8);
+      const left = Math.max(8, Math.min(window.innerWidth - 294, r.left));
+      const top = Math.max(8, Math.min(window.innerHeight - 420, r.bottom + 8));
       pop.style.left = left + 'px';
       pop.style.top = top + 'px';
       pop.classList.remove('hidden');
@@ -4575,14 +5241,19 @@
       }
       if (state.erasing) {
         const last = state.objects[state.objects.length - 1];
-        if (last && last.type === 'erase') state.objects.pop();
+        if (last && (last.type === 'brush' || last.type === 'erase')) state.objects.pop();
         state.erasing = false;
         state.current = null;
+        state.eraserPreview = null;
         handled = true;
       }
       if (state.boxSelecting) {
         state.boxSelecting = false;
         state.selectionBox = null;
+        handled = true;
+      }
+      if (!handled && touchInteraction.multiSelectMode) {
+        touchInteraction.multiSelectMode = false;
         handled = true;
       }
       if (!handled && state.selectedIds.length) {
@@ -4593,7 +5264,7 @@
         setTool('select');
         handled = true;
       }
-      if (handled) { draw(); updateCursor(); }
+      if (handled) { clearSnapIndicator(); draw(); updateCursor(); }
       return handled;
     }
 
@@ -4601,6 +5272,20 @@
       if (!target) return false;
       const tag = String(target.tagName || '').toLowerCase();
       return target.isContentEditable || tag === 'input' || tag === 'textarea' || tag === 'select';
+    }
+
+    function isMacLikePlatform() {
+      const platform = String((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '');
+      const ua = String(navigator.userAgent || '');
+      return /Mac|iPhone|iPad|iPod/i.test(platform) || /iPhone|iPad|iPod/i.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    function shouldDeleteObjectFromKey(e) {
+      if (!state.selectedIds.length || isTextEditingTarget(e.target)) return false;
+      if (e.ctrlKey || e.metaKey || e.altKey) return false;
+      if (e.key === 'Delete') return true;
+      if (e.key === 'Backspace') return isMacLikePlatform();
+      return false;
     }
 
     document.addEventListener('keydown', e=>{
@@ -4616,12 +5301,15 @@
       if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='v'){ e.preventDefault(); pasteClipboard(); return; }
       if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='g'&&!e.shiftKey){ e.preventDefault(); groupSelected(); return; }
       if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='g'){ e.preventDefault(); ungroupSelected(); return; }
-      if((e.key==='Delete'||e.key==='Backspace')&&state.selectedIds.length){ e.preventDefault(); deleteSelected(); return; }
+      if(shouldDeleteObjectFromKey(e)){ e.preventDefault(); deleteSelected(); return; }
       const keys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
       if(keys.includes(e.key)&&state.selectedIds.length){ e.preventDefault(); const step=e.shiftKey?10:1; let dx=0,dy=0; if(e.key==='ArrowLeft')dx=-step; if(e.key==='ArrowRight')dx=step; if(e.key==='ArrowUp')dy=-step; if(e.key==='ArrowDown')dy=step; saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))moveObject(o,dx,dy); }); draw(); }
     });
 
-    [els.strokeColor,els.lineWidth,els.wallThickness,els.wallStyle,els.openingThicknessMode,els.areaOpacity,els.fontSize,els.arrowMode,els.arrowSize,els.dimensionLabelMode,els.eraserWidth,els.snapMode,els.gridSize,els.unitName,els.scaleFactor,els.layerSelect].forEach(el=>{ if(!el) return; el.addEventListener('input',()=>{ draw(); markProjectDirty(); }); el.addEventListener('change',()=>{ draw(); markProjectDirty(); }); });
+    [els.strokeColor,els.lineWidth,els.wallThickness,els.wallStyle,els.openingThicknessMode,els.areaOpacity,els.fontSize,els.arrowMode,els.arrowSize,els.dimensionLabelMode,els.eraserWidth,els.endpointSnapMode,els.snapMode,els.gridSize,els.unitName,els.scaleFactor,els.layerSelect].forEach(el=>{ if(!el) return; el.addEventListener('input',()=>{ draw(); markProjectDirty(); }); el.addEventListener('change',()=>{ draw(); markProjectDirty(); }); });
+    if (els.endpointSnapMode) {
+      els.endpointSnapMode.addEventListener('change', () => { clearSnapIndicator(); draw(); });
+    }
     [els.exportFormat, els.exportScale, els.exportBackground].forEach(el=>{
       if(!el) return;
       el.addEventListener('change', () => { updateExportOptions(); syncSegmentedControls(el.id); markProjectDirty(); });
