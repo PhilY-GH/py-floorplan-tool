@@ -161,6 +161,30 @@
     #canvas {
       touch-action: none;
       overscroll-behavior: contain;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .app,
+    .top-toolbar,
+    .sidebar,
+    .canvas-float-bar,
+    .tool-btn,
+    .toolbar-btn,
+    .segmented button,
+    .sidebar button,
+    .status-action-btn {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    input,
+    textarea,
+    select,
+    [contenteditable="true"] {
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
     }
     .group {
       border-top: 1px solid #e5e7eb;
@@ -894,6 +918,38 @@
       color: #1d4ed8;
       font-weight: 800;
     }
+    .status-area-info {
+      color: #475569;
+      white-space: nowrap;
+    }
+    .status-action-btn {
+      min-height: 24px;
+      height: 24px;
+      margin-left: 5px;
+      padding: 0 8px;
+      border: 1px solid rgba(203,213,225,.9);
+      border-radius: 7px;
+      background: rgba(255,255,255,.74);
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+    .status-action-btn.primary {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
+    .status-action-btn:hover:not(:disabled) {
+      background: #dbeafe;
+      border-color: #93c5fd;
+      color: #1d4ed8;
+    }
+    .status-action-btn:disabled {
+      opacity: .45;
+      cursor: default;
+    }
     .canvas-zoom {
       display: inline-flex;
       align-items: center;
@@ -1350,7 +1406,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v89';
+    const APP_VERSION = 'v90';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1879,7 +1935,14 @@
     function updateStatus() {
       const count = state.selectedIds.length;
       els.status.classList.toggle('multi-select', !!touchInteraction.multiSelectMode);
-      els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">已选 ${count} 个对象</span>`;
+      if (state.tool === 'area' && state.areaDrawing) {
+        const pointCount = (state.areaPoints || []).length;
+        const canComplete = pointCount >= 3;
+        els.status.classList.remove('multi-select');
+        els.status.innerHTML = `<span class="status-tool">当前工具：区域</span><span>｜</span><span class="status-area-info">已绘 ${pointCount} 个点</span><button type="button" class="status-action-btn primary" data-status-action="complete-area" ${canComplete ? '' : 'disabled'}>完成</button><button type="button" class="status-action-btn" data-status-action="cancel-area">取消</button>`;
+      } else {
+        els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">已选 ${count} 个对象</span>`;
+      }
       if (document.activeElement !== els.zoomInput) els.zoomInput.value = `${Math.round(state.zoom * 100)}%`;
       updateObjectMetrics();
     }
@@ -3312,7 +3375,9 @@
     }
 
     function getAreaCloseTolerance() {
-      return Math.max(10 / state.zoom, 6);
+      const base = touchControlMode ? 22 : 10;
+      const min = touchControlMode ? 10 : 6;
+      return Math.max(base / state.zoom, min);
     }
 
     function isNearAreaStart(p) {
@@ -3382,12 +3447,14 @@
       if (points.length >= 3) c.lineTo(points[0].x, points[0].y);
       c.stroke();
       c.setLineDash([]);
-      const r = Math.max(4 / state.zoom, 3);
+      const baseR = Math.max(4 / state.zoom, 3);
       points.forEach((pt, i) => {
+        const isStartClosePoint = i === 0 && points.length >= 3;
+        const r = isStartClosePoint && touchControlMode ? Math.max(8 / state.zoom, 6) : baseR;
         c.beginPath();
-        c.fillStyle = i === 0 && points.length >= 3 ? '#eff6ff' : '#ffffff';
-        c.strokeStyle = color;
-        c.lineWidth = 1.5 / state.zoom;
+        c.fillStyle = isStartClosePoint ? '#eff6ff' : '#ffffff';
+        c.strokeStyle = isStartClosePoint && touchControlMode ? '#1d4ed8' : color;
+        c.lineWidth = (isStartClosePoint && touchControlMode ? 2.2 : 1.5) / state.zoom;
         c.arc(pt.x, pt.y, r, 0, Math.PI * 2);
         c.fill();
         c.stroke();
@@ -3855,20 +3922,10 @@
     }
 
     function beginTouchLongPress(found) {
+      // iPad Safari 长按容易触发系统文字选择 / 呼出菜单。
+      // 多选入口已改为点击左上状态栏“已选 x 个对象”，因此触控长按不再开启多选。
       clearTouchLongPress();
-      if (!found || state.tool !== 'select') return;
-      touchInteraction.longPressTimer = setTimeout(() => {
-        touchInteraction.longPressTimer = null;
-        if (touchInteraction.primaryId === null || touchInteraction.pinchMode) return;
-        touchInteraction.multiSelectMode = true;
-        const ids = expandSelectionWithGroup(found.id);
-        const set = new Set(state.selectedIds);
-        ids.forEach(id => set.add(id));
-        state.selectedIds = [...set];
-        state.dragOriginals = captureSelectedOriginals();
-        draw();
-        updateCursor();
-      }, TOUCH_LONG_PRESS_MS);
+      return;
     }
 
     function isTouchLike(e) {
@@ -4132,6 +4189,14 @@
     canvas.addEventListener('pointermove', handlePointerMove);
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('pointercancel', handlePointerCancel);
+    const canvasWrapForTouchGuards = getCanvasWrap();
+    if (canvasWrapForTouchGuards) {
+      ['touchstart','touchmove'].forEach(type => {
+        canvasWrapForTouchGuards.addEventListener(type, e => {
+          if (!isInteractiveEditingAllowedTarget(e.target)) e.preventDefault();
+        }, { passive: false });
+      });
+    }
     canvas.addEventListener('pointerleave', () => {
       let needsDraw = false;
       if (state.snapIndicator && !state.drawing && !state.resizingEndpoint && !state.resizingBox && !state.resizingAreaVertex) {
@@ -4211,13 +4276,31 @@
     }
     document.querySelectorAll('[data-tool]').forEach(btn=>btn.addEventListener('click',()=>setTool(btn.dataset.tool)));
     els.status.addEventListener('click', e => {
-      const target = e.target.closest('[data-status-action="toggle-multiselect"]');
-      if (!target || state.tool !== 'select') return;
+      const target = e.target.closest('[data-status-action]');
+      if (!target) return;
+      const action = target.dataset.statusAction;
       e.preventDefault();
       e.stopPropagation();
-      touchInteraction.multiSelectMode = !touchInteraction.multiSelectMode;
-      draw();
-      updateCursor();
+      if (action === 'complete-area') {
+        if (!target.disabled && state.tool === 'area' && state.areaDrawing) {
+          completeAreaDraft();
+          updateCursor();
+        }
+        return;
+      }
+      if (action === 'cancel-area') {
+        if (state.tool === 'area' && state.areaDrawing) {
+          cancelAreaDraft(true);
+          updateCursor();
+        }
+        return;
+      }
+      if (action === 'toggle-multiselect') {
+        if (state.tool !== 'select') return;
+        touchInteraction.multiSelectMode = !touchInteraction.multiSelectMode;
+        draw();
+        updateCursor();
+      }
     });
 
     function deleteSelected(){ if(!state.selectedIds.length)return; saveHistory(); state.objects=state.objects.filter(o=>!state.selectedIds.includes(o.id)); state.selectedIds=[]; draw(); }
@@ -5805,6 +5888,31 @@
       const tag = String(target.tagName || '').toLowerCase();
       return target.isContentEditable || tag === 'input' || tag === 'textarea' || tag === 'select';
     }
+
+    function isInteractiveEditingAllowedTarget(target) {
+      return isTextEditingTarget(target);
+    }
+
+    function shouldSuppressTouchBrowserUI(target) {
+      if (isInteractiveEditingAllowedTarget(target)) return false;
+      return !!(target && target.closest && target.closest('.app, .canvas-float-bar, .top-toolbar, .sidebar, .canvas-wrap'));
+    }
+
+    const hasTouchLikeInput = navigator.maxTouchPoints > 0 || /iPad|iPhone|iPod/i.test(navigator.userAgent || '');
+
+    document.addEventListener('selectstart', e => {
+      if (hasTouchLikeInput && shouldSuppressTouchBrowserUI(e.target)) e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('contextmenu', e => {
+      if (hasTouchLikeInput && shouldSuppressTouchBrowserUI(e.target)) e.preventDefault();
+    }, { passive: false });
+
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(type => {
+      document.addEventListener(type, e => {
+        if (!isInteractiveEditingAllowedTarget(e.target)) e.preventDefault();
+      }, { passive: false });
+    });
 
     function isMacLikePlatform() {
       const platform = String((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '');
