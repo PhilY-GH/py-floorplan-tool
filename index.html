@@ -1797,7 +1797,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v105';
+    const APP_VERSION = 'v107';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1833,6 +1833,7 @@
       dragCopySourceIds: [],
       dragCopyCreatedIds: [],
       dragGuide: null,
+      modalOpen: false,
       resizeHistorySaved: false,
       start: null,
       current: null,
@@ -5875,6 +5876,7 @@
 
     function showTextInputDialog(title, message, initialValue = '', placeholder = '') {
       return new Promise(resolve => {
+        state.modalOpen = true;
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;padding:20px;';
         const box = document.createElement('div');
@@ -5900,7 +5902,7 @@
         okBtn.type = 'button';
         okBtn.textContent = '确定';
         okBtn.style.cssText = 'min-height:34px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;font-weight:700;';
-        const finish = value => { overlay.remove(); resolve(value); };
+        const finish = value => { state.modalOpen = false; overlay.remove(); resolve(value); };
         cancelBtn.addEventListener('click', () => finish(null));
         okBtn.addEventListener('click', () => finish(input.value));
         input.addEventListener('keydown', e => {
@@ -5914,6 +5916,16 @@
         box.appendChild(input);
         box.appendChild(row);
         overlay.appendChild(box);
+        overlay.addEventListener('pointerdown', e => {
+          if (e.target === overlay) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        });
+        overlay.addEventListener('wheel', e => {
+          e.preventDefault();
+          e.stopPropagation();
+        }, { passive: false });
         document.body.appendChild(overlay);
         setTimeout(() => { input.focus(); input.select(); }, 0);
       });
@@ -5921,6 +5933,7 @@
 
     function showMultilineTextDialog(title, message, initialValue = '', placeholder = '', initialAlign = 'left', initialColor = '#111827', initialBgMode = 'none', initialBgColor = '#ffffff', options = {}) {
       return new Promise(resolve => {
+        state.modalOpen = true;
         const previewTarget = options.previewTarget || null;
         const originalSnapshot = options.originalSnapshot ? JSON.parse(JSON.stringify(options.originalSnapshot)) : null;
         const onPreview = typeof options.onPreview === 'function' ? options.onPreview : null;
@@ -6207,6 +6220,8 @@
         okBtn.style.cssText = 'min-height:34px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;font-weight:700;';
         const finish = value => {
           closeFloatingPalette();
+          document.removeEventListener('keydown', modalKeyHandler, true);
+          state.modalOpen = false;
           overlay.remove();
           if (value === null) {
             restoreOriginal();
@@ -6215,6 +6230,19 @@
             resolve(currentResult());
           }
         };
+        const modalKeyHandler = e => {
+          if (!overlay.contains(e.target)) return;
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            finish(null);
+          } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            finish(input.value);
+          }
+        };
+        document.addEventListener('keydown', modalKeyHandler, true);
         cancelBtn.addEventListener('click', () => finish(null));
         closeBtn.addEventListener('pointerdown', e => e.stopPropagation());
         closeBtn.addEventListener('click', () => finish(null));
@@ -6983,7 +7011,18 @@
     }
 
     document.addEventListener('keydown', e=>{
-      if((e.key === 'Enter' || e.key === 'Return') && state.tool === 'area' && state.areaDrawing && !isTextEditingTarget(e.target)){
+      const editingTarget = isTextEditingTarget(e.target);
+      if(editingTarget){
+        // 输入框 / 多行文字编辑框内，常规编辑快捷键应交给浏览器和文本框处理。
+        // 例：Cmd/Ctrl+C/V/X/A/Z/Y、方向键、Delete、Backspace 等，不再触发画布复制、撤销、移动或删除。
+        // 文字编辑弹窗自己的 Ctrl/Command+Enter 与 Esc 已在输入框自身 keydown 里处理。
+        return;
+      }
+      if(state.modalOpen){
+        // 模态编辑窗口打开时，背景画布不响应任何全局快捷键，避免误移动、误删除、误撤销对象。
+        return;
+      }
+      if((e.key === 'Enter' || e.key === 'Return') && state.tool === 'area' && state.areaDrawing){
         if(state.areaPoints.length >= 3 && completeAreaDraft()){ e.preventDefault(); updateCursor(); }
         return;
       }
