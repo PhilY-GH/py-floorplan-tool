@@ -1844,7 +1844,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v110';
+    const APP_VERSION = 'v111';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -2071,10 +2071,40 @@
       draw();
     }
 
-    function getCurrentAppViewportHeight() {
+    let stableAppViewportHeight = 0;
+
+    function getLayoutViewportHeightCandidate() {
+      return Math.max(
+        Number(window.innerHeight) || 0,
+        Number(document.documentElement && document.documentElement.clientHeight) || 0,
+        Number(document.body && document.body.clientHeight) || 0
+      );
+    }
+
+    function isModalTextInputFocused() {
+      const active = document.activeElement;
+      return !!(state.modalOpen && active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName));
+    }
+
+    function isVisualViewportKeyboardShrunk() {
       const vv = window.visualViewport;
-      const rawHeight = vv && Number(vv.height) ? vv.height : window.innerHeight;
-      return Math.max(320, Math.round(rawHeight || document.documentElement.clientHeight || 600));
+      if (!vv || !Number(vv.height)) return false;
+      const base = Math.max(stableAppViewportHeight || 0, getLayoutViewportHeightCandidate() || 0);
+      if (!base) return false;
+      return Number(vv.height) < base - 120;
+    }
+
+    function getCurrentAppViewportHeight() {
+      const layoutHeight = getLayoutViewportHeightCandidate();
+      const vv = window.visualViewport;
+      const vvHeight = vv && Number(vv.height) ? Number(vv.height) : 0;
+      const keyboardActive = isModalTextInputFocused() || isVisualViewportKeyboardShrunk();
+      const rawHeight = keyboardActive
+        ? Math.max(stableAppViewportHeight || 0, layoutHeight || 0)
+        : Math.max(layoutHeight || 0, vvHeight || 0);
+      const nextHeight = Math.max(320, Math.round(rawHeight || stableAppViewportHeight || 600));
+      if (!keyboardActive || !stableAppViewportHeight) stableAppViewportHeight = nextHeight;
+      return nextHeight;
     }
 
     function updateAppViewportHeight() {
