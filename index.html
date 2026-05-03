@@ -15,7 +15,7 @@
       margin: 0;
       width: 100%;
       height: 100%;
-      font-family: Arial, "Microsoft YaHei", sans-serif;
+      font-family: Arial, "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
       background: #e5e7eb;
       color: #111827;
       overflow: hidden;
@@ -1097,7 +1097,7 @@
       border-radius: 16px;
       box-shadow: 0 24px 60px rgba(15,23,42,.28);
       padding: 18px;
-      font-family: Arial, "Microsoft YaHei", sans-serif;
+      font-family: Arial, "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
       color: #111827;
       position: fixed;
       z-index: 20001;
@@ -1844,7 +1844,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v111';
+    const APP_VERSION = 'v112';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -2366,15 +2366,40 @@
       return text.split('\n').map(line => line.trim()).filter(Boolean).join(' / ') || text.replace(/\n+/g, ' / ');
     }
 
+    function getSingleLineTextMetrics(line, fontSize) {
+      const size = Math.max(8, fontSize || 20);
+      const metrics = ctx.measureText(line || ' ');
+      let ascent = Number(metrics.actualBoundingBoxAscent);
+      let descent = Number(metrics.actualBoundingBoxDescent);
+      if (!Number.isFinite(ascent) || ascent <= 0) ascent = Number(metrics.fontBoundingBoxAscent);
+      if (!Number.isFinite(descent) || descent < 0) descent = Number(metrics.fontBoundingBoxDescent);
+      if (!Number.isFinite(ascent) || ascent <= 0) ascent = size * 0.82;
+      if (!Number.isFinite(descent) || descent < 0) descent = size * 0.22;
+      const left = Number(metrics.actualBoundingBoxLeft);
+      const right = Number(metrics.actualBoundingBoxRight);
+      const visualWidth = Number.isFinite(left) && Number.isFinite(right) && (left + right) > 0
+        ? left + right
+        : Number(metrics.width);
+      return {
+        width: Math.max(Number(metrics.width) || 0, visualWidth || 0),
+        ascent: Math.max(1, ascent),
+        descent: Math.max(0, descent)
+      };
+    }
+
     function measureTextBlock(text, fontSize, bold = false, italic = false, fontType = 'default') {
-      const size = fontSize || 20;
+      const size = Math.max(8, fontSize || 20);
       const lines = getTextLines(text);
       ctx.save();
       ctx.font = getTextFontString(size, bold, italic, fontType);
-      const width = Math.max(24, ...lines.map(line => ctx.measureText(line || ' ').width));
+      const lineMetrics = lines.map(line => getSingleLineTextMetrics(line, size));
       ctx.restore();
-      const lineHeight = getTextLineHeight(size);
-      return { width, height: lineHeight * lines.length, lineHeight, lines };
+      const width = Math.max(24, ...lineMetrics.map(m => m.width));
+      const ascent = Math.max(size * 0.72, ...lineMetrics.map(m => m.ascent));
+      const descent = Math.max(size * 0.18, ...lineMetrics.map(m => m.descent));
+      const lineHeight = Math.max(getTextLineHeight(size), ascent + descent);
+      const height = lineHeight * Math.max(0, lines.length - 1) + ascent + descent;
+      return { width, height, lineHeight, lines, ascent, descent, baselineOffset: ascent };
     }
 
     function normalizeTextAlign(value) {
@@ -2391,8 +2416,8 @@
 
     function getFontFamilyByType(fontType) {
       return normalizeFontType(fontType) === 'monospace'
-        ? '"SFMono-Regular", Menlo, Consolas, "Liberation Mono", "Courier New", monospace'
-        : PDF_TEXT_FONT_FAMILY;
+        ? MONOSPACE_TEXT_FONT_FAMILY
+        : DEFAULT_TEXT_FONT_FAMILY;
     }
 
     function getTextFontString(fontSize = 20, bold = false, italic = false, fontType = 'default') {
@@ -2437,14 +2462,15 @@
     }
 
     function getTextBackgroundPadding(fontSize = 20) {
-      const size = fontSize || 20;
-      // Canvas 的 textBaseline='top' 与字体真实可见区域并不完全重合；
-      // lineHeight 还会在下方留下额外视觉空间。这里采用视觉补偿：
-      // 上方留白略多、下方留白略少，让黑色/彩色文字背景看起来上下更均衡。
+      const size = Math.max(8, fontSize || 20);
+      // V112：背景框改为基于字体真实边界计算，不再按 macOS 经验值做上下不对称补偿。
+      // x 方向略宽，方便中文/英文混排；y 方向保持上下一致，跨 Windows / macOS 更稳定。
+      const y = Math.max(5, Math.round(size * 0.20));
       return {
         x: Math.max(5, Math.round(size * 0.32)),
-        top: Math.max(5, Math.round(size * 0.28)),
-        bottom: Math.max(2, Math.round(size * 0.06))
+        y,
+        top: y,
+        bottom: y
       };
     }
 
@@ -2454,9 +2480,9 @@
       const pad = getTextBackgroundPadding(fontSize);
       return {
         x: o.x - pad.x,
-        y: o.y - pad.top,
+        y: o.y - pad.y,
         w: m.width + pad.x * 2,
-        h: m.height + pad.top + pad.bottom
+        h: m.height + pad.y * 2
       };
     }
 
@@ -3679,7 +3705,8 @@
           const bgBox = getTextBackgroundBox(o);
           textItems.push(renderRect(bgBox.x, bgBox.y, bgBox.w, bgBox.h, bgColor, null, 0));
         }
-        textItems.push(renderText(o.text || '文字', anchor.x, anchor.y, color, fontSize, { textAlign: canvasTextAlignFromBlockAlign(o.textAlign), textBaseline: 'top', fontWeight: o.textBold ? '700' : '400', fontStyle: o.textItalic ? 'italic' : 'normal', textUnderline: !!o.textUnderline, fontType: normalizeFontType(o.fontType) }));
+        const textMetrics = measureTextBlock(o.text || '文字', fontSize, !!o.textBold, !!o.textItalic, o.fontType);
+        textItems.push(renderText(o.text || '文字', anchor.x, anchor.y, color, fontSize, { textAlign: canvasTextAlignFromBlockAlign(o.textAlign), textBaseline: 'alphabetic', lineHeight: textMetrics.lineHeight, textAscent: textMetrics.ascent, textDescent: textMetrics.descent, fontWeight: o.textBold ? '700' : '400', fontStyle: o.textItalic ? 'italic' : 'normal', textUnderline: !!o.textUnderline, fontType: normalizeFontType(o.fontType) }));
         items = textItems;
       }
       else if (o.type === 'door') items = buildDoorRenderItems(o);
@@ -3808,20 +3835,26 @@
         const baseline = item.textBaseline || 'top';
         const lines = getTextLines(item.text || '');
         const lineHeight = item.lineHeight || getTextLineHeight(item.fontSize || 20);
+        const metricAscent = Number(item.textAscent);
+        const metricBaseline = baseline === 'alphabetic' && Number.isFinite(metricAscent);
         let y = item.y || 0;
-        if (baseline === 'middle') y -= ((lines.length - 1) * lineHeight) / 2;
-        else if (baseline === 'bottom') y -= (lines.length - 1) * lineHeight;
-        c.textBaseline = baseline;
+        if (metricBaseline) {
+          c.textBaseline = 'alphabetic';
+        } else {
+          if (baseline === 'middle') y -= ((lines.length - 1) * lineHeight) / 2;
+          else if (baseline === 'bottom') y -= (lines.length - 1) * lineHeight;
+          c.textBaseline = baseline;
+        }
         lines.forEach((line, index) => {
           const lineText = line || ' ';
-          const lineY = y + index * lineHeight;
+          const lineY = metricBaseline ? y + metricAscent + index * lineHeight : y + index * lineHeight;
           c.fillText(lineText, item.x || 0, lineY);
           if (item.textUnderline) {
             const metrics = c.measureText(lineText);
             let startX = item.x || 0;
             if (c.textAlign === 'center') startX -= metrics.width / 2;
             else if (c.textAlign === 'right' || c.textAlign === 'end') startX -= metrics.width;
-            const underlineY = lineY + (item.fontSize || 20) * 1.08;
+            const underlineY = metricBaseline ? lineY + Math.max(1.5, (item.fontSize || 20) * 0.08) : lineY + (item.fontSize || 20) * 1.08;
             c.save();
             c.strokeStyle = item.fill || '#111827';
             c.lineWidth = Math.max(1, (item.fontSize || 20) / 16);
@@ -3905,13 +3938,20 @@
         const lineHeight = item.lineHeight || getTextLineHeight(item.fontSize || 20);
         let y = Number(item.y || 0);
         const baseline = item.textBaseline || 'top';
-        if (baseline === 'middle') y -= ((lines.length - 1) * lineHeight) / 2;
-        else if (baseline === 'bottom') y -= (lines.length - 1) * lineHeight;
-        const tspans = lines.map((line, index) => `<tspan x="${svgNum(item.x || 0)}" dy="${index === 0 ? 0 : svgNum(lineHeight)}">${escapeSvg(line || ' ')}</tspan>`).join('');
+        const metricAscent = Number(item.textAscent);
+        const metricBaseline = baseline === 'alphabetic' && Number.isFinite(metricAscent);
+        if (!metricBaseline) {
+          if (baseline === 'middle') y -= ((lines.length - 1) * lineHeight) / 2;
+          else if (baseline === 'bottom') y -= (lines.length - 1) * lineHeight;
+        }
+        const tspans = metricBaseline
+          ? lines.map((line, index) => `<tspan x="${svgNum(item.x || 0)}" y="${svgNum(y + metricAscent + index * lineHeight)}">${escapeSvg(line || ' ')}</tspan>`).join('')
+          : lines.map((line, index) => `<tspan x="${svgNum(item.x || 0)}" dy="${index === 0 ? 0 : svgNum(lineHeight)}">${escapeSvg(line || ' ')}</tspan>`).join('');
         const fontWeight = item.fontWeight === '700' ? ' font-weight="700"' : '';
         const fontStyle = item.fontStyle === 'italic' ? ' font-style="italic"' : '';
         const decoration = item.textUnderline ? ' text-decoration="underline"' : '';
-        return `<text x="${svgNum(item.x || 0)}" y="${svgNum(y)}" fill="${escapeSvg(item.fill || '#111827')}" font-size="${svgNum(item.fontSize || 20)}" font-family="${escapeSvg(getFontFamilyByType(item.fontType || 'default'))}"${fontWeight}${fontStyle}${decoration} text-anchor="${svgTextAnchor(item.textAlign)}" dominant-baseline="${svgTextBaseline(baseline)}"${transform}>${tspans}</text>`;
+        const dominantBaseline = metricBaseline ? 'alphabetic' : svgTextBaseline(baseline);
+        return `<text x="${svgNum(item.x || 0)}" y="${svgNum(metricBaseline ? y + metricAscent : y)}" fill="${escapeSvg(item.fill || '#111827')}" font-size="${svgNum(item.fontSize || 20)}" font-family="${escapeSvg(getFontFamilyByType(item.fontType || 'default'))}"${fontWeight}${fontStyle}${decoration} text-anchor="${svgTextAnchor(item.textAlign)}" dominant-baseline="${dominantBaseline}"${transform}>${tspans}</text>`;
       }
       return '';
     }
@@ -5593,7 +5633,9 @@
     }
 
 
-    const PDF_TEXT_FONT_FAMILY = 'Arial, "Microsoft YaHei", "Noto Sans CJK SC", "PingFang SC", sans-serif';
+    const DEFAULT_TEXT_FONT_FAMILY = 'Arial, "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif';
+    const MONOSPACE_TEXT_FONT_FAMILY = '"SFMono-Regular", Menlo, Consolas, "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Courier New", monospace';
+    const PDF_TEXT_FONT_FAMILY = DEFAULT_TEXT_FONT_FAMILY;
 
     function svgNum(value){
       const n = Number(value);
@@ -5690,7 +5732,7 @@
         const text = await blob.text();
         content = `<pre style="margin:0;padding:18px;white-space:pre-wrap;word-break:break-word;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#0f172a;">${escapeHtml(text)}</pre>`;
       }
-      win.document.write(`<!doctype html><html><head><meta charset="UTF-8"><title>${escapeHtml(filename)}</title><style>body{margin:0;background:#f3f4f6;font-family:Arial,"Microsoft YaHei",sans-serif;}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:10px 14px;font-size:13px;color:#374151;z-index:1;}</style></head><body><header>${headerText}</header>${content}</body></html>`);
+      win.document.write(`<!doctype html><html><head><meta charset="UTF-8"><title>${escapeHtml(filename)}</title><style>body{margin:0;background:#f3f4f6;font-family:Arial,"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif;}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:10px 14px;font-size:13px;color:#374151;z-index:1;}</style></head><body><header>${headerText}</header>${content}</body></html>`);
       win.document.close();
       setTimeout(()=>URL.revokeObjectURL(url), 10 * 60 * 1000);
       return true;
@@ -6152,7 +6194,7 @@
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;padding:20px;';
         const box = document.createElement('div');
-        box.style.cssText = 'width:min(460px,100%);background:#fff;border:1px solid #cbd5e1;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.28);padding:18px;font-family:Arial,"Microsoft YaHei",sans-serif;color:#111827;';
+        box.style.cssText = 'width:min(460px,100%);background:#fff;border:1px solid #cbd5e1;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.28);padding:18px;font-family:Arial,"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif;color:#111827;';
         prepareModalOverlay(overlay, box);
         const h = document.createElement('div');
         h.textContent = title;
@@ -6187,7 +6229,7 @@
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;padding:20px;';
         const box = document.createElement('div');
-        box.style.cssText = 'width:min(460px,100%);background:#fff;border:1px solid #cbd5e1;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.28);padding:18px;font-family:Arial,"Microsoft YaHei",sans-serif;color:#111827;';
+        box.style.cssText = 'width:min(460px,100%);background:#fff;border:1px solid #cbd5e1;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.28);padding:18px;font-family:Arial,"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif;color:#111827;';
         prepareModalOverlay(overlay, box);
         const h = document.createElement('div');
         h.textContent = title;
@@ -6289,7 +6331,7 @@
         input.value = String(initialValue || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         input.placeholder = placeholder || '';
         input.rows = 7;
-        input.style.cssText = 'width:100%;min-height:150px;resize:vertical;border:1px solid #cbd5e1;border-radius:9px;padding:9px 10px;font-size:13px;line-height:1.45;margin-bottom:12px;outline:none;font-family:Arial,"Microsoft YaHei",sans-serif;';
+        input.style.cssText = 'width:100%;min-height:150px;resize:vertical;border:1px solid #cbd5e1;border-radius:9px;padding:9px 10px;font-size:13px;line-height:1.45;margin-bottom:12px;outline:none;font-family:Arial,"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif;';
 
         function currentResult() {
           return {
