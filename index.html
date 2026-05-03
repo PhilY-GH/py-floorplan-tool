@@ -1099,6 +1099,11 @@
       border-bottom: 1px solid #e5ebf3;
       background: #fbfdff;
       border-radius: 16px 16px 0 0;
+      cursor: move;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
     }
     .text-dialog-close-v97 {
       width: 28px;
@@ -1110,6 +1115,7 @@
       font-size: 18px;
       line-height: 1;
       cursor: pointer;
+      touch-action: manipulation;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -1117,6 +1123,24 @@
     .text-dialog-close-v97:hover {
       background: #f8fafc;
       color: #0f172a;
+    }
+    .py-modal-overlay-v108 {
+      touch-action: none;
+      overscroll-behavior: contain;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .py-modal-content-v108 {
+      touch-action: auto;
+    }
+    .py-modal-content-v108 input,
+    .py-modal-content-v108 textarea,
+    .py-modal-content-v108 select {
+      touch-action: auto;
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
     }
     .text-dialog-section-v97 {
       padding-bottom: 12px;
@@ -1797,7 +1821,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v107';
+    const APP_VERSION = 'v108';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -4578,6 +4602,7 @@
     }
 
     function handlePointerDown(e) {
+      if (state.modalOpen) { e.preventDefault(); e.stopPropagation(); return; }
       if (e.pointerType === 'mouse' && Date.now() < touchInteraction.ignoreSyntheticMouseUntil) return;
       if (e.button !== undefined && e.button !== 0) return;
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY, pointerType: e.pointerType });
@@ -4699,6 +4724,7 @@
     }
 
     function handlePointerMove(e) {
+      if (state.modalOpen) { e.preventDefault(); e.stopPropagation(); return; }
       if (e.pointerType === 'mouse' && Date.now() < touchInteraction.ignoreSyntheticMouseUntil) return;
       updateTouchPointer(e);
       if (isTouchLike(e)) {
@@ -4805,6 +4831,7 @@
     }
 
     function handlePointerUp(e) {
+      if (state.modalOpen) { e.preventDefault(); e.stopPropagation(); return; }
       if (e.pointerType === 'mouse' && Date.now() < touchInteraction.ignoreSyntheticMouseUntil) return;
       const wasTouch = isTouchLike(e);
       if (wasTouch) e.preventDefault();
@@ -4841,6 +4868,7 @@
     }
 
     function handlePointerCancel(e) {
+      if (state.modalOpen) { e.preventDefault(); e.stopPropagation(); return; }
       clearTouchLongPress();
       activePointers.delete(e.pointerId);
       try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
@@ -4866,12 +4894,14 @@
     if (canvasWrapForTouchGuards) {
       ['touchstart','touchmove'].forEach(type => {
         canvasWrapForTouchGuards.addEventListener(type, e => {
+          if (state.modalOpen) { e.preventDefault(); e.stopPropagation(); return; }
           if (e.target && e.target.closest && e.target.closest('.canvas-float-bar')) return;
           if (!isInteractiveEditingAllowedTarget(e.target)) e.preventDefault();
         }, { passive: false });
       });
       ['gesturestart','gesturechange','gestureend'].forEach(type => {
         canvasWrapForTouchGuards.addEventListener(type, e => {
+          if (state.modalOpen) { e.preventDefault(); e.stopPropagation(); return; }
           if (e.target && e.target.closest && e.target.closest('.canvas-float-bar')) return;
           if (!isInteractiveEditingAllowedTarget(e.target)) e.preventDefault();
         }, { passive: false });
@@ -4892,7 +4922,7 @@
     canvas.addEventListener('lostpointercapture', e => {
       if (activePointers.has(e.pointerId)) handlePointerCancel(e);
     });
-    canvas.addEventListener('dblclick', e=>{ if(state.tool==='area'){ e.preventDefault(); completeAreaDraft(); return; } const t=hitText(rawScreenToWorld(e)); if(t){ e.preventDefault(); editTextObject(t); } });
+    canvas.addEventListener('dblclick', e=>{ if(state.modalOpen){ e.preventDefault(); e.stopPropagation(); return; } if(state.tool==='area'){ e.preventDefault(); completeAreaDraft(); return; } const t=hitText(rawScreenToWorld(e)); if(t){ e.preventDefault(); editTextObject(t); } });
 
     function finishPointer(e){
       if(state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex){
@@ -5393,6 +5423,7 @@
     window.addEventListener('resize', scheduleCanvasFloatBarSettledUpdates, { passive: true });
 
     document.querySelector('.canvas-wrap').addEventListener('wheel', e => {
+      if (state.modalOpen) { e.preventDefault(); e.stopPropagation(); return; }
       if (state.tool === 'eraser' && e.altKey && !(e.ctrlKey || e.metaKey)) {
         handleEraserWheelResize(e);
         return;
@@ -5841,12 +5872,70 @@
       };
     }
 
+    let modalLockDepth = 0;
+    let modalGlobalShieldInstalled = false;
+    const modalShieldEventTypes = ['pointerdown','pointermove','pointerup','pointercancel','mousedown','mousemove','mouseup','click','dblclick','touchstart','touchmove','touchend','wheel','gesturestart','gesturechange','gestureend'];
+
+    function isModalAllowedTarget(target) {
+      return !!(target && target.closest && target.closest('.py-modal-content-v108, .text-floating-palette-v95'));
+    }
+
+    function blockModalBackgroundEvent(e) {
+      if (!state.modalOpen) return;
+      if (isModalAllowedTarget(e.target)) return;
+      if (e.cancelable !== false) e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+    }
+
+    function installModalGlobalShield() {
+      if (modalGlobalShieldInstalled) return;
+      modalShieldEventTypes.forEach(type => document.addEventListener(type, blockModalBackgroundEvent, { capture: true, passive: false }));
+      modalGlobalShieldInstalled = true;
+    }
+
+    function removeModalGlobalShield() {
+      if (!modalGlobalShieldInstalled) return;
+      modalShieldEventTypes.forEach(type => document.removeEventListener(type, blockModalBackgroundEvent, { capture: true }));
+      modalGlobalShieldInstalled = false;
+    }
+
+    function beginModalLock() {
+      modalLockDepth += 1;
+      state.modalOpen = true;
+      installModalGlobalShield();
+    }
+
+    function endModalLock() {
+      modalLockDepth = Math.max(0, modalLockDepth - 1);
+      if (modalLockDepth === 0) {
+        state.modalOpen = false;
+        removeModalGlobalShield();
+      }
+    }
+
+    function prepareModalOverlay(overlay, content) {
+      if (overlay) overlay.classList.add('py-modal-overlay-v108');
+      if (content) content.classList.add('py-modal-content-v108');
+      if (!overlay) return;
+      modalShieldEventTypes.forEach(type => {
+        overlay.addEventListener(type, e => {
+          if (isModalAllowedTarget(e.target)) return;
+          if (e.cancelable !== false) e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        }, { capture: true, passive: false });
+      });
+    }
+
     function showChoiceDialog(title, message, choices) {
       return new Promise(resolve => {
+        beginModalLock();
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;padding:20px;';
         const box = document.createElement('div');
         box.style.cssText = 'width:min(460px,100%);background:#fff;border:1px solid #cbd5e1;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.28);padding:18px;font-family:Arial,"Microsoft YaHei",sans-serif;color:#111827;';
+        prepareModalOverlay(overlay, box);
         const h = document.createElement('div');
         h.textContent = title;
         h.style.cssText = 'font-size:16px;font-weight:800;margin-bottom:8px;';
@@ -5861,7 +5950,7 @@
           btn.textContent = choice.label;
           btn.style.cssText = 'min-height:34px;border:1px solid #cbd5e1;background:#f8fafc;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;';
           if (choice.primary) btn.style.cssText += 'background:#1d4ed8;border-color:#1d4ed8;color:#fff;font-weight:700;';
-          btn.addEventListener('click', () => { overlay.remove(); resolve(choice.value); });
+          btn.addEventListener('click', () => { endModalLock(); overlay.remove(); resolve(choice.value); });
           row.appendChild(btn);
         });
         box.appendChild(h); box.appendChild(p); box.appendChild(row); overlay.appendChild(box); document.body.appendChild(overlay);
@@ -5876,11 +5965,12 @@
 
     function showTextInputDialog(title, message, initialValue = '', placeholder = '') {
       return new Promise(resolve => {
-        state.modalOpen = true;
+        beginModalLock();
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;padding:20px;';
         const box = document.createElement('div');
         box.style.cssText = 'width:min(460px,100%);background:#fff;border:1px solid #cbd5e1;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.28);padding:18px;font-family:Arial,"Microsoft YaHei",sans-serif;color:#111827;';
+        prepareModalOverlay(overlay, box);
         const h = document.createElement('div');
         h.textContent = title;
         h.style.cssText = 'font-size:16px;font-weight:800;margin-bottom:8px;';
@@ -5902,7 +5992,7 @@
         okBtn.type = 'button';
         okBtn.textContent = '确定';
         okBtn.style.cssText = 'min-height:34px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;font-weight:700;';
-        const finish = value => { state.modalOpen = false; overlay.remove(); resolve(value); };
+        const finish = value => { endModalLock(); overlay.remove(); resolve(value); };
         cancelBtn.addEventListener('click', () => finish(null));
         okBtn.addEventListener('click', () => finish(input.value));
         input.addEventListener('keydown', e => {
@@ -5933,7 +6023,7 @@
 
     function showMultilineTextDialog(title, message, initialValue = '', placeholder = '', initialAlign = 'left', initialColor = '#111827', initialBgMode = 'none', initialBgColor = '#ffffff', options = {}) {
       return new Promise(resolve => {
-        state.modalOpen = true;
+        beginModalLock();
         const previewTarget = options.previewTarget || null;
         const originalSnapshot = options.originalSnapshot ? JSON.parse(JSON.stringify(options.originalSnapshot)) : null;
         const onPreview = typeof options.onPreview === 'function' ? options.onPreview : null;
@@ -5943,6 +6033,7 @@
         overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(15,23,42,.20);padding:0;';
         const box = document.createElement('div');
         box.className = 'text-dialog-box-v95';
+        prepareModalOverlay(overlay, box);
         const titlebar = document.createElement('div');
         titlebar.className = 'text-dialog-titlebar-v97';
         const h = document.createElement('div');
@@ -6221,7 +6312,7 @@
         const finish = value => {
           closeFloatingPalette();
           document.removeEventListener('keydown', modalKeyHandler, true);
-          state.modalOpen = false;
+          endModalLock();
           overlay.remove();
           if (value === null) {
             restoreOriginal();
@@ -6245,7 +6336,9 @@
         document.addEventListener('keydown', modalKeyHandler, true);
         cancelBtn.addEventListener('click', () => finish(null));
         closeBtn.addEventListener('pointerdown', e => e.stopPropagation());
-        closeBtn.addEventListener('click', () => finish(null));
+        closeBtn.addEventListener('pointermove', e => e.stopPropagation());
+        closeBtn.addEventListener('pointerup', e => e.stopPropagation());
+        closeBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); finish(null); });
         okBtn.addEventListener('click', () => finish(input.value));
         input.addEventListener('input', applyPreview);
         input.addEventListener('keydown', e => {
@@ -6297,7 +6390,9 @@
         let dragOffsetX = 0;
         let dragOffsetY = 0;
         titlebar.addEventListener('pointerdown', e => {
+          if (e.target && e.target.closest && e.target.closest('.text-dialog-close-v97')) return;
           e.preventDefault();
+          e.stopPropagation();
           closeFloatingPalette();
           const rect = box.getBoundingClientRect();
           draggingDialog = true;
@@ -6308,15 +6403,26 @@
         titlebar.addEventListener('pointermove', e => {
           if (!draggingDialog) return;
           e.preventDefault();
+          e.stopPropagation();
           const pos = clampBoxPosition(e.clientX - dragOffsetX, e.clientY - dragOffsetY);
           box.style.left = `${pos.left}px`;
           box.style.top = `${pos.top}px`;
         });
         titlebar.addEventListener('pointerup', e => {
+          if (draggingDialog) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
           draggingDialog = false;
           try { titlebar.releasePointerCapture(e.pointerId); } catch (err) {}
         });
-        titlebar.addEventListener('pointercancel', () => { draggingDialog = false; });
+        titlebar.addEventListener('pointercancel', e => {
+          if (draggingDialog) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          draggingDialog = false;
+        });
         window.addEventListener('resize', () => {
           const rect = box.getBoundingClientRect();
           const pos = clampBoxPosition(rect.left, rect.top);
