@@ -1821,7 +1821,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v108';
+    const APP_VERSION = 'v109';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -5900,6 +5900,84 @@
       modalGlobalShieldInstalled = false;
     }
 
+    function getVisualViewportRect() {
+      const vv = window.visualViewport;
+      if (vv) {
+        return {
+          left: Number(vv.offsetLeft) || 0,
+          top: Number(vv.offsetTop) || 0,
+          width: Number(vv.width) || window.innerWidth,
+          height: Number(vv.height) || window.innerHeight
+        };
+      }
+      return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    }
+
+    function clampElementToVisualViewport(el, left, top, padding = 8) {
+      const viewport = getVisualViewportRect();
+      const rect = el.getBoundingClientRect();
+      const minLeft = viewport.left + padding;
+      const minTop = viewport.top + padding;
+      const maxLeft = viewport.left + Math.max(padding, viewport.width - rect.width - padding);
+      const maxTop = viewport.top + Math.max(padding, viewport.height - rect.height - padding);
+      return {
+        left: Math.min(maxLeft, Math.max(minLeft, left)),
+        top: Math.min(maxTop, Math.max(minTop, top))
+      };
+    }
+
+    function centerElementInVisualViewport(el, padding = 8) {
+      const viewport = getVisualViewportRect();
+      const rect = el.getBoundingClientRect();
+      return clampElementToVisualViewport(
+        el,
+        viewport.left + (viewport.width - rect.width) / 2,
+        viewport.top + (viewport.height - rect.height) / 2,
+        padding
+      );
+    }
+
+    function forceWindowScrollTop() {
+      try { window.scrollTo(0, 0); } catch (err) {}
+      try { document.documentElement.scrollTop = 0; } catch (err) {}
+      try { document.body.scrollTop = 0; } catch (err) {}
+      scheduleCanvasFloatBarUpdate();
+    }
+
+    function scheduleViewportResetAfterKeyboard(force = false) {
+      const run = () => {
+        const active = document.activeElement;
+        const isEditing = !!(active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName));
+        if (!force && isEditing) return;
+        forceWindowScrollTop();
+      };
+      requestAnimationFrame(run);
+      [60, 160, 320, 650].forEach(delay => setTimeout(run, delay));
+    }
+
+    function installModalViewportWatcher(onViewportChange) {
+      const handler = () => {
+        requestAnimationFrame(() => {
+          if (typeof onViewportChange === 'function') onViewportChange();
+          scheduleViewportResetAfterKeyboard(false);
+        });
+      };
+      window.addEventListener('resize', handler, { passive: true });
+      window.addEventListener('orientationchange', handler, { passive: true });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handler, { passive: true });
+        window.visualViewport.addEventListener('scroll', handler, { passive: true });
+      }
+      return () => {
+        window.removeEventListener('resize', handler);
+        window.removeEventListener('orientationchange', handler);
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', handler);
+          window.visualViewport.removeEventListener('scroll', handler);
+        }
+      };
+    }
+
     function beginModalLock() {
       modalLockDepth += 1;
       state.modalOpen = true;
@@ -5911,6 +5989,7 @@
       if (modalLockDepth === 0) {
         state.modalOpen = false;
         removeModalGlobalShield();
+        scheduleViewportResetAfterKeyboard(true);
       }
     }
 
@@ -5992,7 +6071,12 @@
         okBtn.type = 'button';
         okBtn.textContent = '确定';
         okBtn.style.cssText = 'min-height:34px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;font-weight:700;';
-        const finish = value => { endModalLock(); overlay.remove(); resolve(value); };
+        const finish = value => {
+          endModalLock();
+          overlay.remove();
+          scheduleViewportResetAfterKeyboard(true);
+          resolve(value);
+        };
         cancelBtn.addEventListener('click', () => finish(null));
         okBtn.addEventListener('click', () => finish(input.value));
         input.addEventListener('keydown', e => {
@@ -6017,7 +6101,11 @@
           e.stopPropagation();
         }, { passive: false });
         document.body.appendChild(overlay);
-        setTimeout(() => { input.focus(); input.select(); }, 0);
+        input.addEventListener('blur', () => scheduleViewportResetAfterKeyboard(false));
+        setTimeout(() => {
+          input.focus();
+          input.select();
+        }, 0);
       });
     }
 
@@ -6309,11 +6397,17 @@
         okBtn.type = 'button';
         okBtn.textContent = '确定';
         okBtn.style.cssText = 'min-height:34px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;font-weight:700;';
+        let cleanupViewportWatcher = null;
         const finish = value => {
           closeFloatingPalette();
           document.removeEventListener('keydown', modalKeyHandler, true);
+          if (cleanupViewportWatcher) {
+            cleanupViewportWatcher();
+            cleanupViewportWatcher = null;
+          }
           endModalLock();
           overlay.remove();
+          scheduleViewportResetAfterKeyboard(true);
           if (value === null) {
             restoreOriginal();
             resolve(null);
@@ -6372,19 +6466,21 @@
         document.body.appendChild(overlay);
 
         function placeBoxCenter() {
-          const rect = box.getBoundingClientRect();
-          const left = Math.max(8, (window.innerWidth - rect.width) / 2);
-          const top = Math.max(8, (window.innerHeight - rect.height) / 2);
-          box.style.left = `${left}px`;
-          box.style.top = `${top}px`;
+          const pos = centerElementInVisualViewport(box, 8);
+          box.style.left = `${pos.left}px`;
+          box.style.top = `${pos.top}px`;
         }
         function clampBoxPosition(left, top) {
+          return clampElementToVisualViewport(box, left, top, 8);
+        }
+        function keepBoxInsideViewport() {
           const rect = box.getBoundingClientRect();
-          const maxLeft = Math.max(8, window.innerWidth - rect.width - 8);
-          const maxTop = Math.max(8, window.innerHeight - rect.height - 8);
-          return { left: Math.min(maxLeft, Math.max(8, left)), top: Math.min(maxTop, Math.max(8, top)) };
+          const pos = clampBoxPosition(rect.left, rect.top);
+          box.style.left = `${pos.left}px`;
+          box.style.top = `${pos.top}px`;
         }
         placeBoxCenter();
+        cleanupViewportWatcher = installModalViewportWatcher(keepBoxInsideViewport);
 
         let draggingDialog = false;
         let dragOffsetX = 0;
@@ -6423,18 +6519,17 @@
           }
           draggingDialog = false;
         });
-        window.addEventListener('resize', () => {
-          const rect = box.getBoundingClientRect();
-          const pos = clampBoxPosition(rect.left, rect.top);
-          box.style.left = `${pos.left}px`;
-          box.style.top = `${pos.top}px`;
-        }, { passive: true });
+        input.addEventListener('blur', () => {
+          scheduleViewportResetAfterKeyboard(false);
+          setTimeout(keepBoxInsideViewport, 120);
+        });
 
         applyPreview();
         setTimeout(() => {
           input.focus();
           const end = input.value.length;
           try { input.setSelectionRange(end, end); } catch (err) {}
+          setTimeout(keepBoxInsideViewport, 120);
         }, 0);
       });
     }
