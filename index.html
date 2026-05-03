@@ -1586,7 +1586,7 @@
           </div>
           <div class="row">
             <label>区域透明度</label>
-            <input id="areaOpacity" type="number" min="0" max="100" step="1" value="100" title="影响区域填充；100% 为完全显示，数值越低越透明" />
+            <input id="areaOpacity" type="number" min="0" max="100" step="1" value="50" title="影响区域/矩形/椭圆填充；100% 为完全显示，数值越低越透明" />
           </div>
           <div class="row">
             <label>字号</label>
@@ -1728,9 +1728,15 @@
           <div class="row">
             <label>纸张</label>
             <select id="pagePreset">
-              <option value="letter" selected>美国信纸 Letter</option>
-              <option value="a4">A4</option>
-              <option value="a3">A3</option>
+              <option value="letter" selected>Letter 8.5×11 in</option>
+              <option value="legal">Legal 8.5×14 in</option>
+              <option value="tabloid">Tabloid 11×17 in</option>
+              <option value="a4">A4 210×297 mm</option>
+              <option value="a3">A3 297×420 mm</option>
+              <option value="archA">ARCH A 9×12 in</option>
+              <option value="archB">ARCH B 12×18 in</option>
+              <option value="archC">ARCH C 18×24 in</option>
+              <option value="archD">ARCH D 24×36 in</option>
               <option value="custom">自定义</option>
             </select>
           </div>
@@ -1856,14 +1862,21 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v113';
+    const APP_VERSION = 'v115';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
     const pagePresets = {
-      letter: { w: 1100, h: 850 },
-      a4: { w: 1123, h: 794 },
-      a3: { w: 1587, h: 1123 }
+      // 页面预设统一按 100 px = 1 inch 换算；w / h 存放横向尺寸，方向切换时再取长短边。
+      letter: { w: 1100, h: 850, name: 'Letter', portraitW: 8.5, portraitH: 11 },
+      legal: { w: 1400, h: 850, name: 'Legal', portraitW: 8.5, portraitH: 14 },
+      tabloid: { w: 1700, h: 1100, name: 'Tabloid', portraitW: 11, portraitH: 17 },
+      a4: { w: 1169, h: 827, name: 'A4', portraitW: 8.27, portraitH: 11.69 },
+      a3: { w: 1654, h: 1169, name: 'A3', portraitW: 11.69, portraitH: 16.54 },
+      archA: { w: 1200, h: 900, name: 'ARCH A', portraitW: 9, portraitH: 12 },
+      archB: { w: 1800, h: 1200, name: 'ARCH B', portraitW: 12, portraitH: 18 },
+      archC: { w: 2400, h: 1800, name: 'ARCH C', portraitW: 18, portraitH: 24 },
+      archD: { w: 3600, h: 2400, name: 'ARCH D', portraitW: 24, portraitH: 36 }
     };
 
     const state = {
@@ -2326,9 +2339,52 @@
     }
 
     function getDefaultAreaFillOpacity() {
-      const raw = getInputNumber(els.areaOpacity, 100);
-      if (!Number.isFinite(raw)) return 1;
+      const raw = getInputNumber(els.areaOpacity, 50);
+      if (!Number.isFinite(raw)) return 0.5;
       return Math.max(0, Math.min(100, raw)) / 100;
+    }
+
+
+    function isFillableShapeType(type) {
+      return ['area', 'rect', 'ellipse'].includes(type);
+    }
+
+    function isFillableShapeObject(o) {
+      return !!(o && isFillableShapeType(o.type));
+    }
+
+    function normalizeOpacityRatio(value, fallback = 0.5) {
+      const raw = Number(value);
+      if (!Number.isFinite(raw)) return fallback;
+      const ratio = raw > 1 ? raw / 100 : raw;
+      return Math.max(0, Math.min(1, ratio));
+    }
+
+    function normalizeFillEnabledValue(value, fallback = false) {
+      if (value === true || value === 'true' || value === 1 || value === '1' || value === '有' || value === 'yes') return true;
+      if (value === false || value === 'false' || value === 0 || value === '0' || value === '无' || value === 'no') return false;
+      return !!fallback;
+    }
+
+    function getShapeFillEnabled(o) {
+      if (!isFillableShapeObject(o)) return false;
+      const defaultValue = o.type === 'area';
+      return normalizeFillEnabledValue(o.fillEnabled, defaultValue);
+    }
+
+    function getShapeFillOpacity(o) {
+      if (!isFillableShapeObject(o)) return 0.5;
+      if (o.fillOpacity !== undefined) return normalizeOpacityRatio(o.fillOpacity, 0.5);
+      if (o.areaOpacity !== undefined) return normalizeOpacityRatio(o.areaOpacity, 0.5);
+      return 0.5;
+    }
+
+    function normalizeFillableShapeObject(o) {
+      if (!isFillableShapeObject(o)) return o;
+      const defaultFill = o.type === 'area';
+      o.fillEnabled = normalizeFillEnabledValue(o.fillEnabled, defaultFill);
+      o.fillOpacity = getShapeFillOpacity(o);
+      return o;
     }
 
     function getBrushOpacityPercent() {
@@ -2682,8 +2738,12 @@
         defs.push({ key:'textPreview', label:'内容', type:'readonlyText' });
       }
       defs.push({ key:'color', label:'颜色', type:'swatches' });
+      if (isFillableShapeObject(o)) {
+        const fillEnabled = getShapeFillEnabled(o);
+        defs.push({ key:'fillEnabled', label:'填充', type:'select', options:[['false','无'],['true','有']] });
+        defs.push({ key:'fillOpacity', label:'透明', type:'number', unit:'%', disabled: !fillEnabled, disabledTitle: '填充为无时，透明度保留但不参与显示' });
+      }
       if (['wall','line','arrow','rect','ellipse','dimension','door','window','area'].includes(o.type)) defs.push({ key:'lineWidth', label:'线宽', type:'number', unit:'px' });
-      if (o.type === 'area') defs.push({ key:'fillOpacity', label:'透明', type:'number', unit:'%' });
       if (o.type === 'wall') {
         defs.push({ key:'wallThickness', label:'墙厚', type:'number', unit:'px' });
         defs.push({ key:'wallStyle', label:'墙体', type:'select', options:[['hollow','空心'],['solid','实心']] });
@@ -2722,7 +2782,8 @@
       if (key === 'lineWidth') return o.lineWidth || 2;
       if (key === 'brushObjectWidth') return o.width || 22;
       if (key === 'brushObjectOpacity') return Math.round((Number.isFinite(Number(o.opacity)) ? Math.max(0, Math.min(1, Number(o.opacity))) : 1) * 100);
-      if (key === 'fillOpacity') return Math.round(getAreaFillOpacity(o) * 100);
+      if (key === 'fillEnabled') return getShapeFillEnabled(o) ? 'true' : 'false';
+      if (key === 'fillOpacity') return Math.round(getShapeFillOpacity(o) * 100);
       if (key === 'wallThickness') return o.wallThickness || 10;
       if (key === 'wallStyle') return o.wallStyle || 'hollow';
       if (key === 'openingThicknessMode') return o.openingThicknessMode || (o.openingUseWallThickness ? 'wall' : 'linear');
@@ -2766,11 +2827,27 @@
     function getMultiPropertyDefs(objects) {
       if (!objects || objects.length < 2) return [];
       const types = [...new Set(objects.map(o => o.type === 'erase' ? 'brush' : o.type))];
-      if (types.length > 1) return [{ key:'color', label:'颜色', type:'swatches' }];
+      const allFillableShapes = objects.every(o => isFillableShapeObject(o));
+      if (types.length > 1) {
+        if (allFillableShapes) {
+          const allFillEnabled = objects.every(o => getShapeFillEnabled(o));
+          return [
+            { key:'color', label:'颜色', type:'swatches' },
+            { key:'fillEnabled', label:'填充', type:'select', options:[['false','无'],['true','有']] },
+            { key:'fillOpacity', label:'透明', type:'number', unit:'%', disabled: !allFillEnabled, disabledTitle: '填充为无时，透明度保留但不参与显示' },
+            { key:'lineWidth', label:'线宽', type:'number', unit:'px' }
+          ];
+        }
+        return [{ key:'color', label:'颜色', type:'swatches' }];
+      }
       const type = types[0];
       const defs = [{ key:'color', label:'颜色', type:'swatches' }];
+      if (isFillableShapeType(type)) {
+        const allFillEnabled = objects.every(o => getShapeFillEnabled(o));
+        defs.push({ key:'fillEnabled', label:'填充', type:'select', options:[['false','无'],['true','有']] });
+        defs.push({ key:'fillOpacity', label:'透明', type:'number', unit:'%', disabled: !allFillEnabled, disabledTitle: '填充为无时，透明度保留但不参与显示' });
+      }
       if (['wall','line','arrow','rect','ellipse','dimension','door','window','area'].includes(type)) defs.push({ key:'lineWidth', label:'线宽', type:'number', unit:'px' });
-      if (type === 'area') defs.push({ key:'fillOpacity', label:'透明', type:'number', unit:'%' });
       if (type === 'brush') {
         defs.push({ key:'brushObjectWidth', label:'大小', type:'number', unit:'px' });
         defs.push({ key:'brushObjectOpacity', label:'透明', type:'number', unit:'%' });
@@ -2813,7 +2890,7 @@
       if (key === 'color') return ['wall','line','arrow','rect','ellipse','dimension','door','window','area','text','brush','erase'].includes(o.type);
       if (key === 'layer') return !!o.type;
       if (key === 'lineWidth') return ['wall','line','arrow','rect','ellipse','dimension','door','window','area'].includes(o.type);
-      if (key === 'fillOpacity') return o.type === 'area';
+      if (key === 'fillEnabled' || key === 'fillOpacity') return isFillableShapeObject(o);
       if (key === 'brushObjectWidth' || key === 'brushObjectOpacity') return o.type === 'brush' || o.type === 'erase';
       if (key === 'wallThickness' || key === 'wallStyle') return o.type === 'wall';
       if (key === 'openingThicknessMode') return o.type === 'door' || o.type === 'window';
@@ -2836,8 +2913,11 @@
         o.width = Math.max(1, n);
       } else if (key === 'brushObjectOpacity') {
         o.opacity = Math.max(0, Math.min(100, n)) / 100;
+      } else if (key === 'fillEnabled') {
+        o.fillEnabled = normalizeFillEnabledValue(raw, getShapeFillEnabled(o));
+        if (o.fillOpacity === undefined) o.fillOpacity = getShapeFillOpacity(o);
       } else if (key === 'fillOpacity') {
-        o.fillOpacity = Math.max(0, Math.min(100, n)) / 100;
+        o.fillOpacity = normalizeOpacityRatio(n, getShapeFillOpacity(o));
       } else if (key === 'wallThickness') {
         o.wallThickness = Math.max(4, n);
       } else if (key === 'wallStyle') {
@@ -2885,7 +2965,7 @@
       saveHistory();
       targets.forEach(o => applyObjectProperty(o, key, raw, n));
       draw();
-      updateObjectMetrics(key === 'dimensionTextMode');
+      updateObjectMetrics(key === 'dimensionTextMode' || key === 'fillEnabled');
       updateDimensionCustomTextInputState();
       markProjectDirty();
       return true;
@@ -2939,7 +3019,7 @@
     const sidebarUnitizedInputDefs = [
       { id: 'lineWidth', unit: 'px', fallback: 2, min: 1, max: 30 },
       { id: 'wallThickness', unit: 'px', fallback: 10, min: 4, max: 120 },
-      { id: 'areaOpacity', unit: '%', fallback: 100, min: 0, max: 100 },
+      { id: 'areaOpacity', unit: '%', fallback: 50, min: 0, max: 100 },
       { id: 'fontSize', unit: 'px', fallback: 20, min: 8, max: 96 },
       { id: 'arrowSize', unit: 'px', fallback: 14, min: 4, max: 80 },
       { id: 'eraserWidth', unit: 'px', fallback: 22, min: 4, max: 120 },
@@ -3381,7 +3461,7 @@
         applyObjectProperty(o, key, raw, n);
       }
       draw();
-      updateObjectMetrics(key === 'dimensionTextMode');
+      updateObjectMetrics(key === 'dimensionTextMode' || key === 'fillEnabled');
       updateDimensionCustomTextInputState();
       markProjectDirty();
     }
@@ -3456,8 +3536,7 @@
     }
 
     function getAreaFillOpacity(o) {
-      const raw = Number(o && o.fillOpacity);
-      return Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 1;
+      return getShapeFillOpacity(o);
     }
 
     function buildAreaRenderItems(o) {
@@ -3465,7 +3544,8 @@
       if (points.length < 3) return [];
       const color = o.color || DEFAULT_AREA_COLOR;
       const width = o.lineWidth || 2;
-      return applyPreviewDash(o, [renderPolygon(points, color, color, width, 'round', 'round', { fillOpacity: getAreaFillOpacity(o) })]);
+      const fill = getShapeFillEnabled(o) ? color : null;
+      return applyPreviewDash(o, [renderPolygon(points, fill, color, width, 'round', 'round', { fillOpacity: getShapeFillOpacity(o) })]);
     }
 
     function getDoorSwing(o) {
@@ -3712,10 +3792,12 @@
         if ((o.arrowMode || 'end') === 'both') items.push(...buildArrowHeadRenderItems(o.x1, o.y1, a + Math.PI, s, color, width));
       } else if (o.type === 'rect') {
         const b = getObjectBox(o);
-        items = [renderRect(b.x, b.y, b.w, b.h, null, color, width)];
+        const fill = getShapeFillEnabled(o) ? color : null;
+        items = [renderRect(b.x, b.y, b.w, b.h, fill, color, width, { fillOpacity: getShapeFillOpacity(o) })];
       } else if (o.type === 'ellipse') {
         const b = getObjectBox(o);
-        items = [{ kind: 'ellipse', cx: b.x + b.w / 2, cy: b.y + b.h / 2, rx: Math.abs(b.w / 2), ry: Math.abs(b.h / 2), fill: null, stroke: color, lineWidth: width }];
+        const fill = getShapeFillEnabled(o) ? color : null;
+        items = [{ kind: 'ellipse', cx: b.x + b.w / 2, cy: b.y + b.h / 2, rx: Math.abs(b.w / 2), ry: Math.abs(b.h / 2), fill, stroke: color, lineWidth: width, fillOpacity: getShapeFillOpacity(o) }];
       } else if (o.type === 'dimension') items = buildDimensionRenderItems(o);
       else if (o.type === 'text') {
         const fontSize = o.fontSize || 20;
@@ -4046,6 +4128,10 @@
         finalEnd = snapWallEndpoint(finalEnd);
       }
       const base = { id: preview ? null : uid(), type, x1: finalStart.x, y1: finalStart.y, x2: finalEnd.x, y2: finalEnd.y, preview, ...s, layer: toolLayer[type] || s.layer };
+      if (['rect','ellipse'].includes(type)) {
+        base.fillEnabled = false;
+        base.fillOpacity = s.areaOpacity;
+      }
       if (type === 'ellipse' && window.event && window.event.shiftKey) {
         const dx = finalEnd.x - finalStart.x, dy = finalEnd.y - finalStart.y;
         const size = Math.max(Math.abs(dx), Math.abs(dy));
@@ -4067,6 +4153,7 @@
         points: points.map(p => ({ x: p.x, y: p.y })),
         color: getAreaDrawColor(),
         lineWidth: s.lineWidth,
+        fillEnabled: true,
         fillOpacity: s.areaOpacity,
         layer: s.layer || 'areas'
       };
@@ -5298,7 +5385,8 @@
           o.arrowSize = arrowSize;
           o.dimensionLabelMode = dimensionLabelMode;
         }
-        if(o.type === 'area') {
+        if(isFillableShapeObject(o)) {
+          if(o.fillEnabled === undefined) o.fillEnabled = o.type === 'area';
           o.fillOpacity = areaOpacity;
         }
       });
@@ -5414,7 +5502,9 @@
     async function applyPagePreset(){
       const p=els.pagePreset.value;
       if(p==='custom') { updateAspectRatioFromPage(); rememberPageSelectorValues(); return true; }
-      let {w,h}=pagePresets[p];
+      const preset = pagePresets[p];
+      if(!preset) { els.pagePreset.value = 'custom'; updateAspectRatioFromPage(); rememberPageSelectorValues(); return true; }
+      let {w,h}=preset;
       if(els.pageOrientation.value==='portrait')[w,h]=[Math.min(w,h),Math.max(w,h)]; else [w,h]=[Math.max(w,h),Math.min(w,h)];
       const ok = await confirmCanvasResizeIfNeeded(w, h);
       if(!ok) return false;
@@ -5635,12 +5725,7 @@
     function getPdfPaperInfo(){
       const preset = els.pagePreset.value;
       const orientation = els.pageOrientation.value;
-      const map = {
-        letter: { name: 'letter', portraitW: 8.5, portraitH: 11 },
-        a4: { name: 'A4', portraitW: 8.27, portraitH: 11.69 },
-        a3: { name: 'A3', portraitW: 11.69, portraitH: 16.54 }
-      };
-      const base = map[preset];
+      const base = pagePresets[preset];
       if(!base){
         const shortSide = 8.5;
         const longSide = Math.max(shortSide, shortSide * Math.max(state.pageW, state.pageH) / Math.max(1, Math.min(state.pageW, state.pageH)));
@@ -5651,7 +5736,8 @@
       const portrait = orientation === 'portrait';
       const wIn = portrait ? base.portraitW : base.portraitH;
       const hIn = portrait ? base.portraitH : base.portraitW;
-      return { cssSize: `${base.name} ${orientation}`, wIn, hIn, label: `${base.name}-${orientation}` };
+      // PDF 使用明确英寸尺寸，避免不同浏览器对 Tabloid / ARCH 等页面名支持不一致。
+      return { cssSize: `${wIn.toFixed(3)}in ${hIn.toFixed(3)}in`, wIn, hIn, label: `${base.name}-${orientation}` };
     }
 
 
@@ -5866,7 +5952,7 @@
           wallThickness: getInputNumber(els.wallThickness, 10),
           wallStyle: els.wallStyle.value,
           openingThicknessMode: els.openingThicknessMode.value,
-          areaOpacity: getInputNumber(els.areaOpacity, 100),
+          areaOpacity: getInputNumber(els.areaOpacity, 50),
           fontSize: getInputNumber(els.fontSize, 20),
           arrowMode: els.arrowMode.value,
           arrowSize: getInputNumber(els.arrowSize, 14),
@@ -5901,7 +5987,8 @@
           o.openingThicknessMode = o.openingUseWallThickness ? 'wall' : 'linear';
         }
         if(o.type==='door') { o.doorSwing = o.doorSwing || o.swing || 'right'; o.swing = o.doorSwing; }
-        if(o.type==='area') { o.layer = o.layer || 'areas'; o.points = Array.isArray(o.points) ? o.points : []; if(o.fillOpacity === undefined) o.fillOpacity = 1; }
+        if(o.type==='area') { o.layer = o.layer || 'areas'; o.points = Array.isArray(o.points) ? o.points : []; normalizeFillableShapeObject(o); }
+        if(o.type==='rect' || o.type==='ellipse') { normalizeFillableShapeObject(o); }
         if(o.type === 'dimension') {
           if(!o.dimensionLabelMode) o.dimensionLabelMode = 'inline';
           if(!o.dimensionTextMode) o.dimensionTextMode = 'auto';
@@ -5948,7 +6035,10 @@
 
       els.pageWidth.value = state.pageW;
       els.pageHeight.value = state.pageH;
-      if(page.preset || data.pagePreset) els.pagePreset.value = page.preset || data.pagePreset;
+      if(page.preset || data.pagePreset) {
+        const loadedPreset = page.preset || data.pagePreset;
+        els.pagePreset.value = (loadedPreset === 'custom' || pagePresets[loadedPreset]) ? loadedPreset : 'custom';
+      }
       if(page.orientation || data.pageOrientation) els.pageOrientation.value = page.orientation || data.pageOrientation;
       els.aspectRatioLock.value = page.aspectRatioLocked === false ? 'off' : 'on';
 
@@ -5959,7 +6049,7 @@
       if(defaults.wallStyle) els.wallStyle.value = defaults.wallStyle;
       if(defaults.openingThicknessMode) els.openingThicknessMode.value = defaults.openingThicknessMode;
       if(defaults.areaOpacity !== undefined) {
-        const opacityRaw = parseInputNumber(defaults.areaOpacity, 100);
+        const opacityRaw = parseInputNumber(defaults.areaOpacity, 50);
         els.areaOpacity.value = Math.round(Math.max(0, Math.min(100, opacityRaw > 1 ? opacityRaw : opacityRaw * 100)));
       }
       if(defaults.fontSize) els.fontSize.value = defaults.fontSize;
