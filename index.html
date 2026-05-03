@@ -695,6 +695,9 @@
       grid-template-columns: 1fr 1fr;
       gap: 8px;
     }
+    .bg-fit-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
     .bg-popover button {
       min-height: 32px;
       padding: 6px 8px;
@@ -972,6 +975,41 @@
     .status-action-btn:disabled {
       opacity: .45;
       cursor: default;
+    }
+
+    .status.background-edit-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 7px 10px;
+    }
+    .status.background-edit-status .status-tool {
+      white-space: nowrap;
+    }
+    .status.background-edit-status .status-action-btn {
+      min-width: 58px;
+      min-height: 32px;
+      height: 32px;
+      margin-left: 0;
+      padding: 0 13px;
+      font-size: 13px;
+      border-radius: 9px;
+    }
+    .status-bg-scale-info {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 82px;
+      height: 30px;
+      padding: 0 10px;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      border: 1px solid rgba(203,213,225,.72);
+      border-radius: 9px;
+      background: rgba(255,255,255,.48);
+      pointer-events: none;
     }
     .text-dialog-toolbar {
       display: flex;
@@ -1862,7 +1900,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v117';
+    const APP_VERSION = 'v119';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -2640,10 +2678,11 @@
     function updateStatus() {
       const count = state.selectedIds.length;
       els.status.classList.toggle('multi-select', !!touchInteraction.multiSelectMode && !state.backgroundEditMode);
+      els.status.classList.toggle('background-edit-status', !!state.backgroundEditMode);
       if (state.backgroundEditMode) {
         els.status.classList.remove('multi-select');
         const bgScale = getBackgroundScalePercent();
-        els.status.innerHTML = `<span class="status-tool">当前模式：底图手动调整</span><span>｜</span><span class="status-area-info" title="相对底图原始尺寸的比例">缩放 ${bgScale}%</span><button type="button" class="status-action-btn" data-status-action="restore-background-original" title="恢复底图原始尺寸，保持当前位置中心不变">原始</button><button type="button" class="status-action-btn" data-status-action="exit-background-edit">退出</button>`;
+        els.status.innerHTML = `<span class="status-tool">当前模式：底图手动调整</span><button type="button" class="status-action-btn" data-status-action="restore-background-original" title="恢复底图原始尺寸，保持当前位置中心不变">原始</button><span class="status-bg-scale-info" title="相对底图原始尺寸的比例">缩放 ${bgScale}%</span><button type="button" class="status-action-btn" data-status-action="exit-background-edit">退出</button>`;
       } else if (state.tool === 'area' && state.areaDrawing) {
         const pointCount = (state.areaPoints || []).length;
         const canComplete = pointCount >= 3;
@@ -5092,6 +5131,12 @@
 
     function handlePointerDown(e) {
       if (state.modalOpen) { e.preventDefault(); e.stopPropagation(); return; }
+      if (isBackgroundPopoverOpen()) {
+        closeBackgroundPopover();
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       if (e.pointerType === 'mouse' && Date.now() < touchInteraction.ignoreSyntheticMouseUntil) return;
       if (e.button !== undefined && e.button !== 0) return;
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY, pointerType: e.pointerType });
@@ -6233,8 +6278,15 @@
     document.getElementById('exportBtn').onclick=exportCurrentPlan;
     document.getElementById('exportSidebarBtn').onclick=exportCurrentPlan;
     document.getElementById('backgroundBtn').onclick=e=>{
-      if (state.backgroundImage) openBackgroundPopover(e.currentTarget);
-      else els.backgroundImageInput.click();
+      e.preventDefault();
+      e.stopPropagation();
+      if (state.backgroundImage) {
+        if (isBackgroundPopoverOpen()) closeBackgroundPopover();
+        else openBackgroundPopover(e.currentTarget);
+      } else {
+        closeBackgroundPopover();
+        els.backgroundImageInput.click();
+      }
     };
     els.backgroundImageInput.onchange=e=>{
       const file=e.target.files && e.target.files[0];
@@ -7293,6 +7345,56 @@
       bg.height = height;
     }
 
+    function applyBackgroundFitCurrentPage() {
+      const bg = state.backgroundImage;
+      if (!bg) return;
+      const width = Math.max(1, Number(bg.width) || Number(bg.naturalWidth) || 1);
+      const height = Math.max(1, Number(bg.height) || Number(bg.naturalHeight) || 1);
+      state.pageW = width;
+      state.pageH = height;
+      state.aspectRatio = state.pageW / Math.max(1, state.pageH);
+      els.pagePreset.value = 'custom';
+      els.pageWidth.value = state.pageW;
+      els.pageHeight.value = state.pageH;
+      refreshSidebarUnitizedInputs();
+      updateAspectRatioFromPage();
+      rememberPageSelectorValues();
+      bg.x = 0;
+      bg.y = 0;
+      bg.width = width;
+      bg.height = height;
+    }
+
+    function getBackgroundScaleRatio(bg = state.backgroundImage) {
+      if (!bg) return 1;
+      const naturalWidth = Math.max(1, Number(bg.naturalWidth) || Number(bg.width) || 1);
+      const naturalHeight = Math.max(1, Number(bg.naturalHeight) || Number(bg.height) || 1);
+      const width = Math.max(1, Number(bg.width) || naturalWidth);
+      const height = Math.max(1, Number(bg.height) || naturalHeight);
+      return Math.sqrt((width * height) / (naturalWidth * naturalHeight));
+    }
+
+    function isBackgroundAtOriginalScale(bg = state.backgroundImage) {
+      return Math.abs(getBackgroundScaleRatio(bg) - 1) <= 0.005;
+    }
+
+    async function confirmBackgroundFitOriginalIfNeeded() {
+      if (isBackgroundAtOriginalScale()) return true;
+      const choice = await showChoiceDialog(
+        '恢复并适配底图原始尺寸？',
+        `操作将会覆盖当前手动调整的底图缩放比例，并把底图恢复为原图 100% 尺寸。
+
+如果想保留当前底图大小并让画布跟随，请使用“适配当前”。
+
+是否确定要恢复并适配底图“原始尺寸”？`,
+        [
+          { label: '取消', value: 'cancel' },
+          { label: '适配原图尺寸', value: 'confirm', primary: true }
+        ]
+      );
+      return choice === 'confirm';
+    }
+
     function getBackgroundAlignedPosition(position, width, height) {
       const w = Math.max(1, Number(width) || 1);
       const h = Math.max(1, Number(height) || 1);
@@ -7421,6 +7523,11 @@
       pop.setAttribute('aria-hidden', 'true');
     }
 
+    function isBackgroundPopoverOpen() {
+      const pop = document.getElementById('backgroundPopover');
+      return !!(pop && !pop.classList.contains('hidden'));
+    }
+
     function openBackgroundPopover(anchor) {
       const pop = document.getElementById('backgroundPopover');
       if (!pop) return;
@@ -7443,7 +7550,11 @@
         btn.textContent = text;
         if (options.title) btn.title = options.title;
         btn.disabled = !!options.disabled;
-        btn.addEventListener('click', options.onClick || (() => {}));
+        btn.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          (options.onClick || (() => {}))(e);
+        });
         row.appendChild(btn);
         return btn;
       };
@@ -7482,7 +7593,6 @@
           if (!state.backgroundImage) return;
           saveHistory(true);
           await rotateBackgroundImageQuarter('left');
-          openBackgroundPopover(anchor);
         }
       });
       addButton(rotateRow, '右转 90°', {
@@ -7491,14 +7601,13 @@
           if (!state.backgroundImage) return;
           saveHistory(true);
           await rotateBackgroundImageQuarter('right');
-          openBackgroundPopover(anchor);
         }
       });
       pop.appendChild(rotateRow);
 
       addTitle('适配');
       const fitRow = document.createElement('div');
-      fitRow.className = 'bg-popover-row';
+      fitRow.className = 'bg-popover-row bg-fit-row';
       addButton(fitRow, '适配画布', {
         title: '按比例缩放图片，完整放入画布',
         disabled: !hasBg,
@@ -7506,18 +7615,32 @@
           if (!state.backgroundImage) return;
           saveHistory(true);
           applyBackgroundFitCanvas();
-          openBackgroundPopover(anchor);
+          closeBackgroundPopover();
           draw();
         }
       });
       addButton(fitRow, '适配原图', {
-        title: '画布跟随图片尺寸，图片不缩放',
+        title: '画布跟随图片原始尺寸，图片恢复为 100%',
+        disabled: !hasBg,
+        onClick: async () => {
+          if (!state.backgroundImage) return;
+          closeBackgroundPopover();
+          const confirmed = await confirmBackgroundFitOriginalIfNeeded();
+          if (!confirmed) return;
+          saveHistory(true);
+          applyBackgroundFitOriginalPage();
+          resizeCanvas();
+          draw();
+        }
+      });
+      addButton(fitRow, '适配当前', {
+        title: '画布跟随当前底图显示尺寸，保留当前缩放比例',
         disabled: !hasBg,
         onClick: () => {
           if (!state.backgroundImage) return;
           saveHistory(true);
-          applyBackgroundFitOriginalPage();
-          openBackgroundPopover(anchor);
+          applyBackgroundFitCurrentPage();
+          closeBackgroundPopover();
           resizeCanvas();
           draw();
         }
@@ -7541,7 +7664,7 @@
             if (!state.backgroundImage) return;
             saveHistory(true);
             alignBackground(value);
-            openBackgroundPopover(anchor);
+            closeBackgroundPopover();
             draw();
           }
         });
@@ -7752,7 +7875,10 @@
 
     function cancelCurrentOperation() {
       let handled = false;
-      if (state.backgroundAdjusting) {
+      if (isBackgroundPopoverOpen()) {
+        closeBackgroundPopover();
+        handled = true;
+      } else if (state.backgroundAdjusting) {
         restoreBackgroundAdjustOriginal();
         handled = true;
       } else if (state.backgroundEditMode) {
