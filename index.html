@@ -1089,7 +1089,7 @@
     }
 
     .text-dialog-box-v95 {
-      width: min(560px, calc(100vw - 32px));
+      width: min(660px, calc(100vw - 32px));
       max-height: calc(100vh - 32px);
       overflow: visible;
       background: #fff;
@@ -1166,9 +1166,21 @@
       -webkit-touch-callout: default;
     }
     .text-dialog-section-v97 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 22px;
+      row-gap: 10px;
       padding-bottom: 12px;
       margin-bottom: 12px;
       border-bottom: 1px solid #e5ebf3;
+    }
+    .text-dialog-section-v97 .text-dialog-style-row-v95 {
+      margin-bottom: 0;
+    }
+    @media (max-width: 720px) {
+      .text-dialog-section-v97 {
+        grid-template-columns: 1fr;
+      }
     }
     .text-dialog-content-label-v97 {
       font-size: 12px;
@@ -1844,7 +1856,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v112';
+    const APP_VERSION = 'v113';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -2451,6 +2463,15 @@
 
     function normalizeTextBackgroundMode(value) {
       return ['none', 'white', 'yellow', 'custom'].includes(value) ? value : 'none';
+    }
+
+    function normalizeTextBackgroundOpacity(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 1;
+    }
+
+    function getTextBackgroundOpacity(o) {
+      return normalizeTextBackgroundOpacity(o && o.textBackgroundOpacity);
     }
 
     function getTextBackgroundColor(o) {
@@ -3703,7 +3724,7 @@
         const bgColor = getTextBackgroundColor(o);
         if (bgColor) {
           const bgBox = getTextBackgroundBox(o);
-          textItems.push(renderRect(bgBox.x, bgBox.y, bgBox.w, bgBox.h, bgColor, null, 0));
+          textItems.push(renderRect(bgBox.x, bgBox.y, bgBox.w, bgBox.h, bgColor, null, 0, { fillOpacity: getTextBackgroundOpacity(o) }));
         }
         const textMetrics = measureTextBlock(o.text || '文字', fontSize, !!o.textBold, !!o.textItalic, o.fontType);
         textItems.push(renderText(o.text || '文字', anchor.x, anchor.y, color, fontSize, { textAlign: canvasTextAlignFromBlockAlign(o.textAlign), textBaseline: 'alphabetic', lineHeight: textMetrics.lineHeight, textAscent: textMetrics.ascent, textDescent: textMetrics.descent, fontWeight: o.textBold ? '700' : '400', fontStyle: o.textItalic ? 'italic' : 'normal', textUnderline: !!o.textUnderline, fontType: normalizeFontType(o.fontType) }));
@@ -4764,7 +4785,7 @@
         return;
       }
       if(state.tool==='text'){
-        addObject({type:'text',x:p.x,y:p.y,text:normalizeTextContent(els.textInput.value, '文字'),textAlign:'left',textBackgroundMode:'none',textBackgroundColor:'#ffffff',textBold:false,textItalic:false,textUnderline:false,fontType:normalizeFontType(els.textFontType ? els.textFontType.value : 'default'),layer:'text'});
+        addObject({type:'text',x:p.x,y:p.y,text:normalizeTextContent(els.textInput.value, '文字'),textAlign:'left',textBackgroundMode:'none',textBackgroundColor:'#ffffff',textBackgroundOpacity:1,textBold:false,textItalic:false,textUnderline:false,fontType:normalizeFontType(els.textFontType ? els.textFontType.value : 'default'),layer:'text'});
         updateCursor(e);
         return;
       }
@@ -5096,7 +5117,7 @@
         draw();
         updateObjectMetrics(true);
       };
-      const result = await showMultilineTextDialog('编辑文字', '', o.text || '', '文字标签', o.textAlign || 'left', o.color || '#111827', o.textBackgroundMode || 'none', o.textBackgroundColor || '#ffffff', { previewTarget: o, originalSnapshot: original, onPreview: previewUpdate, onRestore: restoreOriginal, initialBold: o.textBold, initialItalic: o.textItalic, initialUnderline: o.textUnderline, initialFontSize: o.fontSize || 20, initialFontType: o.fontType || 'default' });
+      const result = await showMultilineTextDialog('编辑文字', '', o.text || '', '文字标签', o.textAlign || 'left', o.color || '#111827', o.textBackgroundMode || 'none', o.textBackgroundColor || '#ffffff', { previewTarget: o, originalSnapshot: original, onPreview: previewUpdate, onRestore: restoreOriginal, initialBold: o.textBold, initialItalic: o.textItalic, initialUnderline: o.textUnderline, initialFontSize: o.fontSize || 20, initialFontType: o.fontType || 'default', initialBackgroundOpacity: getTextBackgroundOpacity(o) });
       if(result === null) return;
       restoreOriginal(original);
       saveHistory();
@@ -5105,6 +5126,7 @@
       o.color = normalizeHexColor(result.color, o.color || '#111827');
       o.textBackgroundMode = normalizeTextBackgroundMode(result.backgroundMode);
       o.textBackgroundColor = normalizeHexColor(result.backgroundColor, '#ffffff');
+      o.textBackgroundOpacity = normalizeTextBackgroundOpacity(result.backgroundOpacity);
       o.textBold = normalizeTextStyleFlag(result.bold);
       o.textItalic = normalizeTextStyleFlag(result.italic);
       o.textUnderline = normalizeTextStyleFlag(result.underline);
@@ -5892,7 +5914,7 @@
           o.width = o.width || 22;
           o.layer = o.layer || 'annotations';
         }
-        if(o.type === 'text') { o.text = normalizeTextContent(o.text, '文字'); o.textAlign = normalizeTextAlign(o.textAlign); o.color = normalizeHexColor(o.color, '#111827'); o.textBackgroundMode = normalizeTextBackgroundMode(o.textBackgroundMode); o.textBackgroundColor = normalizeHexColor(o.textBackgroundColor, '#ffffff'); o.textBold = normalizeTextStyleFlag(o.textBold); o.textItalic = normalizeTextStyleFlag(o.textItalic); o.textUnderline = normalizeTextStyleFlag(o.textUnderline); o.fontType = normalizeFontType(o.fontType); }
+        if(o.type === 'text') { o.text = normalizeTextContent(o.text, '文字'); o.textAlign = normalizeTextAlign(o.textAlign); o.color = normalizeHexColor(o.color, '#111827'); o.textBackgroundMode = normalizeTextBackgroundMode(o.textBackgroundMode); o.textBackgroundColor = normalizeHexColor(o.textBackgroundColor, '#ffffff'); o.textBackgroundOpacity = normalizeTextBackgroundOpacity(o.textBackgroundOpacity); o.textBold = normalizeTextStyleFlag(o.textBold); o.textItalic = normalizeTextStyleFlag(o.textItalic); o.textUnderline = normalizeTextStyleFlag(o.textUnderline); o.fontType = normalizeFontType(o.fontType); }
         if(o.type === 'brush') {
           o.points = Array.isArray(o.points) ? o.points : [];
           o.color = o.color || DEFAULT_STROKE_COLOR;
@@ -6321,6 +6343,7 @@
         let textColorValue = normalizeHexColor(initialColor, '#111827');
         let backgroundModeValue = normalizeTextBackgroundMode(initialBgMode);
         let backgroundColorValue = normalizeHexColor(initialBgColor, '#ffffff');
+        let backgroundOpacityValue = normalizeTextBackgroundOpacity(options.initialBackgroundOpacity);
         let textBoldValue = normalizeTextStyleFlag(options.initialBold);
         let textItalicValue = normalizeTextStyleFlag(options.initialItalic);
         let textUnderlineValue = normalizeTextStyleFlag(options.initialUnderline);
@@ -6340,6 +6363,7 @@
             color: textColorValue,
             backgroundMode: backgroundModeValue,
             backgroundColor: backgroundColorValue,
+            backgroundOpacity: backgroundOpacityValue,
             bold: textBoldValue,
             italic: textItalicValue,
             underline: textUnderlineValue,
@@ -6356,6 +6380,7 @@
           previewTarget.color = normalizeHexColor(result.color, previewTarget.color || '#111827');
           previewTarget.textBackgroundMode = normalizeTextBackgroundMode(result.backgroundMode);
           previewTarget.textBackgroundColor = normalizeHexColor(result.backgroundColor, '#ffffff');
+          previewTarget.textBackgroundOpacity = normalizeTextBackgroundOpacity(result.backgroundOpacity);
           previewTarget.textBold = normalizeTextStyleFlag(result.bold);
           previewTarget.textItalic = normalizeTextStyleFlag(result.italic);
           previewTarget.textUnderline = normalizeTextStyleFlag(result.underline);
@@ -6440,6 +6465,30 @@
         bgGroup.appendChild(bgColorBtn);
         bgGroup.appendChild(bgNoneBtn);
         bgRow.appendChild(bgGroup);
+
+        const bgOpacityRow = makeRow('背景透明');
+        const bgOpacityInput = document.createElement('input');
+        bgOpacityInput.type = 'text';
+        bgOpacityInput.className = 'text-dialog-size-input-v97';
+        bgOpacityInput.value = `${Math.round(backgroundOpacityValue * 100)}%`;
+        bgOpacityInput.inputMode = 'decimal';
+        bgOpacityInput.title = '只影响文字背景，不影响文字本身；100% 为完全不透明';
+        bgOpacityInput.addEventListener('focus', () => {
+          bgOpacityInput.value = String(Math.round(backgroundOpacityValue * 100));
+          bgOpacityInput.select();
+        });
+        bgOpacityInput.addEventListener('input', () => {
+          const raw = String(bgOpacityInput.value || '').replace(/%/g, '').trim();
+          const n = Number(raw);
+          if (Number.isFinite(n)) {
+            backgroundOpacityValue = Math.max(0, Math.min(100, n)) / 100;
+            applyPreview();
+          }
+        });
+        bgOpacityInput.addEventListener('blur', () => {
+          bgOpacityInput.value = `${Math.round(backgroundOpacityValue * 100)}%`;
+        });
+        bgOpacityRow.appendChild(bgOpacityInput);
 
         const colorRow = makeRow('文字颜色');
         const colorGroup = document.createElement('div');
@@ -6627,10 +6676,11 @@
         const attrSection = document.createElement('div');
         attrSection.className = 'text-dialog-section-v97';
         attrSection.appendChild(bgRow);
+        attrSection.appendChild(bgOpacityRow);
         attrSection.appendChild(colorRow);
+        attrSection.appendChild(sizeRow);
         attrSection.appendChild(styleRow);
         attrSection.appendChild(fontTypeRow);
-        attrSection.appendChild(sizeRow);
         attrSection.appendChild(alignRow);
         const contentLabel = document.createElement('div');
         contentLabel.className = 'text-dialog-content-label-v97';
