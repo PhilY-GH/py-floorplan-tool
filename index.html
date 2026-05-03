@@ -1862,7 +1862,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v115';
+    const APP_VERSION = 'v117';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1919,6 +1919,13 @@
       pageH: 850,
       aspectRatio: 1100 / 850,
       backgroundImage: null,
+      backgroundEditMode: false,
+      backgroundAdjusting: false,
+      backgroundAdjustMode: null,
+      backgroundAdjustHandle: null,
+      backgroundStartRaw: null,
+      backgroundOriginal: null,
+      backgroundHistorySaved: false,
       snapIndicator: null,
       eraserPreview: null,
       brushColor: '#000000',
@@ -2625,14 +2632,19 @@
       drawShiftDragGuide(ctx);
       if (state.tool === 'eraser' && (state.current || state.eraserPreview)) drawBrushCursor(ctx);
       drawSnapIndicator(ctx);
+      drawBackgroundEditOverlay(ctx);
       ctx.restore();
       updateStatus();
     }
 
     function updateStatus() {
       const count = state.selectedIds.length;
-      els.status.classList.toggle('multi-select', !!touchInteraction.multiSelectMode);
-      if (state.tool === 'area' && state.areaDrawing) {
+      els.status.classList.toggle('multi-select', !!touchInteraction.multiSelectMode && !state.backgroundEditMode);
+      if (state.backgroundEditMode) {
+        els.status.classList.remove('multi-select');
+        const bgScale = getBackgroundScalePercent();
+        els.status.innerHTML = `<span class="status-tool">当前模式：底图手动调整</span><span>｜</span><span class="status-area-info" title="相对底图原始尺寸的比例">缩放 ${bgScale}%</span><button type="button" class="status-action-btn" data-status-action="restore-background-original" title="恢复底图原始尺寸，保持当前位置中心不变">原始</button><button type="button" class="status-action-btn" data-status-action="exit-background-edit">退出</button>`;
+      } else if (state.tool === 'area' && state.areaDrawing) {
         const pointCount = (state.areaPoints || []).length;
         const canComplete = pointCount >= 3;
         els.status.classList.remove('multi-select');
@@ -4100,6 +4112,241 @@
       c.restore();
     }
 
+    function getBackgroundBox() {
+      const bg = state.backgroundImage;
+      if (!bg) return null;
+      const width = Math.max(1, Number(bg.width) || Number(bg.naturalWidth) || 1);
+      const height = Math.max(1, Number(bg.height) || Number(bg.naturalHeight) || 1);
+      return { x: Number(bg.x) || 0, y: Number(bg.y) || 0, w: width, h: height };
+    }
+
+    function getBackgroundScalePercent(bg = state.backgroundImage) {
+      if (!bg) return 100;
+      const naturalWidth = Math.max(1, Number(bg.naturalWidth) || Number(bg.width) || 1);
+      const naturalHeight = Math.max(1, Number(bg.naturalHeight) || Number(bg.height) || 1);
+      const width = Math.max(1, Number(bg.width) || naturalWidth);
+      const height = Math.max(1, Number(bg.height) || naturalHeight);
+      const ratio = Math.sqrt((width * height) / (naturalWidth * naturalHeight));
+      return Math.max(1, Math.round(ratio * 100));
+    }
+
+    function restoreBackgroundOriginalSizeKeepCenter() {
+      const bg = state.backgroundImage;
+      if (!bg) return;
+      const naturalWidth = Math.max(1, Number(bg.naturalWidth) || Number(bg.width) || 1);
+      const naturalHeight = Math.max(1, Number(bg.naturalHeight) || Number(bg.height) || 1);
+      const currentWidth = Math.max(1, Number(bg.width) || naturalWidth);
+      const currentHeight = Math.max(1, Number(bg.height) || naturalHeight);
+      const centerX = (Number(bg.x) || 0) + currentWidth / 2;
+      const centerY = (Number(bg.y) || 0) + currentHeight / 2;
+      saveHistory(true);
+      bg.width = naturalWidth;
+      bg.height = naturalHeight;
+      bg.x = centerX - naturalWidth / 2;
+      bg.y = centerY - naturalHeight / 2;
+      draw();
+      updateCursor();
+      markProjectDirty();
+    }
+
+    function getBackgroundEditHandleSize() {
+      return isTouchControlMode() ? Math.max(14 / state.zoom, 10) : Math.max(10 / state.zoom, 8);
+    }
+
+    function getBackgroundEditHitTolerance() {
+      return isTouchControlMode() ? Math.max(24 / state.zoom, 14) : Math.max(12 / state.zoom, 8);
+    }
+
+    function getBackgroundEditHandles() {
+      const b = getBackgroundBox();
+      if (!b) return [];
+      return [
+        { handle: 'nw', x: b.x, y: b.y, cursor: 'nwse-resize' },
+        { handle: 'ne', x: b.x + b.w, y: b.y, cursor: 'nesw-resize' },
+        { handle: 'se', x: b.x + b.w, y: b.y + b.h, cursor: 'nwse-resize' },
+        { handle: 'sw', x: b.x, y: b.y + b.h, cursor: 'nesw-resize' }
+      ];
+    }
+
+    function hitBackgroundEditHandle(p) {
+      if (!state.backgroundEditMode || !state.backgroundImage || !p) return null;
+      const tolerance = getBackgroundEditHitTolerance();
+      let best = null;
+      let bestDist = Infinity;
+      getBackgroundEditHandles().forEach(h => {
+        const d = Math.hypot(p.x - h.x, p.y - h.y);
+        if (d <= tolerance && d < bestDist) { best = h; bestDist = d; }
+      });
+      return best;
+    }
+
+    function isPointInBackgroundImage(p) {
+      const b = getBackgroundBox();
+      return !!(b && p && pointInBox(p, b, 0));
+    }
+
+    function drawBackgroundEditOverlay(c) {
+      if (!state.backgroundEditMode || !state.backgroundImage) return;
+      const b = getBackgroundBox();
+      if (!b) return;
+      const handleSize = getBackgroundEditHandleSize();
+      const half = handleSize / 2;
+      c.save();
+      c.setLineDash([7 / state.zoom, 5 / state.zoom]);
+      c.strokeStyle = '#2563eb';
+      c.lineWidth = Math.max(1.8 / state.zoom, 1);
+      c.strokeRect(b.x, b.y, b.w, b.h);
+      c.setLineDash([]);
+      c.fillStyle = '#ffffff';
+      c.strokeStyle = '#2563eb';
+      c.lineWidth = Math.max(2 / state.zoom, 1);
+      getBackgroundEditHandles().forEach(h => {
+        c.beginPath();
+        c.rect(h.x - half, h.y - half, handleSize, handleSize);
+        c.fill();
+        c.stroke();
+      });
+      c.restore();
+    }
+
+    function enterBackgroundEditMode() {
+      if (!state.backgroundImage) return false;
+      resetTransientInteraction(false);
+      state.backgroundEditMode = true;
+      state.selectedIds = [];
+      touchInteraction.multiSelectMode = false;
+      closeColorPopover();
+      closeMorePopover();
+      closeBackgroundPopover();
+      draw();
+      updateCursor();
+      return true;
+    }
+
+    function exitBackgroundEditMode(shouldDraw = true) {
+      state.backgroundEditMode = false;
+      state.backgroundAdjusting = false;
+      state.backgroundAdjustMode = null;
+      state.backgroundAdjustHandle = null;
+      state.backgroundStartRaw = null;
+      state.backgroundOriginal = null;
+      state.backgroundHistorySaved = false;
+      if (shouldDraw) {
+        draw();
+        updateCursor();
+      }
+    }
+
+    function toggleBackgroundEditMode() {
+      if (state.backgroundEditMode) exitBackgroundEditMode(true);
+      else enterBackgroundEditMode();
+    }
+
+    function startBackgroundAdjust(e, raw) {
+      if (!state.backgroundEditMode || !state.backgroundImage || !raw) return;
+      const handle = hitBackgroundEditHandle(raw);
+      if (handle) {
+        state.backgroundAdjusting = true;
+        state.backgroundAdjustMode = 'scale';
+        state.backgroundAdjustHandle = handle.handle;
+      } else if (isPointInBackgroundImage(raw)) {
+        state.backgroundAdjusting = true;
+        state.backgroundAdjustMode = 'move';
+        state.backgroundAdjustHandle = null;
+      } else {
+        state.backgroundAdjusting = false;
+        state.backgroundAdjustMode = null;
+        state.backgroundAdjustHandle = null;
+        updateCursor(e);
+        return;
+      }
+      state.backgroundStartRaw = { x: raw.x, y: raw.y };
+      state.backgroundOriginal = JSON.parse(JSON.stringify(state.backgroundImage));
+      state.backgroundHistorySaved = false;
+      draw();
+      updateCursor(e);
+    }
+
+    function saveBackgroundAdjustHistoryOnce() {
+      if (state.backgroundHistorySaved) return;
+      saveHistory(true);
+      state.backgroundHistorySaved = true;
+    }
+
+    function updateBackgroundAdjust(raw) {
+      if (!state.backgroundEditMode || !state.backgroundAdjusting || !state.backgroundImage || !state.backgroundStartRaw || !state.backgroundOriginal || !raw) return;
+      const original = state.backgroundOriginal;
+      const bg = state.backgroundImage;
+      const start = state.backgroundStartRaw;
+      const dx = raw.x - start.x;
+      const dy = raw.y - start.y;
+      if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) saveBackgroundAdjustHistoryOnce();
+      if (state.backgroundAdjustMode === 'move') {
+        bg.x = (Number(original.x) || 0) + dx;
+        bg.y = (Number(original.y) || 0) + dy;
+        bg.width = Math.max(1, Number(original.width) || Number(original.naturalWidth) || 1);
+        bg.height = Math.max(1, Number(original.height) || Number(original.naturalHeight) || 1);
+        draw();
+        return;
+      }
+      if (state.backgroundAdjustMode === 'scale') {
+        const ow = Math.max(1, Number(original.width) || Number(original.naturalWidth) || 1);
+        const oh = Math.max(1, Number(original.height) || Number(original.naturalHeight) || 1);
+        const ox = Number(original.x) || 0;
+        const oy = Number(original.y) || 0;
+        const handle = state.backgroundAdjustHandle || 'se';
+        const moving = {
+          nw: { x: ox, y: oy },
+          ne: { x: ox + ow, y: oy },
+          se: { x: ox + ow, y: oy + oh },
+          sw: { x: ox, y: oy + oh }
+        }[handle];
+        const fixed = {
+          nw: { x: ox + ow, y: oy + oh },
+          ne: { x: ox, y: oy + oh },
+          se: { x: ox, y: oy },
+          sw: { x: ox + ow, y: oy }
+        }[handle];
+        const ovx = moving.x - fixed.x;
+        const ovy = moving.y - fixed.y;
+        const cvx = raw.x - fixed.x;
+        const cvy = raw.y - fixed.y;
+        const denom = Math.max(1, ovx * ovx + ovy * ovy);
+        const scale = Math.max(0.02, Math.min(20, (cvx * ovx + cvy * ovy) / denom));
+        const nw = Math.max(10, ow * scale);
+        const nh = Math.max(10, oh * scale);
+        bg.width = nw;
+        bg.height = nh;
+        if (handle === 'nw') { bg.x = fixed.x - nw; bg.y = fixed.y - nh; }
+        else if (handle === 'ne') { bg.x = fixed.x; bg.y = fixed.y - nh; }
+        else if (handle === 'sw') { bg.x = fixed.x - nw; bg.y = fixed.y; }
+        else { bg.x = fixed.x; bg.y = fixed.y; }
+        draw();
+      }
+    }
+
+    function finishBackgroundAdjust() {
+      state.backgroundAdjusting = false;
+      state.backgroundAdjustMode = null;
+      state.backgroundAdjustHandle = null;
+      state.backgroundStartRaw = null;
+      state.backgroundOriginal = null;
+      state.backgroundHistorySaved = false;
+      draw();
+      updateCursor();
+      markProjectDirty();
+    }
+
+    function restoreBackgroundAdjustOriginal() {
+      if (state.backgroundOriginal) state.backgroundImage = JSON.parse(JSON.stringify(state.backgroundOriginal));
+      state.backgroundAdjusting = false;
+      state.backgroundAdjustMode = null;
+      state.backgroundAdjustHandle = null;
+      state.backgroundStartRaw = null;
+      state.backgroundOriginal = null;
+      state.backgroundHistorySaved = false;
+    }
+
     function ensureBackgroundImageLoaded() {
       const bg = state.backgroundImage;
       if (!bg || !bg.dataUrl) { backgroundImgElement = null; return Promise.resolve(null); }
@@ -4565,7 +4812,22 @@
     function updateCursor(e) {
       let cursor = 'default';
 
-      if (state.tool === 'eraser') {
+      if (state.backgroundEditMode) {
+        if (state.backgroundAdjusting) {
+          if (state.backgroundAdjustMode === 'move') cursor = 'grabbing';
+          else if (state.backgroundAdjustHandle === 'nw' || state.backgroundAdjustHandle === 'se') cursor = 'nwse-resize';
+          else if (state.backgroundAdjustHandle === 'ne' || state.backgroundAdjustHandle === 'sw') cursor = 'nesw-resize';
+          else cursor = 'grabbing';
+        } else if (e) {
+          const raw = rawScreenToWorld(e);
+          const handle = hitBackgroundEditHandle(raw);
+          if (handle) cursor = handle.cursor || 'pointer';
+          else if (isPointInBackgroundImage(raw)) cursor = 'move';
+          else cursor = 'default';
+        } else {
+          cursor = 'default';
+        }
+      } else if (state.tool === 'eraser') {
         cursor = 'none';
       } else if (state.tool !== 'select') {
         cursor = 'crosshair';
@@ -4835,6 +5097,17 @@
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY, pointerType: e.pointerType });
       try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
 
+      if (state.backgroundEditMode) {
+        if (isTouchLike(e)) {
+          touchControlMode = true;
+          touchInteraction.ignoreSyntheticMouseUntil = Date.now() + 700;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        startBackgroundAdjust(e, rawScreenToWorld(e));
+        return;
+      }
+
       if (isTouchLike(e)) {
         touchControlMode = true;
         touchInteraction.ignoreSyntheticMouseUntil = Date.now() + 700;
@@ -4954,6 +5227,14 @@
       if (state.modalOpen) { e.preventDefault(); e.stopPropagation(); return; }
       if (e.pointerType === 'mouse' && Date.now() < touchInteraction.ignoreSyntheticMouseUntil) return;
       updateTouchPointer(e);
+      if (state.backgroundEditMode) {
+        if (isTouchLike(e)) e.preventDefault();
+        e.stopPropagation();
+        const raw = rawScreenToWorld(e);
+        if (state.backgroundAdjusting) updateBackgroundAdjust(raw);
+        updateCursor(e);
+        return;
+      }
       if (isTouchLike(e)) {
         e.preventDefault();
         if (touchInteraction.pinchMode || getTouchPointers().length >= 2) {
@@ -5066,6 +5347,13 @@
       activePointers.delete(e.pointerId);
       try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
 
+      if (state.backgroundEditMode) {
+        e.stopPropagation();
+        if (state.backgroundAdjusting) finishBackgroundAdjust();
+        else updateCursor(e);
+        return;
+      }
+
       if (wasTouch) {
         if (touchInteraction.pinchMode) {
           if (getTouchPointers().length < 2) {
@@ -5099,6 +5387,14 @@
       clearTouchLongPress();
       activePointers.delete(e.pointerId);
       try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+      if (state.backgroundEditMode) {
+        if (state.backgroundAdjusting) {
+          restoreBackgroundAdjustOriginal();
+          draw();
+        }
+        updateCursor(e);
+        return;
+      }
       if (isTouchLike(e)) {
         resetTransientInteraction(true);
         touchInteraction.primaryId = null;
@@ -5144,12 +5440,15 @@
         state.eraserPreview = null;
         needsDraw = true;
       }
+      if (state.backgroundEditMode && !state.backgroundAdjusting) {
+        updateCursor();
+      }
       if (needsDraw) draw();
     });
     canvas.addEventListener('lostpointercapture', e => {
       if (activePointers.has(e.pointerId)) handlePointerCancel(e);
     });
-    canvas.addEventListener('dblclick', e=>{ if(state.modalOpen){ e.preventDefault(); e.stopPropagation(); return; } if(state.tool==='area'){ e.preventDefault(); completeAreaDraft(); return; } const t=hitText(rawScreenToWorld(e)); if(t){ e.preventDefault(); editTextObject(t); } });
+    canvas.addEventListener('dblclick', e=>{ if(state.modalOpen || state.backgroundEditMode){ e.preventDefault(); e.stopPropagation(); return; } if(state.tool==='area'){ e.preventDefault(); completeAreaDraft(); return; } const t=hitText(rawScreenToWorld(e)); if(t){ e.preventDefault(); editTextObject(t); } });
 
     function finishPointer(e){
       if(state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex){
@@ -5226,6 +5525,7 @@
     }
 
     function setTool(tool) {
+      if (state.backgroundEditMode) exitBackgroundEditMode(false);
       if (tool !== state.tool) cancelAreaDraft(false);
       if (tool !== 'eraser') state.eraserPreview = null;
       clearSnapIndicator();
@@ -5258,10 +5558,19 @@
         return;
       }
       if (action === 'toggle-multiselect') {
-        if (state.tool !== 'select') return;
+        if (state.tool !== 'select' || state.backgroundEditMode) return;
         touchInteraction.multiSelectMode = !touchInteraction.multiSelectMode;
         draw();
         updateCursor();
+        return;
+      }
+      if (action === 'restore-background-original') {
+        if (state.backgroundEditMode && state.backgroundImage) restoreBackgroundOriginalSizeKeepCenter();
+        return;
+      }
+      if (action === 'exit-background-edit') {
+        exitBackgroundEditMode(true);
+        return;
       }
     }
     els.status.addEventListener('pointerdown', handleStatusAction);
@@ -7071,6 +7380,7 @@
         const action = await chooseBackgroundCanvasAction(prepared.width, prepared.height);
         if (action === 'cancel') return;
         saveHistory(true);
+        exitBackgroundEditMode(false);
         if (action === 'image') {
           state.pageW = prepared.width;
           state.pageH = prepared.height;
@@ -7156,6 +7466,7 @@
           saveHistory(true);
           state.backgroundImage = null;
           backgroundImgElement = null;
+          exitBackgroundEditMode(false);
           closeBackgroundPopover();
           draw();
         }
@@ -7235,6 +7546,16 @@
           }
         });
       });
+      const manualBtn = addButton(positionRow, '手动', {
+        disabled: !hasBg,
+        title: '进入 / 退出底图手动调整：拖动移动，拖动四角等比例缩放',
+        onClick: () => {
+          if (!state.backgroundImage) return;
+          toggleBackgroundEditMode();
+          closeBackgroundPopover();
+        }
+      });
+      manualBtn.classList.toggle('active', !!state.backgroundEditMode);
       pop.appendChild(positionRow);
 
       addTitle('透明度（100%为完全显示）');
@@ -7431,7 +7752,14 @@
 
     function cancelCurrentOperation() {
       let handled = false;
-      if (state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex) {
+      if (state.backgroundAdjusting) {
+        restoreBackgroundAdjustOriginal();
+        handled = true;
+      } else if (state.backgroundEditMode) {
+        exitBackgroundEditMode(false);
+        handled = true;
+      }
+      if (!handled && (state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex)) {
         restoreDragOriginals();
         state.resizingEndpoint = false;
         state.resizingBox = false;
