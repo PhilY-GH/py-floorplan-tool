@@ -6,17 +6,40 @@
   <title>PY平面图工具</title>
   <style>
     * { box-sizing: border-box; }
+    html {
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
     body {
       margin: 0;
+      width: 100%;
+      height: 100%;
       font-family: Arial, "Microsoft YaHei", sans-serif;
       background: #e5e7eb;
       color: #111827;
       overflow: hidden;
+      overscroll-behavior: none;
+    }
+    html.py-keyboard-lock {
+      overflow: hidden !important;
+      overscroll-behavior: none;
+    }
+    body.py-keyboard-lock {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: var(--app-height, 100vh);
+      overflow: hidden !important;
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: auto;
     }
     .app {
       display: grid;
       grid-template-rows: var(--toolbar-height, 76px) 1fr;
       height: 100vh;
+      height: 100dvh;
+      height: var(--app-height, 100vh);
     }
     .top-toolbar {
       display: flex;
@@ -1821,7 +1844,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v109';
+    const APP_VERSION = 'v110';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -2048,7 +2071,33 @@
       draw();
     }
 
-    window.addEventListener('resize', resizeCanvas);
+    function getCurrentAppViewportHeight() {
+      const vv = window.visualViewport;
+      const rawHeight = vv && Number(vv.height) ? vv.height : window.innerHeight;
+      return Math.max(320, Math.round(rawHeight || document.documentElement.clientHeight || 600));
+    }
+
+    function updateAppViewportHeight() {
+      document.documentElement.style.setProperty('--app-height', `${getCurrentAppViewportHeight()}px`);
+    }
+
+    function handleAppViewportChange() {
+      updateAppViewportHeight();
+      resizeCanvas();
+      scheduleCanvasFloatBarSettledUpdates();
+    }
+
+    updateAppViewportHeight();
+    window.addEventListener('resize', handleAppViewportChange, { passive: true });
+    window.addEventListener('orientationchange', () => {
+      [0, 120, 360, 700].forEach(delay => setTimeout(handleAppViewportChange, delay));
+    }, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleAppViewportChange, { passive: true });
+      window.visualViewport.addEventListener('scroll', () => {
+        if (state.modalOpen) scheduleViewportResetAfterKeyboard(false);
+      }, { passive: true });
+    }
 
     function snapGridPoint(p) {
       const g = getInputNumber(els.gridSize, 20) || 20;
@@ -5874,7 +5923,58 @@
 
     let modalLockDepth = 0;
     let modalGlobalShieldInstalled = false;
+    let modalPageLockInstalled = false;
+    let modalPageUnlockTimer = null;
     const modalShieldEventTypes = ['pointerdown','pointermove','pointerup','pointercancel','mousedown','mousemove','mouseup','click','dblclick','touchstart','touchmove','touchend','wheel','gesturestart','gesturechange','gestureend'];
+
+    function isIOSLikeDevice() {
+      const ua = navigator.userAgent || '';
+      return /iPad|iPhone|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    function shouldAutoFocusModalInput() {
+      const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      return !(isIOSLikeDevice() || coarse || touchControlMode);
+    }
+
+    function lockPageForModal() {
+      if (modalPageUnlockTimer) {
+        clearTimeout(modalPageUnlockTimer);
+        modalPageUnlockTimer = null;
+      }
+      if (modalPageLockInstalled) return;
+      updateAppViewportHeight();
+      document.documentElement.classList.add('py-keyboard-lock');
+      document.body.classList.add('py-keyboard-lock');
+      modalPageLockInstalled = true;
+      forceWindowScrollTop();
+    }
+
+    function blurActiveModalInput() {
+      const active = document.activeElement;
+      if (active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) {
+        try { active.blur(); } catch (err) {}
+      }
+    }
+
+    function releasePageForModal() {
+      if (!modalPageLockInstalled) return;
+      document.documentElement.classList.remove('py-keyboard-lock');
+      document.body.classList.remove('py-keyboard-lock');
+      modalPageLockInstalled = false;
+      updateAppViewportHeight();
+      forceWindowScrollTop();
+      requestAnimationFrame(() => {
+        updateAppViewportHeight();
+        resizeCanvas();
+        forceWindowScrollTop();
+      });
+      [120, 320, 700].forEach(delay => setTimeout(() => {
+        updateAppViewportHeight();
+        resizeCanvas();
+        forceWindowScrollTop();
+      }, delay));
+    }
 
     function isModalAllowedTarget(target) {
       return !!(target && target.closest && target.closest('.py-modal-content-v108, .text-floating-palette-v95'));
@@ -5939,8 +6039,10 @@
 
     function forceWindowScrollTop() {
       try { window.scrollTo(0, 0); } catch (err) {}
+      try { (document.scrollingElement || document.documentElement).scrollTop = 0; } catch (err) {}
       try { document.documentElement.scrollTop = 0; } catch (err) {}
       try { document.body.scrollTop = 0; } catch (err) {}
+      updateAppViewportHeight();
       scheduleCanvasFloatBarUpdate();
     }
 
@@ -5979,6 +6081,7 @@
     }
 
     function beginModalLock() {
+      if (modalLockDepth === 0) lockPageForModal();
       modalLockDepth += 1;
       state.modalOpen = true;
       installModalGlobalShield();
@@ -5987,9 +6090,15 @@
     function endModalLock() {
       modalLockDepth = Math.max(0, modalLockDepth - 1);
       if (modalLockDepth === 0) {
-        state.modalOpen = false;
-        removeModalGlobalShield();
-        scheduleViewportResetAfterKeyboard(true);
+        blurActiveModalInput();
+        const release = () => {
+          state.modalOpen = false;
+          removeModalGlobalShield();
+          releasePageForModal();
+          scheduleViewportResetAfterKeyboard(true);
+        };
+        if (modalPageUnlockTimer) clearTimeout(modalPageUnlockTimer);
+        modalPageUnlockTimer = setTimeout(release, shouldAutoFocusModalInput() ? 0 : 380);
       }
     }
 
@@ -6103,6 +6212,7 @@
         document.body.appendChild(overlay);
         input.addEventListener('blur', () => scheduleViewportResetAfterKeyboard(false));
         setTimeout(() => {
+          if (!shouldAutoFocusModalInput()) return;
           input.focus();
           input.select();
         }, 0);
@@ -6526,9 +6636,11 @@
 
         applyPreview();
         setTimeout(() => {
-          input.focus();
-          const end = input.value.length;
-          try { input.setSelectionRange(end, end); } catch (err) {}
+          if (shouldAutoFocusModalInput()) {
+            input.focus();
+            const end = input.value.length;
+            try { input.setSelectionRange(end, end); } catch (err) {}
+          }
           setTimeout(keepBoxInsideViewport, 120);
         }, 0);
       });
