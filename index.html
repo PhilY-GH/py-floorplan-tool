@@ -1338,26 +1338,20 @@
       background: #fff;
       position: relative;
     }
-    .text-swatch-chip-v95.none::after {
-      content: "";
-      position: absolute;
-      left: 1px;
-      top: 8px;
-      width: 21px;
-      height: 2px;
-      background: #dc2626;
-      transform: rotate(-38deg);
-      transform-origin: center;
-      border-radius: 2px;
+    .text-swatch-chip-v95.none {
+      border: 0;
+      background: transparent;
+      width: 22px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
-
-    .text-swatch-chip-v95.none::before {
-      content: "";
-      position: absolute;
-      inset: -1px;
-      border: 1px solid #94a3b8;
-      border-radius: 5px;
-      pointer-events: none;
+    .text-swatch-none-svg-v120 {
+      width: 22px;
+      height: 20px;
+      display: block;
+      overflow: visible;
     }
     .text-dialog-style-row-v95 .row-label {
       width: 68px;
@@ -1900,7 +1894,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v119';
+    const APP_VERSION = 'v120';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -6862,7 +6856,11 @@
           btn.title = titleText;
           const chip = document.createElement('span');
           chip.className = 'text-swatch-chip-v95' + (isNone ? ' none' : '');
-          if (color) chip.style.background = color;
+          if (isNone) {
+            chip.innerHTML = '<svg class="text-swatch-none-svg-v120" viewBox="0 0 24 22" aria-hidden="true" focusable="false"><rect x="2.5" y="2.5" width="19" height="17" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/><path d="M4.2 18.2L19.8 3.8" fill="none" stroke="#dc2626" stroke-width="2.2" stroke-linecap="round"/></svg>';
+          } else if (color) {
+            chip.style.background = color;
+          }
           btn.appendChild(chip);
           return btn;
         }
