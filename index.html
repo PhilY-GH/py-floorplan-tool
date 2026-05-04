@@ -629,6 +629,7 @@
       align-items: center;
     }
     .unified-color-custom-swatch {
+      position: relative;
       width: 54px;
       height: 30px;
       padding: 0;
@@ -638,16 +639,23 @@
       overflow: hidden;
       cursor: pointer;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
+      display: block;
     }
-    .unified-color-native-input-v124 {
-      position: fixed;
-      width: 54px;
-      height: 30px;
-      padding: 0;
-      border: 0;
+    .unified-color-custom-swatch input.unified-color-native-input-v126 {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      min-width: 100% !important;
+      min-height: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border: 0 !important;
       opacity: 0.01;
-      pointer-events: none;
-      z-index: 1;
+      cursor: pointer;
+      pointer-events: auto;
+      appearance: none;
+      -webkit-appearance: none;
     }
     .unified-color-hex {
       height: 30px;
@@ -1984,7 +1992,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v125';
+    const APP_VERSION = 'v126';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -3557,7 +3565,9 @@
       renderUnifiedColorPickerContent(pop, currentColor, applySelectedColor, previewSelectedColor);
       const r = anchor.getBoundingClientRect();
       const left = Math.min(window.innerWidth - 294, Math.max(8, r.left));
-      const top = Math.min(window.innerHeight - 380, Math.max(8, r.bottom + 8));
+      const preferredTop = r.bottom + 8;
+      const maxTop = Math.max(8, window.innerHeight - 420);
+      const top = Math.min(maxTop, Math.max(8, preferredTop));
       pop.style.left = left + 'px';
       pop.style.top = top + 'px';
       pop.classList.remove('hidden');
@@ -3580,15 +3590,15 @@
       custom.appendChild(title);
       const row = document.createElement('div');
       row.className = 'unified-color-custom-row';
-      const swatchBtn = document.createElement('button');
-      swatchBtn.type = 'button';
+      const swatchBtn = document.createElement('label');
       swatchBtn.className = 'unified-color-custom-swatch';
       swatchBtn.title = '选择自定义颜色';
       swatchBtn.style.background = currentColor;
       const colorInput = document.createElement('input');
       colorInput.type = 'color';
-      colorInput.className = 'unified-color-native-input-v124';
+      colorInput.className = 'unified-color-native-input-v126';
       colorInput.value = currentColor;
+      swatchBtn.appendChild(colorInput);
       const hexInput = document.createElement('input');
       hexInput.type = 'text';
       hexInput.className = 'unified-color-hex';
@@ -3611,15 +3621,6 @@
         cancelBtn.disabled = !customDirty;
         confirmBtn.disabled = !customDirty;
       };
-      const positionNativeColorInput = () => {
-        const popRect = pop.getBoundingClientRect();
-        const swatchRect = swatchBtn.getBoundingClientRect();
-        const preferredTop = popRect.bottom + 14;
-        const top = Math.max(8, Math.min(window.innerHeight - 40, preferredTop));
-        const left = Math.max(8, Math.min(window.innerWidth - 70, swatchRect.left));
-        colorInput.style.left = left + 'px';
-        colorInput.style.top = top + 'px';
-      };
       const applyCustomPreview = raw => {
         const color = normalizeHexColor(raw, '');
         if (!color) return;
@@ -3632,10 +3633,10 @@
         onPreview(color);
       };
       swatchBtn.addEventListener('click', e => {
-        e.preventDefault();
         e.stopPropagation();
-        positionNativeColorInput();
-        colorInput.click();
+      });
+      colorInput.addEventListener('click', e => {
+        e.stopPropagation();
       });
       colorInput.addEventListener('input', e => applyCustomPreview(e.target.value));
       colorInput.addEventListener('change', e => applyCustomPreview(e.target.value));
@@ -3675,7 +3676,6 @@
       row.appendChild(confirmBtn);
       custom.appendChild(row);
       pop.appendChild(custom);
-      pop.appendChild(colorInput);
     }
 
     function previewColorPropertyInput(propKey, color) {
