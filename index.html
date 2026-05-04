@@ -630,9 +630,13 @@
     }
     .unified-color-custom-swatch {
       position: relative;
-      width: 54px;
-      height: 30px;
-      padding: 0;
+      width: 54px !important;
+      min-width: 54px !important;
+      max-width: 54px !important;
+      height: 30px !important;
+      min-height: 30px !important;
+      max-height: 30px !important;
+      padding: 0 !important;
       border: 1px solid #cbd5e1;
       border-radius: 8px;
       background: #ffffff;
@@ -640,22 +644,40 @@
       cursor: pointer;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
       display: block;
+      box-sizing: border-box;
+      flex: 0 0 54px;
+      contain: paint;
     }
-    .unified-color-custom-swatch input.unified-color-native-input-v126 {
+    .unified-color-custom-swatch input.unified-color-native-input-v127 {
       position: absolute !important;
-      inset: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      min-width: 100% !important;
-      min-height: 100% !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 54px !important;
+      min-width: 54px !important;
+      max-width: 54px !important;
+      height: 30px !important;
+      min-height: 30px !important;
+      max-height: 30px !important;
       padding: 0 !important;
       margin: 0 !important;
       border: 0 !important;
-      opacity: 0.01;
+      border-radius: 8px !important;
+      box-sizing: border-box !important;
       cursor: pointer;
       pointer-events: auto;
       appearance: none;
       -webkit-appearance: none;
+      background: transparent;
+      overflow: hidden !important;
+      z-index: 2;
+    }
+    .unified-color-custom-swatch input.unified-color-native-input-v127::-webkit-color-swatch-wrapper {
+      padding: 0 !important;
+      border: 0 !important;
+    }
+    .unified-color-custom-swatch input.unified-color-native-input-v127::-webkit-color-swatch {
+      border: 0 !important;
+      border-radius: 8px !important;
     }
     .unified-color-hex {
       height: 30px;
@@ -1992,7 +2014,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v126';
+    const APP_VERSION = 'v127';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -3596,7 +3618,7 @@
       swatchBtn.style.background = currentColor;
       const colorInput = document.createElement('input');
       colorInput.type = 'color';
-      colorInput.className = 'unified-color-native-input-v126';
+      colorInput.className = 'unified-color-native-input-v127';
       colorInput.value = currentColor;
       swatchBtn.appendChild(colorInput);
       const hexInput = document.createElement('input');
