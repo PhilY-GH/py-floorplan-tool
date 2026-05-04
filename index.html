@@ -568,31 +568,121 @@
       background: linear-gradient(135deg, #111827 0 25%, #ffffff 25% 50%, #111827 50% 75%, #ffffff 75% 100%);
       border-color: #94a3b8;
     }
+    .sidebar-color-current {
+      flex: 1 1 auto;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      height: 34px !important;
+      min-height: 34px !important;
+      max-height: 34px !important;
+      cursor: pointer;
+      display: block;
+    }
     .color-popover {
       position: fixed;
-      z-index: 9999;
-      display: grid;
-      grid-template-columns: repeat(8, 24px);
-      gap: 7px;
-      padding: 10px;
+      z-index: 26000;
+      width: 286px;
+      max-width: calc(100vw - 16px);
+      padding: 12px;
       background: #ffffff;
       border: 1px solid #cbd5e1;
-      border-radius: 12px;
-      box-shadow: 0 12px 30px rgba(15, 23, 42, .18);
+      border-radius: 14px;
+      box-shadow: 0 18px 44px rgba(15, 23, 42, .20);
     }
     .color-popover.hidden { display: none; }
-    .color-popover button {
+    .unified-color-section { margin-top: 10px; }
+    .unified-color-section:first-child { margin-top: 0; }
+    .unified-color-title {
+      margin: 0 0 6px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: .04em;
+    }
+    .unified-color-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 24px);
+      gap: 6px;
+      width: 234px;
+      margin: 0 auto;
+    }
+    .color-popover .unified-color-swatch {
       width: 24px;
       height: 24px;
+      min-width: 24px;
       min-height: 24px;
       padding: 0;
       border-radius: 999px;
       border: 1px solid #cbd5e1;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.65);
+      cursor: pointer;
     }
-    .color-popover button.active {
+    .color-popover .unified-color-swatch.active {
       border-color: #1d4ed8;
       box-shadow: 0 0 0 2px rgba(37,99,235,.24), inset 0 0 0 1px rgba(255,255,255,.85);
+    }
+    .unified-color-custom-row {
+      display: grid;
+      grid-template-columns: 54px 96px 44px 44px;
+      gap: 6px;
+      align-items: center;
+    }
+    .unified-color-custom-swatch {
+      width: 54px;
+      height: 30px;
+      padding: 0;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #ffffff;
+      overflow: hidden;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
+    }
+    .unified-color-native-input-v124 {
+      position: fixed;
+      width: 54px;
+      height: 30px;
+      padding: 0;
+      border: 0;
+      opacity: 0.01;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .unified-color-hex {
+      height: 30px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 0 8px;
+      font-size: 13px;
+      color: #0f172a;
+      outline: none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+    }
+    .unified-color-custom-action {
+      height: 30px;
+      min-width: 44px;
+      padding: 0 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #334155;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .unified-color-custom-action.confirm:not(:disabled) {
+      border-color: #1d4ed8;
+      background: #1d4ed8;
+      color: #ffffff;
+    }
+    .unified-color-custom-action:disabled {
+      color: #94a3b8;
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+      cursor: not-allowed;
+      opacity: 1;
     }
     .metric-group.text-preview-group {
       grid-column: span 2;
@@ -911,7 +1001,7 @@
     .canvas-float-bar {
       position: absolute;
       top: 14px;
-      background: rgba(255,255,255,0.60);
+      background: rgba(255,255,255,0.45);
       border: 1px solid rgba(209,213,219,0.72);
       border-radius: 10px;
       padding: 8px 10px;
@@ -1894,7 +1984,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v120';
+    const APP_VERSION = 'v125';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -1962,6 +2052,7 @@
       eraserPreview: null,
       brushColor: '#000000',
       brushOpacity: 1,
+      projectColors: [],
       history: [],
       redoHistory: []
     };
@@ -2025,6 +2116,9 @@
       '#4d4d4d', '#808080', '#c00000', '#bf9000', '#1f4e79', '#38761d', '#c65911', '#a64d79',
       '#bfbfbf', '#d9d9d9', '#ffcce5', '#ffff99', '#ccecff', '#ccffcc', '#ffd9b3', '#ffccff'
     ];
+    const RECENT_COLORS_STORAGE_KEY = 'pyFloorPlan.recentColors.v121';
+    const MAX_RECENT_COLORS = 8;
+    const MAX_PROJECT_COLORS = 8;
 
     let currentProjectFileName = '';
     let currentProjectDisplayName = '';
@@ -2088,14 +2182,50 @@
 
     function initSwatches() {
       const box = document.getElementById('swatches');
-      colors.forEach(c => {
-        const b = document.createElement('button');
-        b.className = 'swatch';
-        b.style.background = c;
-        b.title = c;
-        b.addEventListener('click', () => { els.strokeColor.value = c; draw(); });
-        box.appendChild(b);
-      });
+      if (box) {
+        box.innerHTML = '';
+        box.style.display = 'none';
+      }
+      if (!els.strokeColor) return;
+      try { els.strokeColor.type = 'text'; } catch (err) {}
+      els.strokeColor.classList.add('hidden-input');
+      let btn = document.getElementById('sidebarColorPickerBtn');
+      if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'sidebarColorPickerBtn';
+        btn.type = 'button';
+        btn.className = 'prop-color-current sidebar-color-current';
+        btn.title = '选择默认颜色';
+        els.strokeColor.insertAdjacentElement('afterend', btn);
+        btn.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          const previewSidebarColor = color => {
+            els.strokeColor.value = color;
+            updateSidebarColorButton();
+            draw();
+          };
+          openUnifiedColorPicker({
+            anchor: btn,
+            currentColor: els.strokeColor.value || DEFAULT_STROKE_COLOR,
+            onPreview: previewSidebarColor,
+            onSelect: color => {
+              previewSidebarColor(color);
+              markProjectDirty();
+            }
+          });
+        });
+      }
+      updateSidebarColorButton();
+    }
+
+    function updateSidebarColorButton() {
+      const btn = document.getElementById('sidebarColorPickerBtn');
+      if (!btn || !els.strokeColor) return;
+      const color = normalizeHexColor(els.strokeColor.value, DEFAULT_STROKE_COLOR);
+      els.strokeColor.value = color;
+      btn.style.background = color;
+      btn.title = `默认颜色：${color}`;
     }
 
     function resizeCanvas() {
@@ -3288,44 +3418,303 @@
     }
 
     let activeColorAnchor = null;
-    let activeColorProp = null;
+    let activeColorSelect = null;
+    let activeColorCancel = null;
 
-    function closeColorPopover() {
-      const pop = document.getElementById('colorPopover');
-      if (!pop) return;
-      pop.classList.add('hidden');
-      pop.setAttribute('aria-hidden', 'true');
-      activeColorAnchor = null;
-      activeColorProp = null;
+    function normalizeColorList(list, max = 8) {
+      const out = [];
+      (Array.isArray(list) ? list : []).forEach(c => {
+        const color = normalizeHexColor(c, '');
+        if (color && !out.includes(color)) out.push(color);
+      });
+      return out.slice(0, max);
     }
 
-    function openColorPopover(anchor, propKey, currentValue) {
+    function mergeColorLists(...lists) {
+      const out = [];
+      lists.flat().forEach(c => {
+        const color = normalizeHexColor(c, '');
+        if (!color) return;
+        if (!out.includes(color)) out.push(color);
+      });
+      return out.slice(0, MAX_PROJECT_COLORS);
+    }
+
+    function getRecentColors() {
+      try { return normalizeColorList(JSON.parse(localStorage.getItem(RECENT_COLORS_STORAGE_KEY) || '[]'), MAX_RECENT_COLORS); }
+      catch (err) { return []; }
+    }
+
+    function saveRecentColors(list) {
+      try { localStorage.setItem(RECENT_COLORS_STORAGE_KEY, JSON.stringify(normalizeColorList(list, MAX_RECENT_COLORS))); }
+      catch (err) {}
+    }
+
+    function rememberRecentColor(color) {
+      const normalized = normalizeHexColor(color, '');
+      if (!normalized) return;
+      saveRecentColors(mergeColorLists([normalized], getRecentColors()).slice(0, MAX_RECENT_COLORS));
+    }
+
+    function rememberProjectColor(color) {
+      const normalized = normalizeHexColor(color, '');
+      if (!normalized) return;
+      state.projectColors = mergeColorLists([normalized], state.projectColors || []).slice(0, MAX_PROJECT_COLORS);
+    }
+
+    function rememberUsedColor(color) {
+      const normalized = normalizeHexColor(color, '');
+      if (!normalized) return normalized;
+      rememberRecentColor(normalized);
+      rememberProjectColor(normalized);
+      return normalized;
+    }
+
+    function collectProjectColorsFromObjects(objects = []) {
+      const list = [];
+      (objects || []).forEach(o => {
+        if (!o) return;
+        ['color','textBackgroundColor'].forEach(key => {
+          const c = normalizeHexColor(o[key], '');
+          if (c) list.push(c);
+        });
+      });
+      return normalizeColorList(list, MAX_PROJECT_COLORS);
+    }
+
+    function closeColorPopover(cancelPreview = true) {
       const pop = document.getElementById('colorPopover');
       if (!pop) return;
-      activeColorAnchor = anchor;
-      activeColorProp = propKey;
+      if (cancelPreview && typeof activeColorCancel === 'function') {
+        const restore = activeColorCancel;
+        activeColorCancel = null;
+        restore();
+      }
+      pop.classList.add('hidden');
+      pop.setAttribute('aria-hidden', 'true');
       pop.innerHTML = '';
-      colors.forEach(c => {
+      activeColorAnchor = null;
+      activeColorSelect = null;
+      activeColorCancel = null;
+    }
+
+    function makeColorSection(title, list, currentColor, onSelect) {
+      const colorsForSection = normalizeColorList(list, title === '预设颜色' ? colors.length : 8);
+      if (!colorsForSection.length) return null;
+      const section = document.createElement('div');
+      section.className = 'unified-color-section';
+      const label = document.createElement('div');
+      label.className = 'unified-color-title';
+      label.textContent = title;
+      section.appendChild(label);
+      const grid = document.createElement('div');
+      grid.className = 'unified-color-grid';
+      colorsForSection.forEach(c => {
         const b = document.createElement('button');
         b.type = 'button';
+        b.className = 'unified-color-swatch';
         b.style.background = c;
         b.title = c;
-        b.className = String(currentValue).toLowerCase() === c.toLowerCase() ? 'active' : '';
-        b.addEventListener('click', e => {
-          e.stopPropagation();
-          const fakeInput = { dataset: { prop: activeColorProp, value: c }, value: c };
-          applyPropertyInput(fakeInput);
-          closeColorPopover();
-        });
-        pop.appendChild(b);
+        b.classList.toggle('active', currentColor === c);
+        b.addEventListener('click', e => { e.stopPropagation(); onSelect(c, true); });
+        grid.appendChild(b);
       });
+      section.appendChild(grid);
+      return section;
+    }
+
+    function openUnifiedColorPicker(options = {}) {
+      const pop = document.getElementById('colorPopover');
+      const anchor = options.anchor;
+      if (!pop || !anchor) return;
+      closeMorePopover();
+      closeBackgroundPopover();
+      closeColorPopover();
+      activeColorAnchor = anchor;
+      let currentColor = normalizeHexColor(options.currentColor, DEFAULT_STROKE_COLOR);
+      activeColorSelect = typeof options.onSelect === 'function' ? options.onSelect : (() => {});
+      const activeColorPreview = typeof options.onPreview === 'function' ? options.onPreview : activeColorSelect;
+      const previewSelectedColor = rawColor => {
+        const color = normalizeHexColor(rawColor, '');
+        if (!color) return '';
+        currentColor = color;
+        activeColorPreview(color);
+        updateSidebarColorButton();
+        return color;
+      };
+      const applySelectedColor = (rawColor, closeAfter = true) => {
+        const color = rememberUsedColor(rawColor);
+        if (!color) return;
+        const restoreBeforeCommit = typeof activeColorCancel === 'function' ? activeColorCancel : null;
+        activeColorCancel = null;
+        if (restoreBeforeCommit) restoreBeforeCommit();
+        currentColor = color;
+        activeColorSelect(color);
+        updateSidebarColorButton();
+        if (closeAfter) closeColorPopover(false);
+        else renderUnifiedColorPickerContent(pop, currentColor, applySelectedColor, previewSelectedColor);
+      };
+      renderUnifiedColorPickerContent(pop, currentColor, applySelectedColor, previewSelectedColor);
       const r = anchor.getBoundingClientRect();
-      const left = Math.min(window.innerWidth - 230, Math.max(8, r.left));
-      const top = Math.min(window.innerHeight - 80, r.bottom + 8);
+      const left = Math.min(window.innerWidth - 294, Math.max(8, r.left));
+      const top = Math.min(window.innerHeight - 380, Math.max(8, r.bottom + 8));
       pop.style.left = left + 'px';
       pop.style.top = top + 'px';
       pop.classList.remove('hidden');
       pop.setAttribute('aria-hidden', 'false');
+    }
+
+    function renderUnifiedColorPickerContent(pop, currentColor, onSelect, onPreview) {
+      pop.innerHTML = '';
+      const preset = makeColorSection('预设颜色', colors, currentColor, onSelect);
+      if (preset) pop.appendChild(preset);
+      const project = makeColorSection('项目颜色', state.projectColors || [], currentColor, onSelect);
+      if (project) pop.appendChild(project);
+      const recent = makeColorSection('最近使用', getRecentColors(), currentColor, onSelect);
+      if (recent) pop.appendChild(recent);
+      const custom = document.createElement('div');
+      custom.className = 'unified-color-section';
+      const title = document.createElement('div');
+      title.className = 'unified-color-title';
+      title.textContent = '自定义';
+      custom.appendChild(title);
+      const row = document.createElement('div');
+      row.className = 'unified-color-custom-row';
+      const swatchBtn = document.createElement('button');
+      swatchBtn.type = 'button';
+      swatchBtn.className = 'unified-color-custom-swatch';
+      swatchBtn.title = '选择自定义颜色';
+      swatchBtn.style.background = currentColor;
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.className = 'unified-color-native-input-v124';
+      colorInput.value = currentColor;
+      const hexInput = document.createElement('input');
+      hexInput.type = 'text';
+      hexInput.className = 'unified-color-hex';
+      hexInput.value = currentColor;
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'unified-color-custom-action cancel';
+      cancelBtn.textContent = '取消';
+      cancelBtn.disabled = true;
+      const confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.className = 'unified-color-custom-action confirm';
+      confirmBtn.textContent = '确定';
+      confirmBtn.disabled = true;
+      const customOriginalColor = currentColor;
+      let customDraftColor = currentColor;
+      let customDirty = false;
+      const setCustomDirty = color => {
+        customDirty = normalizeHexColor(color, '') !== customOriginalColor;
+        cancelBtn.disabled = !customDirty;
+        confirmBtn.disabled = !customDirty;
+      };
+      const positionNativeColorInput = () => {
+        const popRect = pop.getBoundingClientRect();
+        const swatchRect = swatchBtn.getBoundingClientRect();
+        const preferredTop = popRect.bottom + 14;
+        const top = Math.max(8, Math.min(window.innerHeight - 40, preferredTop));
+        const left = Math.max(8, Math.min(window.innerWidth - 70, swatchRect.left));
+        colorInput.style.left = left + 'px';
+        colorInput.style.top = top + 'px';
+      };
+      const applyCustomPreview = raw => {
+        const color = normalizeHexColor(raw, '');
+        if (!color) return;
+        customDraftColor = color;
+        colorInput.value = color;
+        hexInput.value = color;
+        swatchBtn.style.background = color;
+        activeColorCancel = () => { onPreview(customOriginalColor); };
+        setCustomDirty(color);
+        onPreview(color);
+      };
+      swatchBtn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        positionNativeColorInput();
+        colorInput.click();
+      });
+      colorInput.addEventListener('input', e => applyCustomPreview(e.target.value));
+      colorInput.addEventListener('change', e => applyCustomPreview(e.target.value));
+      hexInput.addEventListener('input', e => {
+        const color = normalizeHexColor(e.target.value, '');
+        if (color) applyCustomPreview(color);
+        else setCustomDirty(customDraftColor);
+      });
+      hexInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          const color = normalizeHexColor(hexInput.value, '');
+          if (color && customDirty) {
+            e.preventDefault();
+            onSelect(color, true);
+          }
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeColorPopover(true);
+        }
+      });
+      cancelBtn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!customDirty) return;
+        closeColorPopover(true);
+      });
+      confirmBtn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!customDirty) return;
+        const color = normalizeHexColor(customDraftColor || hexInput.value, '');
+        if (color) onSelect(color, true);
+      });
+      row.appendChild(swatchBtn);
+      row.appendChild(hexInput);
+      row.appendChild(cancelBtn);
+      row.appendChild(confirmBtn);
+      custom.appendChild(row);
+      pop.appendChild(custom);
+      pop.appendChild(colorInput);
+    }
+
+    function previewColorPropertyInput(propKey, color) {
+      const selectedObjects = getSelectedObjects();
+      const normalized = normalizeHexColor(color, DEFAULT_STROKE_COLOR);
+      if (selectedObjects.length > 1) {
+        selectedObjects.forEach(o => applyObjectProperty(o, propKey, normalized, Number(normalized)));
+        draw();
+        updateObjectMetrics();
+        return;
+      }
+      const o = selectedObjects.length === 1 ? selectedObjects[0] : null;
+      if (!o && state.tool === 'eraser') {
+        if (propKey === 'brushColor') {
+          state.brushColor = normalized;
+          draw();
+          updateObjectMetrics();
+        }
+        return;
+      }
+      if (!o) return;
+      applyObjectProperty(o, propKey, normalized, Number(normalized));
+      draw();
+      updateObjectMetrics();
+      updateDimensionCustomTextInputState();
+    }
+
+    function openColorPopover(anchor, propKey, currentValue) {
+      openUnifiedColorPicker({
+        anchor,
+        currentColor: currentValue,
+        onPreview: color => {
+          previewColorPropertyInput(propKey, color);
+        },
+        onSelect: color => {
+          const fakeInput = { dataset: { prop: propKey, value: color }, value: color };
+          applyPropertyInput(fakeInput);
+        }
+      });
     }
 
     document.addEventListener('click', e => {
@@ -6292,6 +6681,7 @@
       return {
         version: 7,
         appVersion: APP_VERSION,
+        projectColors: mergeColorLists(state.projectColors || [], collectProjectColorsFromObjects(state.objects || []), [els.strokeColor.value, state.brushColor || '']),
         page: {
           preset: els.pagePreset.value,
           orientation: els.pageOrientation.value,
@@ -6378,11 +6768,13 @@
       const defaults = data.defaults || {};
       const view = data.view || data;
       const exportSettings = data.export || {};
+      state.projectColors = normalizeColorList(data.projectColors || data.projectColorsV121 || [], MAX_PROJECT_COLORS);
 
       state.pageW = page.width || data.pageW || 1100;
       state.pageH = page.height || data.pageH || 850;
       state.aspectRatio = page.aspectRatio || (state.pageW / Math.max(1, state.pageH));
       state.objects = normalizeLoadedObjects(data.objects || []);
+      state.projectColors = mergeColorLists(state.projectColors || [], collectProjectColorsFromObjects(state.objects || []), [defaults.color || '', defaults.brushColor || '']);
       state.groups = data.groups || {};
       state.backgroundImage = normalizeBackgroundImage(data.backgroundImage || null);
       state.visibleLayers = view.visibleLayers || data.visibleLayers || state.visibleLayers;
@@ -6398,7 +6790,7 @@
       els.aspectRatioLock.value = page.aspectRatioLocked === false ? 'off' : 'on';
 
       if(defaults.layer !== undefined) els.layerSelect.value = defaults.layer;
-      if(defaults.color) els.strokeColor.value = defaults.color;
+      if(defaults.color) els.strokeColor.value = normalizeHexColor(defaults.color, DEFAULT_STROKE_COLOR);
       if(defaults.lineWidth) els.lineWidth.value = defaults.lineWidth;
       if(defaults.wallThickness) els.wallThickness.value = defaults.wallThickness;
       if(defaults.wallStyle) els.wallStyle.value = defaults.wallStyle;
@@ -6415,6 +6807,7 @@
       if(defaults.brushColor) state.brushColor = defaults.brushColor;
       if(defaults.brushOpacity !== undefined) setBrushOpacityFromPercent(parseInputNumber(defaults.brushOpacity, 100));
       saveBrushToolSettingsToStorage();
+      updateSidebarColorButton();
 
       if(view.unitName || data.unitName) els.unitName.value = view.unitName || data.unitName;
       if(view.scaleFactor || data.scaleFactor) els.scaleFactor.value = view.scaleFactor || data.scaleFactor;
@@ -6516,7 +6909,7 @@
     }
 
     function isModalAllowedTarget(target) {
-      return !!(target && target.closest && target.closest('.py-modal-content-v108, .text-floating-palette-v95'));
+      return !!(target && target.closest && target.closest('.py-modal-content-v108, .text-floating-palette-v95, .color-popover'));
     }
 
     function blockModalBackgroundEvent(e) {
@@ -6867,43 +7260,23 @@
 
         let activeTextPalette = null;
         function closeFloatingPalette() {
-          if (activeTextPalette) {
-            activeTextPalette.remove();
-            activeTextPalette = null;
-          }
+          closeColorPopover();
+          activeTextPalette = null;
           document.removeEventListener('pointerdown', outsidePaletteHandler, true);
         }
-        function outsidePaletteHandler(e) {
-          if (activeTextPalette && !activeTextPalette.contains(e.target)) closeFloatingPalette();
-        }
+        function outsidePaletteHandler(e) { closeFloatingPalette(); }
 
         function showFloatingPalette(anchor, currentColor, onSelect) {
-          closeFloatingPalette();
-          const palette = document.createElement('div');
-          palette.className = 'text-floating-palette-v95';
-          colors.forEach(c => {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.style.background = c;
-            b.title = c;
-            b.dataset.color = c.toLowerCase();
-            b.className = String(currentColor || '').toLowerCase() === c.toLowerCase() ? 'active' : '';
-            b.addEventListener('click', e => {
-              e.stopPropagation();
-              onSelect(c.toLowerCase());
-              applyPreview();
-              closeFloatingPalette();
-            });
-            palette.appendChild(b);
+          const previewTextColor = color => {
+            onSelect(color);
+            applyPreview();
+          };
+          openUnifiedColorPicker({
+            anchor,
+            currentColor,
+            onPreview: previewTextColor,
+            onSelect: previewTextColor
           });
-          document.body.appendChild(palette);
-          const r = anchor.getBoundingClientRect();
-          const left = Math.min(window.innerWidth - 230, Math.max(8, r.left));
-          const top = Math.min(window.innerHeight - 130, Math.max(8, r.bottom + 8));
-          palette.style.left = left + 'px';
-          palette.style.top = top + 'px';
-          activeTextPalette = palette;
-          setTimeout(() => document.addEventListener('pointerdown', outsidePaletteHandler, true), 0);
         }
 
         const bgRow = makeRow('背景颜色');
@@ -8016,7 +8389,15 @@
       if(keys.includes(e.key)&&state.selectedIds.length){ e.preventDefault(); const step=e.shiftKey?10:1; let dx=0,dy=0; if(e.key==='ArrowLeft')dx=-step; if(e.key==='ArrowRight')dx=step; if(e.key==='ArrowUp')dy=-step; if(e.key==='ArrowDown')dy=step; saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))moveObject(o,dx,dy); }); draw(); }
     });
 
-    [els.strokeColor,els.lineWidth,els.wallThickness,els.wallStyle,els.openingThicknessMode,els.areaOpacity,els.fontSize,els.arrowMode,els.arrowSize,els.dimensionLabelMode,els.eraserWidth,els.endpointSnapMode,els.snapMode,els.gridSize,els.unitName,els.scaleFactor,els.layerSelect].forEach(el=>{ if(!el) return; el.addEventListener('input',()=>{ draw(); markProjectDirty(); }); el.addEventListener('change',()=>{ draw(); markProjectDirty(); }); });
+    if (els.strokeColor) {
+      els.strokeColor.addEventListener('change', () => {
+        els.strokeColor.value = rememberUsedColor(els.strokeColor.value) || DEFAULT_STROKE_COLOR;
+        updateSidebarColorButton();
+        draw();
+        markProjectDirty();
+      });
+    }
+    [els.lineWidth,els.wallThickness,els.wallStyle,els.openingThicknessMode,els.areaOpacity,els.fontSize,els.arrowMode,els.arrowSize,els.dimensionLabelMode,els.eraserWidth,els.endpointSnapMode,els.snapMode,els.gridSize,els.unitName,els.scaleFactor,els.layerSelect].forEach(el=>{ if(!el) return; el.addEventListener('input',()=>{ draw(); markProjectDirty(); }); el.addEventListener('change',()=>{ draw(); markProjectDirty(); }); });
     if (els.endpointSnapMode) {
       els.endpointSnapMode.addEventListener('change', () => { clearSnapIndicator(); draw(); });
     }
