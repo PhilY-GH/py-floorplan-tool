@@ -2025,7 +2025,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v140';
+    const APP_VERSION = 'v141';
     const UI_COLORS = {
       selectionBlue: '#2563eb',
       snapOrange: '#f97316',
@@ -5252,12 +5252,12 @@
       return ['line', 'arrow', 'wall', 'dimension', 'door', 'window'].includes(tool);
     }
 
-    function applySmartGuideDrawingDirectionAssist(rawPoint, snappedPoint) {
-      if (!state.start || !rawPoint || !snappedPoint) return snappedPoint;
-      if (!isSmartGuideEnabled() || !isSmartGuideDirectionAssistTool()) return snappedPoint;
+    function applySmartGuideLineDirectionAssist(fixedPoint, rawPoint, snappedPoint, tool = state.tool, excludeIds = []) {
+      if (!fixedPoint || !rawPoint || !snappedPoint) return snappedPoint;
+      if (!isSmartGuideEnabled() || !isSmartGuideDirectionAssistTool(tool)) return snappedPoint;
       if (state.snapIndicator) return snappedPoint;
-      const dx = rawPoint.x - state.start.x;
-      const dy = rawPoint.y - state.start.y;
+      const dx = rawPoint.x - fixedPoint.x;
+      const dy = rawPoint.y - fixedPoint.y;
       const screenLen = Math.hypot(dx, dy) * Math.max(0.0001, state.zoom);
       if (screenLen < 14) return snappedPoint;
       const ax = Math.abs(dx);
@@ -5265,13 +5265,18 @@
       const ratio = 0.22;
       let lockedPoint = null;
       if (ay <= ax * ratio) {
-        lockedPoint = { x: snappedPoint.x, y: state.start.y };
+        lockedPoint = { x: snappedPoint.x, y: fixedPoint.y };
       } else if (ax <= ay * ratio) {
-        lockedPoint = { x: state.start.x, y: snappedPoint.y };
+        lockedPoint = { x: fixedPoint.x, y: snappedPoint.y };
       }
       if (!lockedPoint) return snappedPoint;
-      updateSmartGuidesForPoints([lockedPoint]);
+      updateSmartGuidesForPoints([lockedPoint], excludeIds);
       return lockedPoint;
+    }
+
+    function applySmartGuideDrawingDirectionAssist(rawPoint, snappedPoint) {
+      if (!state.start) return snappedPoint;
+      return applySmartGuideLineDirectionAssist(state.start, rawPoint, snappedPoint, state.tool);
     }
 
     function formatNumber(n){ if(Math.abs(n)>=100)return String(Math.round(n)); if(Math.abs(n)>=10)return n.toFixed(1).replace(/\.0$/,''); return n.toFixed(2).replace(/0+$/,'').replace(/\.$/,''); }
@@ -5661,9 +5666,11 @@
     function updateEndpointFromPointer(e) {
       const o = state.objects.find(x => x.id === state.resizingObjectId);
       if (!o) return;
+      const raw = rawScreenToWorld(e);
       let p = screenToWorldWithSnapOptions(e, { excludeObjectId: o.id });
       const fixed = state.resizeEndpointIndex === 1 ? {x:o.x2,y:o.y2} : {x:o.x1,y:o.y1};
       if (e.shiftKey) p = constrainToAngle(fixed, p, 45);
+      else p = applySmartGuideLineDirectionAssist(fixed, raw, p, o.type, [o.id]);
       if (o.type === 'wall') p = snapWallEndpoint(p);
       if (state.resizeEndpointIndex === 1) { o.x1 = p.x; o.y1 = p.y; }
       else { o.x2 = p.x; o.y2 = p.y; }
