@@ -1220,7 +1220,7 @@
       background: #fff;
     }
     .text-style-swatch.none {
-      background: linear-gradient(45deg, #fff 0 42%, #ef4444 42% 58%, #fff 58% 100%);
+      background: linear-gradient(45deg, #fff 0 42%, #dc2626 42% 58%, #fff 58% 100%);
     }
     .text-custom-palette {
       display: none;
@@ -2025,7 +2025,16 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v137';
+    const APP_VERSION = 'v138';
+    const UI_COLORS = {
+      selectionBlue: '#2563eb',
+      snapOrange: '#f97316',
+      snapOrangeStrong: 'rgba(249,115,22,.95)',
+      closeGreen: '#22c55e',
+      closeGreenSoft: '#f0fdf4',
+      dangerRed: '#dc2626',
+      guideGray: 'rgba(148, 163, 184, 0.58)'
+    };
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -4802,12 +4811,12 @@
       const half = handleSize / 2;
       c.save();
       c.setLineDash([7 / state.zoom, 5 / state.zoom]);
-      c.strokeStyle = '#2563eb';
+      c.strokeStyle = UI_COLORS.selectionBlue;
       c.lineWidth = Math.max(1.8 / state.zoom, 1);
       c.strokeRect(b.x, b.y, b.w, b.h);
       c.setLineDash([]);
       c.fillStyle = '#ffffff';
-      c.strokeStyle = '#2563eb';
+      c.strokeStyle = UI_COLORS.selectionBlue;
       c.lineWidth = Math.max(2 / state.zoom, 1);
       getBackgroundEditHandles().forEach(h => {
         c.beginPath();
@@ -5093,8 +5102,8 @@
       points.forEach((pt, i) => {
         const isStartPoint = i === 0 && points.length >= 3;
         c.beginPath();
-        c.fillStyle = isStartPoint ? '#fff7ed' : '#ffffff';
-        c.strokeStyle = isStartPoint ? '#f97316' : color;
+        c.fillStyle = isStartPoint ? UI_COLORS.closeGreenSoft : '#ffffff';
+        c.strokeStyle = isStartPoint ? UI_COLORS.closeGreen : color;
         c.lineWidth = 1.5 / state.zoom;
         c.arc(pt.x, pt.y, r, 0, Math.PI * 2);
         c.fill();
@@ -5229,18 +5238,18 @@
       return isTouchControlMode() ? Math.max(20 / state.zoom, 12) : Math.max(10 / state.zoom, 6);
     }
     function isEndpointSnapFeedbackActive() {
-      // V136：红色只表示“端点吸附已经命中”，不表示单纯点中 / 按住端点。
+      // V136：橙色只表示“端点吸附已经命中”，不表示单纯点中 / 按住端点。
       // 因此必须存在 snapIndicator，并且只在绘制 / 调整控制点过程中临时显示。
       return !!state.snapIndicator && !!(state.drawing || state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex);
     }
-    function getSelectionNormalColor() { return '#2563eb'; }
-    function getSelectionSnapColor() { return '#dc2626'; }
+    function getSelectionNormalColor() { return UI_COLORS.selectionBlue; }
+    function getSelectionSnapColor() { return UI_COLORS.snapOrange; }
     function getSelectionAccentColor() {
       return isEndpointSnapFeedbackActive() ? getSelectionSnapColor() : getSelectionNormalColor();
     }
     function getHandleAccentColor(o, kind, key) {
-      // 端点吸附命中时，选中框可以变红，但普通控制点仍保持蓝色。
-      // 只有当前正在拖动的端点 / 控制点 / 区域节点才临时变红，避免所有节点一起变红而削弱吸附目标提示。
+      // 端点吸附命中时，选中框可以变橙，但普通控制点仍保持蓝色。
+      // 只有当前正在拖动的端点 / 控制点 / 区域节点才临时变橙，避免所有节点一起变橙而削弱吸附目标提示。
       if (!isEndpointSnapFeedbackActive()) return getSelectionNormalColor();
       if (!o || o.id !== state.resizingObjectId) return getSelectionNormalColor();
       if (kind === 'endpoint' && state.resizingEndpoint && state.resizeEndpointIndex === key) return getSelectionSnapColor();
@@ -5342,7 +5351,7 @@
       });
       c.restore();
     }
-    function drawSelectionBox(c){ const b=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); c.save(); c.fillStyle='rgba(37,99,235,.08)'; c.strokeStyle='#2563eb'; c.setLineDash([5,4]); c.lineWidth=1.5/state.zoom; c.fillRect(b.x,b.y,b.w,b.h); c.strokeRect(b.x,b.y,b.w,b.h); c.restore(); }
+    function drawSelectionBox(c){ const b=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); c.save(); c.fillStyle='rgba(37,99,235,.08)'; c.strokeStyle=UI_COLORS.selectionBlue; c.setLineDash([5,4]); c.lineWidth=1.5/state.zoom; c.fillRect(b.x,b.y,b.w,b.h); c.strokeRect(b.x,b.y,b.w,b.h); c.restore(); }
     function drawShiftDragGuide(c) {
       const g = state.dragGuide;
       if (!g || !state.dragging) return;
@@ -5352,7 +5361,7 @@
       const y2 = (canvas.clientHeight - state.panY) / state.zoom;
       c.save();
       c.setLineDash([8 / state.zoom, 6 / state.zoom]);
-      c.strokeStyle = 'rgba(249,115,22,.95)';
+      c.strokeStyle = UI_COLORS.snapOrangeStrong;
       c.lineWidth = Math.max(1.4 / state.zoom, 0.8);
       c.beginPath();
       if (g.axis === 'h') {
@@ -5386,7 +5395,7 @@
       c.beginPath();
       c.rect(0, 0, state.pageW, state.pageH);
       c.clip();
-      c.strokeStyle = 'rgba(148, 163, 184, 0.58)';
+      c.strokeStyle = UI_COLORS.guideGray;
       c.globalAlpha = 1;
       c.lineWidth = Math.max(1 / state.zoom, 0.8);
       c.setLineDash([6 / state.zoom, 4 / state.zoom]);
@@ -5420,7 +5429,7 @@
       c.save();
       c.setLineDash([]);
       c.fillStyle = '#ffffff';
-      c.strokeStyle = '#dc2626';
+      c.strokeStyle = UI_COLORS.snapOrange;
       c.lineWidth = Math.max(2 / state.zoom, 1.5);
       c.beginPath();
       c.arc(p.x, p.y, r, 0, Math.PI * 2);
@@ -7552,7 +7561,7 @@
           const chip = document.createElement('span');
           chip.className = 'text-swatch-chip-v95' + (isNone ? ' none' : '');
           if (isNone) {
-            chip.innerHTML = '<svg class="text-swatch-none-svg-v120" viewBox="0 0 24 22" aria-hidden="true" focusable="false"><rect x="2.5" y="2.5" width="19" height="17" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/><path d="M4.2 18.2L19.8 3.8" fill="none" stroke="#dc2626" stroke-width="2.2" stroke-linecap="round"/></svg>';
+            chip.innerHTML = `<svg class="text-swatch-none-svg-v120" viewBox="0 0 24 22" aria-hidden="true" focusable="false"><rect x="2.5" y="2.5" width="19" height="17" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/><path d="M4.2 18.2L19.8 3.8" fill="none" stroke="${UI_COLORS.dangerRed}" stroke-width="2.2" stroke-linecap="round"/></svg>`;
           } else if (color) {
             chip.style.background = color;
           }
