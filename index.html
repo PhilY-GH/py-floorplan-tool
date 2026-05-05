@@ -2025,7 +2025,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v133';
+    const APP_VERSION = 'v134';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -5228,12 +5228,21 @@
     function getHandleHitTolerance() {
       return isTouchControlMode() ? Math.max(20 / state.zoom, 12) : Math.max(10 / state.zoom, 6);
     }
+    function isEndpointSnapFeedbackActive() {
+      // V134：端点吸附命中时给当前编辑中的选中辅助框一个临时红色反馈。
+      // 只在绘制 / 调整控制点过程中生效，避免普通选中或普通悬停变红。
+      return !!state.snapIndicator && !!(state.drawing || state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex);
+    }
+    function getSelectionAccentColor() {
+      return isEndpointSnapFeedbackActive() ? '#dc2626' : '#2563eb';
+    }
 
     function drawSelection(c,o){
       const b=getObjectBox(o);
+      const accent = getSelectionAccentColor();
       c.save();
       c.setLineDash([5,4]);
-      c.strokeStyle='#2563eb';
+      c.strokeStyle=accent;
       c.lineWidth=getSelectionStrokeWidth();
       c.strokeRect(b.x-6,b.y-6,b.w+12,b.h+12);
       c.restore();
@@ -5245,10 +5254,11 @@
     }
     function drawEndpointHandles(c,o){
       const r = getEndpointHandleRadius();
+      const accent = getSelectionAccentColor();
       c.save();
       c.setLineDash([]);
       c.fillStyle = '#ffffff';
-      c.strokeStyle = '#2563eb';
+      c.strokeStyle = accent;
       c.lineWidth = 2 / state.zoom;
       [{x:o.x1,y:o.y1},{x:o.x2,y:o.y2}].forEach(p=>{
         c.beginPath();
@@ -5291,10 +5301,11 @@
     function drawBoxResizeHandles(c, o) {
       const size = getBoxHandleSize();
       const half = size / 2;
+      const accent = getSelectionAccentColor();
       c.save();
       c.setLineDash([]);
       c.fillStyle = '#ffffff';
-      c.strokeStyle = '#2563eb';
+      c.strokeStyle = accent;
       c.lineWidth = 2 / state.zoom;
       getBoxResizeHandles(o).forEach(h => {
         c.beginPath();
@@ -5308,10 +5319,11 @@
       const pts = Array.isArray(o.points) ? o.points : [];
       if (pts.length < 3) return;
       const r = getEndpointHandleRadius();
+      const accent = getSelectionAccentColor();
       c.save();
       c.setLineDash([]);
       c.fillStyle = '#ffffff';
-      c.strokeStyle = '#2563eb';
+      c.strokeStyle = accent;
       c.lineWidth = 2 / state.zoom;
       pts.forEach(pt => {
         c.beginPath();
