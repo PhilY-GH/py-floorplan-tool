@@ -2025,7 +2025,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v131';
+    const APP_VERSION = 'v132';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -5133,6 +5133,32 @@
       };
     }
 
+    function isSmartGuideDirectionAssistTool(tool = state.tool) {
+      return ['line', 'arrow', 'wall', 'dimension'].includes(tool);
+    }
+
+    function applySmartGuideDrawingDirectionAssist(rawPoint, snappedPoint) {
+      if (!state.start || !rawPoint || !snappedPoint) return snappedPoint;
+      if (!isSmartGuideEnabled() || !isSmartGuideDirectionAssistTool()) return snappedPoint;
+      if (state.snapIndicator) return snappedPoint;
+      const dx = rawPoint.x - state.start.x;
+      const dy = rawPoint.y - state.start.y;
+      const screenLen = Math.hypot(dx, dy) * Math.max(0.0001, state.zoom);
+      if (screenLen < 14) return snappedPoint;
+      const ax = Math.abs(dx);
+      const ay = Math.abs(dy);
+      const ratio = 0.22;
+      let lockedPoint = null;
+      if (ay <= ax * ratio) {
+        lockedPoint = { x: snappedPoint.x, y: state.start.y };
+      } else if (ax <= ay * ratio) {
+        lockedPoint = { x: state.start.x, y: snappedPoint.y };
+      }
+      if (!lockedPoint) return snappedPoint;
+      updateSmartGuidesForPoints([lockedPoint]);
+      return lockedPoint;
+    }
+
     function formatNumber(n){ if(Math.abs(n)>=100)return String(Math.round(n)); if(Math.abs(n)>=10)return n.toFixed(1).replace(/\.0$/,''); return n.toFixed(2).replace(/0+$/,'').replace(/\.$/,''); }
 
     function getObjectBox(o){
@@ -5942,6 +5968,8 @@
       if(state.tool==='area' && state.areaDrawing){ state.areaPreview=p; updateSmartGuidesForPoints([p]); draw(); updateCursor(e); return; }
       if(state.drawing && state.start && ['line','arrow','wall','dimension','door','window'].includes(state.tool) && e.shiftKey) {
         p = constrainToAngle(state.start, p, 45);
+      } else if(state.drawing && state.start && isSmartGuideDirectionAssistTool()) {
+        p = applySmartGuideDrawingDirectionAssist(raw, p);
       }
       if(state.tool==='wall') p = snapWallEndpoint(p);
       if(state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex){
@@ -6130,8 +6158,10 @@
       if(state.erasing){ state.erasing=false; state.current=null; state.eraserPreview=rawScreenToWorld(e); clearSnapIndicator(); draw(); updateCursor(e); return; }
       if(state.boxSelecting){ state.boxSelecting=false; state.selectionBox=null; clearSnapIndicator(); draw(); updateCursor(e); return; }
       if(!state.drawing){ state.dragging=false; state.dragHistorySaved=false; state.dragCopied=false; state.dragCopySourceIds=[]; state.dragCopyCreatedIds=[]; clearDragGuide(); state.dragStartRaw=null; state.dragOriginals=null; clearSnapIndicator(); clearSmartGuides(); draw(); updateCursor(e); return; }
+      const raw = rawScreenToWorld(e);
       let p=screenToWorld(e);
       if(['line','arrow','wall','dimension','door','window'].includes(state.tool) && e.shiftKey) p = constrainToAngle(state.start, p, 45);
+      else if(isSmartGuideDirectionAssistTool()) p = applySmartGuideDrawingDirectionAssist(raw, p);
       if(state.tool==='wall') p = snapWallEndpoint(p);
       const shouldCreate = Math.hypot(p.x-state.start.x,p.y-state.start.y)>3;
       if (shouldCreate) {
