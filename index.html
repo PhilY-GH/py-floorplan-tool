@@ -2025,7 +2025,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v132';
+    const APP_VERSION = 'v133';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -5760,6 +5760,16 @@
       return e.pointerType === 'touch';
     }
 
+    function canStartResizeHandleWithPointer(e, resizeHit) {
+      if (!resizeHit) return false;
+      if (!isTouchLike(e)) return true;
+      // iPad / 触控下只允许调整“已经选中的单个对象”的控制点。
+      // 这样可以避免手指点到未选中对象端点时误拉伸，同时让已选对象可以正常拖端点 / 节点 / 控制点。
+      if (state.tool !== 'select') return false;
+      if (state.selectedIds.length !== 1) return false;
+      return !!(resizeHit.object && resizeHit.object.id === state.selectedIds[0]);
+    }
+
     function handlePointerDown(e) {
       if (state.modalOpen) { e.preventDefault(); e.stopPropagation(); return; }
       if (isBackgroundPopoverOpen()) {
@@ -5837,7 +5847,7 @@
       }
       if(state.tool==='select'){
         const resizeHit = hitResizeHandle(raw);
-        if (resizeHit && !isTouchLike(e)) {
+        if (canStartResizeHandleWithPointer(e, resizeHit)) {
           state.resizingEndpoint = resizeHit.kind === 'line';
           state.resizingBox = resizeHit.kind === 'box';
           state.resizingAreaVertex = resizeHit.kind === 'areaVertex';
