@@ -2025,7 +2025,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v135';
+    const APP_VERSION = 'v136';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -5229,8 +5229,8 @@
       return isTouchControlMode() ? Math.max(20 / state.zoom, 12) : Math.max(10 / state.zoom, 6);
     }
     function isEndpointSnapFeedbackActive() {
-      // V135：端点吸附命中时保留选中框红色反馈，但只让正在拖动的控制点变红。
-      // 只在绘制 / 调整控制点过程中生效，避免普通选中或普通悬停变红。
+      // V136：红色只表示“端点吸附已经命中”，不表示单纯点中 / 按住端点。
+      // 因此必须存在 snapIndicator，并且只在绘制 / 调整控制点过程中临时显示。
       return !!state.snapIndicator && !!(state.drawing || state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex);
     }
     function getSelectionNormalColor() { return '#2563eb'; }
@@ -5270,8 +5270,8 @@
       c.setLineDash([]);
       c.fillStyle = '#ffffff';
       c.lineWidth = 2 / state.zoom;
-      [{x:o.x1,y:o.y1},{x:o.x2,y:o.y2}].forEach((p, index)=>{
-        c.strokeStyle = getHandleAccentColor(o, 'endpoint', index);
+      [{key:1,x:o.x1,y:o.y1},{key:2,x:o.x2,y:o.y2}].forEach(p=>{
+        c.strokeStyle = getHandleAccentColor(o, 'endpoint', p.key);
         c.beginPath();
         c.arc(p.x, p.y, r, 0, Math.PI*2);
         c.fill();
@@ -5839,7 +5839,11 @@
         }
       }
 
-      let raw = rawScreenToWorld(e), p = state.tool === 'eraser' ? raw : screenToWorld(e);
+      const raw = rawScreenToWorld(e);
+      let p = (state.tool === 'eraser' || state.tool === 'select') ? raw : screenToWorld(e);
+      // 选择工具按下时只用于选中 / 拖动 / 控制点命中，不应触发端点吸附反馈。
+      // 否则 iPad 上只是按住端点，还没真正吸附到其他端点，选中框和控制点也会误变红。
+      if (state.tool === 'select') clearSnapIndicator();
       updateCursor(e);
       if(state.tool==='wall') p = snapWallEndpoint(p);
       startCanvasInteraction(e, p, raw);
