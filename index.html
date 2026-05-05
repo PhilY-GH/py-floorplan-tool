@@ -2025,7 +2025,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v139';
+    const APP_VERSION = 'v140';
     const UI_COLORS = {
       selectionBlue: '#2563eb',
       snapOrange: '#f97316',
@@ -5247,7 +5247,9 @@
     }
 
     function isSmartGuideDirectionAssistTool(tool = state.tool) {
-      return ['line', 'arrow', 'wall', 'dimension'].includes(tool);
+      // 线、箭头、墙体、标尺、门、窗都属于两个端点定义的线形对象；
+      // 智能辅助线下的横平竖直绘制辅助应统一覆盖，门窗只在渲染表现上特殊。
+      return ['line', 'arrow', 'wall', 'dimension', 'door', 'window'].includes(tool);
     }
 
     function applySmartGuideDrawingDirectionAssist(rawPoint, snappedPoint) {
