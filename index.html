@@ -2025,7 +2025,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v134';
+    const APP_VERSION = 'v135';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -5229,12 +5229,24 @@
       return isTouchControlMode() ? Math.max(20 / state.zoom, 12) : Math.max(10 / state.zoom, 6);
     }
     function isEndpointSnapFeedbackActive() {
-      // V134：端点吸附命中时给当前编辑中的选中辅助框一个临时红色反馈。
+      // V135：端点吸附命中时保留选中框红色反馈，但只让正在拖动的控制点变红。
       // 只在绘制 / 调整控制点过程中生效，避免普通选中或普通悬停变红。
       return !!state.snapIndicator && !!(state.drawing || state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex);
     }
+    function getSelectionNormalColor() { return '#2563eb'; }
+    function getSelectionSnapColor() { return '#dc2626'; }
     function getSelectionAccentColor() {
-      return isEndpointSnapFeedbackActive() ? '#dc2626' : '#2563eb';
+      return isEndpointSnapFeedbackActive() ? getSelectionSnapColor() : getSelectionNormalColor();
+    }
+    function getHandleAccentColor(o, kind, key) {
+      // 端点吸附命中时，选中框可以变红，但普通控制点仍保持蓝色。
+      // 只有当前正在拖动的端点 / 控制点 / 区域节点才临时变红，避免所有节点一起变红而削弱吸附目标提示。
+      if (!isEndpointSnapFeedbackActive()) return getSelectionNormalColor();
+      if (!o || o.id !== state.resizingObjectId) return getSelectionNormalColor();
+      if (kind === 'endpoint' && state.resizingEndpoint && state.resizeEndpointIndex === key) return getSelectionSnapColor();
+      if (kind === 'box' && state.resizingBox && state.resizeBoxHandle === key) return getSelectionSnapColor();
+      if (kind === 'area' && state.resizingAreaVertex && state.resizeAreaVertexIndex === key) return getSelectionSnapColor();
+      return getSelectionNormalColor();
     }
 
     function drawSelection(c,o){
@@ -5254,13 +5266,12 @@
     }
     function drawEndpointHandles(c,o){
       const r = getEndpointHandleRadius();
-      const accent = getSelectionAccentColor();
       c.save();
       c.setLineDash([]);
       c.fillStyle = '#ffffff';
-      c.strokeStyle = accent;
       c.lineWidth = 2 / state.zoom;
-      [{x:o.x1,y:o.y1},{x:o.x2,y:o.y2}].forEach(p=>{
+      [{x:o.x1,y:o.y1},{x:o.x2,y:o.y2}].forEach((p, index)=>{
+        c.strokeStyle = getHandleAccentColor(o, 'endpoint', index);
         c.beginPath();
         c.arc(p.x, p.y, r, 0, Math.PI*2);
         c.fill();
@@ -5301,13 +5312,12 @@
     function drawBoxResizeHandles(c, o) {
       const size = getBoxHandleSize();
       const half = size / 2;
-      const accent = getSelectionAccentColor();
       c.save();
       c.setLineDash([]);
       c.fillStyle = '#ffffff';
-      c.strokeStyle = accent;
       c.lineWidth = 2 / state.zoom;
       getBoxResizeHandles(o).forEach(h => {
+        c.strokeStyle = getHandleAccentColor(o, 'box', h.handle);
         c.beginPath();
         c.rect(h.x - half, h.y - half, size, size);
         c.fill();
@@ -5319,13 +5329,12 @@
       const pts = Array.isArray(o.points) ? o.points : [];
       if (pts.length < 3) return;
       const r = getEndpointHandleRadius();
-      const accent = getSelectionAccentColor();
       c.save();
       c.setLineDash([]);
       c.fillStyle = '#ffffff';
-      c.strokeStyle = accent;
       c.lineWidth = 2 / state.zoom;
-      pts.forEach(pt => {
+      pts.forEach((pt, index) => {
+        c.strokeStyle = getHandleAccentColor(o, 'area', index);
         c.beginPath();
         c.arc(pt.x, pt.y, r, 0, Math.PI * 2);
         c.fill();
