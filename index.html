@@ -2025,7 +2025,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v141';
+    const APP_VERSION = 'v142';
     const UI_COLORS = {
       selectionBlue: '#2563eb',
       snapOrange: '#f97316',
@@ -2425,6 +2425,11 @@
           addSnapPoint(points, b.right, cy, o.id, 'ellipse-control', 'e');
           addSnapPoint(points, cx, b.bottom, o.id, 'ellipse-control', 's');
           addSnapPoint(points, b.left, cy, o.id, 'ellipse-control', 'w');
+          return;
+        }
+        if (o.type === 'text') {
+          addTextBoxSnapPoints(points, o);
+          return;
         }
       });
       return points;
@@ -2464,6 +2469,47 @@
       points.push({ x: px, y: py, objectId, kind, key });
     }
 
+    function getTextAlignmentBox(o) {
+      return getTextBackgroundBox(o);
+    }
+
+    function getBoxNinePointsFromBounds(b) {
+      if (!b) return [];
+      const left = Number(b.left ?? b.x);
+      const top = Number(b.top ?? b.y);
+      const right = Number(b.right ?? (b.x + b.w));
+      const bottom = Number(b.bottom ?? (b.y + b.h));
+      if (![left, top, right, bottom].every(Number.isFinite)) return [];
+      const cx = (left + right) / 2;
+      const cy = (top + bottom) / 2;
+      return [
+        { key: 'nw', x: left, y: top },
+        { key: 'n', x: cx, y: top },
+        { key: 'ne', x: right, y: top },
+        { key: 'e', x: right, y: cy },
+        { key: 'se', x: right, y: bottom },
+        { key: 's', x: cx, y: bottom },
+        { key: 'sw', x: left, y: bottom },
+        { key: 'w', x: left, y: cy },
+        { key: 'c', x: cx, y: cy }
+      ];
+    }
+
+    function getTextBoxAlignmentPoints(o) {
+      if (!o || o.type !== 'text') return [];
+      const b = getTextAlignmentBox(o);
+      return getBoxNinePointsFromBounds({ left: b.x, top: b.y, right: b.x + b.w, bottom: b.y + b.h })
+        .map(pt => ({ ...pt, objectId: o.id, kind: 'text-box' }));
+    }
+
+    function addTextBoxSnapPoints(points, o) {
+      getTextBoxAlignmentPoints(o).forEach(pt => addSnapPoint(points, pt.x, pt.y, o.id, pt.kind, pt.key));
+    }
+
+    function addTextBoxAlignmentPoints(points, o) {
+      getTextBoxAlignmentPoints(o).forEach(pt => addAlignmentPoint(points, pt.x, pt.y, o.id, pt.kind, pt.key));
+    }
+
     function getObjectAlignmentPoints(o) {
       const points = [];
       if (!o || !isLayerVisible(o)) return points;
@@ -2492,6 +2538,11 @@
         addAlignmentPoint(points, b.right, cy, o.id, 'ellipse-control', 'e');
         addAlignmentPoint(points, cx, b.bottom, o.id, 'ellipse-control', 's');
         addAlignmentPoint(points, b.left, cy, o.id, 'ellipse-control', 'w');
+        return points;
+      }
+      if (o.type === 'text') {
+        addTextBoxAlignmentPoints(points, o);
+        return points;
       }
       return points;
     }
@@ -5290,13 +5341,7 @@
       if(o.type==='area') { const pts=Array.isArray(o.points)?o.points:[]; if(!pts.length)return {x:0,y:0,w:0,h:0}; const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y); const pad=Math.max(6,(o.lineWidth||2)+4); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys); return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
       if(o.type==='brush'||o.type==='erase') { const pts=Array.isArray(o.points)?o.points:[]; if(!pts.length)return {x:0,y:0,w:0,h:0}; const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y); const pad=Math.max(6,(o.width||22)/2+4); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys); return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
       if(o.type==='text') {
-        const fontSize = o.fontSize || 20;
-        const m = measureTextBlock(o.text || '文字', fontSize, !!o.textBold, !!o.textItalic, o.fontType);
-        const bgColor = getTextBackgroundColor(o);
-        if (bgColor) {
-          return getTextBackgroundBox(o);
-        }
-        return {x:o.x,y:o.y,w:m.width,h:m.height};
+        return getTextAlignmentBox(o);
       }
       if(o.type==='door') {
         const a = Math.atan2(o.y2-o.y1, o.x2-o.x1);
