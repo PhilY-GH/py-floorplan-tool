@@ -2025,7 +2025,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v138';
+    const APP_VERSION = 'v139';
     const UI_COLORS = {
       selectionBlue: '#2563eb',
       snapOrange: '#f97316',
@@ -2100,6 +2100,7 @@
       backgroundHistorySaved: false,
       snapIndicator: null,
       smartGuides: null,
+      moveEndpointSnap: null,
       eraserPreview: null,
       brushColor: '#000000',
       brushOpacity: 1,
@@ -2383,41 +2384,47 @@
       };
     }
 
-    function addSnapPoint(points, x, y, objectId, kind = 'endpoint') {
+    function addSnapPoint(points, x, y, objectId, kind = 'endpoint', key = null) {
       const px = Number(x), py = Number(y);
       if (!Number.isFinite(px) || !Number.isFinite(py)) return;
-      points.push({ x: px, y: py, objectId, kind });
+      points.push({ x: px, y: py, objectId, kind, key });
+    }
+
+    function normalizeExcludedObjectIds(excludeObjectId = null) {
+      if (Array.isArray(excludeObjectId)) return new Set(excludeObjectId.filter(Boolean));
+      return new Set(excludeObjectId ? [excludeObjectId] : []);
     }
 
     function getSnapEndpointCandidates(excludeObjectId = null) {
       const points = [];
+      const excluded = normalizeExcludedObjectIds(excludeObjectId);
       state.objects.forEach(o => {
-        if (!o || o.id === excludeObjectId || !isLayerVisible(o)) return;
+        if (!o || excluded.has(o.id) || !isLayerVisible(o)) return;
         if (['line', 'arrow', 'wall', 'dimension', 'door', 'window'].includes(o.type)) {
-          addSnapPoint(points, o.x1, o.y1, o.id, 'endpoint');
-          addSnapPoint(points, o.x2, o.y2, o.id, 'endpoint');
+          addSnapPoint(points, o.x1, o.y1, o.id, 'endpoint', 1);
+          addSnapPoint(points, o.x2, o.y2, o.id, 'endpoint', 2);
           return;
         }
         if (o.type === 'area') {
-          (Array.isArray(o.points) ? o.points : []).forEach(pt => addSnapPoint(points, pt.x, pt.y, o.id, 'vertex'));
+          (Array.isArray(o.points) ? o.points : []).forEach((pt, index) => addSnapPoint(points, pt.x, pt.y, o.id, 'vertex', index));
           return;
         }
         if (o.type === 'rect') {
           const b = getBoxBounds(o);
-          addSnapPoint(points, b.left, b.top, o.id, 'corner');
-          addSnapPoint(points, b.right, b.top, o.id, 'corner');
-          addSnapPoint(points, b.right, b.bottom, o.id, 'corner');
-          addSnapPoint(points, b.left, b.bottom, o.id, 'corner');
+          addSnapPoint(points, b.left, b.top, o.id, 'corner', 'nw');
+          addSnapPoint(points, b.right, b.top, o.id, 'corner', 'ne');
+          addSnapPoint(points, b.right, b.bottom, o.id, 'corner', 'se');
+          addSnapPoint(points, b.left, b.bottom, o.id, 'corner', 'sw');
           return;
         }
         if (o.type === 'ellipse') {
           const b = getBoxBounds(o);
           const cx = (b.left + b.right) / 2;
           const cy = (b.top + b.bottom) / 2;
-          addSnapPoint(points, cx, b.top, o.id, 'ellipse-control');
-          addSnapPoint(points, b.right, cy, o.id, 'ellipse-control');
-          addSnapPoint(points, cx, b.bottom, o.id, 'ellipse-control');
-          addSnapPoint(points, b.left, cy, o.id, 'ellipse-control');
+          addSnapPoint(points, cx, b.top, o.id, 'ellipse-control', 'n');
+          addSnapPoint(points, b.right, cy, o.id, 'ellipse-control', 'e');
+          addSnapPoint(points, cx, b.bottom, o.id, 'ellipse-control', 's');
+          addSnapPoint(points, b.left, cy, o.id, 'ellipse-control', 'w');
         }
       });
       return points;
@@ -2439,6 +2446,10 @@
       state.snapIndicator = point ? { x: point.x, y: point.y } : null;
     }
 
+    function clearMoveEndpointSnap() {
+      state.moveEndpointSnap = null;
+    }
+
     function isSmartGuideEnabled() {
       return !!(els.smartGuideMode && els.smartGuideMode.value !== 'off');
     }
@@ -2447,40 +2458,40 @@
       state.smartGuides = null;
     }
 
-    function addAlignmentPoint(points, x, y, objectId, kind = 'point') {
+    function addAlignmentPoint(points, x, y, objectId, kind = 'point', key = null) {
       const px = Number(x), py = Number(y);
       if (!Number.isFinite(px) || !Number.isFinite(py)) return;
-      points.push({ x: px, y: py, objectId, kind });
+      points.push({ x: px, y: py, objectId, kind, key });
     }
 
     function getObjectAlignmentPoints(o) {
       const points = [];
       if (!o || !isLayerVisible(o)) return points;
       if (['line', 'arrow', 'wall', 'dimension', 'door', 'window'].includes(o.type)) {
-        addAlignmentPoint(points, o.x1, o.y1, o.id, 'endpoint');
-        addAlignmentPoint(points, o.x2, o.y2, o.id, 'endpoint');
+        addAlignmentPoint(points, o.x1, o.y1, o.id, 'endpoint', 1);
+        addAlignmentPoint(points, o.x2, o.y2, o.id, 'endpoint', 2);
         return points;
       }
       if (o.type === 'area') {
-        (Array.isArray(o.points) ? o.points : []).forEach(pt => addAlignmentPoint(points, pt.x, pt.y, o.id, 'vertex'));
+        (Array.isArray(o.points) ? o.points : []).forEach((pt, index) => addAlignmentPoint(points, pt.x, pt.y, o.id, 'vertex', index));
         return points;
       }
       if (o.type === 'rect') {
         const b = getBoxBounds(o);
-        addAlignmentPoint(points, b.left, b.top, o.id, 'corner');
-        addAlignmentPoint(points, b.right, b.top, o.id, 'corner');
-        addAlignmentPoint(points, b.right, b.bottom, o.id, 'corner');
-        addAlignmentPoint(points, b.left, b.bottom, o.id, 'corner');
+        addAlignmentPoint(points, b.left, b.top, o.id, 'corner', 'nw');
+        addAlignmentPoint(points, b.right, b.top, o.id, 'corner', 'ne');
+        addAlignmentPoint(points, b.right, b.bottom, o.id, 'corner', 'se');
+        addAlignmentPoint(points, b.left, b.bottom, o.id, 'corner', 'sw');
         return points;
       }
       if (o.type === 'ellipse') {
         const b = getBoxBounds(o);
         const cx = (b.left + b.right) / 2;
         const cy = (b.top + b.bottom) / 2;
-        addAlignmentPoint(points, cx, b.top, o.id, 'ellipse-control');
-        addAlignmentPoint(points, b.right, cy, o.id, 'ellipse-control');
-        addAlignmentPoint(points, cx, b.bottom, o.id, 'ellipse-control');
-        addAlignmentPoint(points, b.left, cy, o.id, 'ellipse-control');
+        addAlignmentPoint(points, cx, b.top, o.id, 'ellipse-control', 'n');
+        addAlignmentPoint(points, b.right, cy, o.id, 'ellipse-control', 'e');
+        addAlignmentPoint(points, cx, b.bottom, o.id, 'ellipse-control', 's');
+        addAlignmentPoint(points, b.left, cy, o.id, 'ellipse-control', 'w');
       }
       return points;
     }
@@ -2596,7 +2607,100 @@
           bestDist = d;
         }
       });
-      return best ? { x: best.x, y: best.y, objectId: best.objectId } : null;
+      return best ? { x: best.x, y: best.y, objectId: best.objectId, kind: best.kind, key: best.key } : null;
+    }
+
+    function pointIdentityKey(p) {
+      if (!p) return '';
+      return [p.objectId || '', p.kind || '', String(p.key ?? ''), Number(p.x).toFixed(4), Number(p.y).toFixed(4)].join('|');
+    }
+
+    function snapPairIdentity(pair) {
+      if (!pair || !pair.source || !pair.target) return '';
+      return `${pointIdentityKey(pair.source)}=>${pointIdentityKey(pair.target)}`;
+    }
+
+    function buildMoveEndpointSnapSources(dx, dy, ids = []) {
+      const idSet = new Set(ids || []);
+      const points = [];
+      if (!state.dragOriginals || !state.dragOriginals.size) return points;
+      state.dragOriginals.forEach((o, id) => {
+        if (!idSet.has(id)) return;
+        getObjectAlignmentPoints(o).forEach(pt => {
+          points.push({
+            x: pt.x + dx,
+            y: pt.y + dy,
+            objectId: id,
+            kind: pt.kind,
+            key: pt.key
+          });
+        });
+      });
+      return points;
+    }
+
+    function findMoveEndpointSnapPair(sources, targets, threshold) {
+      let best = null;
+      let bestDist = Infinity;
+      sources.forEach(src => {
+        targets.forEach(tgt => {
+          const d = Math.hypot(src.x - tgt.x, src.y - tgt.y);
+          if (d <= threshold && d < bestDist) {
+            best = { source: src, target: tgt, distance: d };
+            bestDist = d;
+          }
+        });
+      });
+      return best;
+    }
+
+    function findSpecificMoveEndpointSnapPair(sources, targets, prev, threshold) {
+      if (!prev || !prev.source || !prev.target) return null;
+      const src = sources.find(p => p.objectId === prev.source.objectId && p.kind === prev.source.kind && String(p.key ?? '') === String(prev.source.key ?? ''));
+      const tgt = targets.find(p => p.objectId === prev.target.objectId && p.kind === prev.target.kind && String(p.key ?? '') === String(prev.target.key ?? ''));
+      if (!src || !tgt) return null;
+      const d = Math.hypot(src.x - tgt.x, src.y - tgt.y);
+      if (d > threshold) return null;
+      return { source: src, target: tgt, distance: d };
+    }
+
+    function snapMoveEndpointDelta(dx, dy, ids = []) {
+      if (!isEndpointSnapEnabled() || !state.dragOriginals || !state.dragOriginals.size || !(ids || []).length) {
+        clearMoveEndpointSnap();
+        return { dx, dy, snapped: false };
+      }
+      const idSet = new Set(ids || []);
+      const threshold = Math.max(12 / state.zoom, 6);
+      const detachThreshold = threshold + Math.max(8 / state.zoom, 2);
+      const switchMargin = Math.max(4 / state.zoom, 1.5);
+      const sources = buildMoveEndpointSnapSources(dx, dy, ids);
+      const targets = getSnapEndpointCandidates([...idSet]);
+      if (!sources.length || !targets.length) {
+        clearMoveEndpointSnap();
+        return { dx, dy, snapped: false };
+      }
+      let best = findMoveEndpointSnapPair(sources, targets, threshold);
+      const current = findSpecificMoveEndpointSnapPair(sources, targets, state.moveEndpointSnap, detachThreshold);
+      if (current && (!best || best.distance > current.distance - switchMargin)) best = current;
+      if (!best) {
+        clearMoveEndpointSnap();
+        return { dx, dy, snapped: false };
+      }
+      const ndx = dx + (best.target.x - best.source.x);
+      const ndy = dy + (best.target.y - best.source.y);
+      const snappedSource = {
+        ...best.source,
+        x: best.source.x + (ndx - dx),
+        y: best.source.y + (ndy - dy)
+      };
+      state.moveEndpointSnap = {
+        source: snappedSource,
+        target: best.target,
+        distance: best.distance,
+        pairKey: snapPairIdentity(best)
+      };
+      setSnapIndicator(best.target);
+      return { dx: ndx, dy: ndy, snapped: true, source: snappedSource, target: best.target };
     }
 
     function isEndpointSnapDrawingTool(tool = state.tool) {
@@ -5238,9 +5342,9 @@
       return isTouchControlMode() ? Math.max(20 / state.zoom, 12) : Math.max(10 / state.zoom, 6);
     }
     function isEndpointSnapFeedbackActive() {
-      // V136：橙色只表示“端点吸附已经命中”，不表示单纯点中 / 按住端点。
-      // 因此必须存在 snapIndicator，并且只在绘制 / 调整控制点过程中临时显示。
-      return !!state.snapIndicator && !!(state.drawing || state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex);
+      // 橙色只表示“端点吸附已经命中”，不表示单纯点中 / 按住端点。
+      // V139 起，移动整个对象时如果对象关键点吸附到其他端点，也使用同一套橙色反馈。
+      return !!state.snapIndicator && !!(state.drawing || state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex || (state.dragging && state.moveEndpointSnap));
     }
     function getSelectionNormalColor() { return UI_COLORS.selectionBlue; }
     function getSelectionSnapColor() { return UI_COLORS.snapOrange; }
@@ -5249,9 +5353,16 @@
     }
     function getHandleAccentColor(o, kind, key) {
       // 端点吸附命中时，选中框可以变橙，但普通控制点仍保持蓝色。
-      // 只有当前正在拖动的端点 / 控制点 / 区域节点才临时变橙，避免所有节点一起变橙而削弱吸附目标提示。
+      // 只有当前正在拖动 / 正在参与对象移动吸附的那个点才临时变橙。
       if (!isEndpointSnapFeedbackActive()) return getSelectionNormalColor();
-      if (!o || o.id !== state.resizingObjectId) return getSelectionNormalColor();
+      if (!o) return getSelectionNormalColor();
+      const moveSource = state.moveEndpointSnap && state.moveEndpointSnap.source;
+      if (state.dragging && moveSource && o.id === moveSource.objectId) {
+        if (kind === 'endpoint' && moveSource.kind === 'endpoint' && String(moveSource.key ?? '') === String(key ?? '')) return getSelectionSnapColor();
+        if (kind === 'box' && ['corner', 'ellipse-control'].includes(moveSource.kind) && String(moveSource.key ?? '') === String(key ?? '')) return getSelectionSnapColor();
+        if (kind === 'area' && moveSource.kind === 'vertex' && String(moveSource.key ?? '') === String(key ?? '')) return getSelectionSnapColor();
+      }
+      if (o.id !== state.resizingObjectId) return getSelectionNormalColor();
       if (kind === 'endpoint' && state.resizingEndpoint && state.resizeEndpointIndex === key) return getSelectionSnapColor();
       if (kind === 'box' && state.resizingBox && state.resizeBoxHandle === key) return getSelectionSnapColor();
       if (kind === 'area' && state.resizingAreaVertex && state.resizeAreaVertexIndex === key) return getSelectionSnapColor();
@@ -5775,6 +5886,7 @@
       state.dragOriginals = null;
       state.selectionBox = null;
       clearSnapIndicator();
+      clearMoveEndpointSnap();
       clearSmartGuides();
       draw();
     }
@@ -6038,15 +6150,25 @@
           clearSmartGuides();
         } else {
           clearDragGuide();
-          const smartDelta = snapSmartGuideDelta(dx, dy, state.selectedIds);
-          dx = smartDelta.dx;
-          dy = smartDelta.dy;
-          if(!smartDelta.snapped && isGridSnapEnabled()){
-            const g=getInputNumber(els.gridSize, 20)||20;
-            dx=Math.round(dx/g)*g;
-            dy=Math.round(dy/g)*g;
+          const endpointDelta = snapMoveEndpointDelta(dx, dy, state.selectedIds);
+          const endpointSnapped = !!endpointDelta.snapped;
+          if (endpointSnapped) {
+            dx = endpointDelta.dx;
+            dy = endpointDelta.dy;
+            clearSmartGuides();
+          } else {
+            clearSnapIndicator();
+            const smartDelta = snapSmartGuideDelta(dx, dy, state.selectedIds);
+            dx = smartDelta.dx;
+            dy = smartDelta.dy;
+            if(!smartDelta.snapped && isGridSnapEnabled()){
+              const g=getInputNumber(els.gridSize, 20)||20;
+              dx=Math.round(dx/g)*g;
+              dy=Math.round(dy/g)*g;
+            }
           }
         }
+        const endpointDragSnapped = !!state.moveEndpointSnap;
         if(dx !== 0 || dy !== 0){
           if(!state.dragHistorySaved){
             saveHistory();
@@ -6055,7 +6177,8 @@
           }
           restoreDragOriginals();
           state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))moveObject(o,dx,dy); });
-          updateSmartGuidesForSelectedObjects();
+          if (endpointDragSnapped) clearSmartGuides();
+          else updateSmartGuidesForSelectedObjects();
           draw();
         } else if (hadGuide || state.dragGuide) {
           draw();
@@ -6161,8 +6284,9 @@
     }
     canvas.addEventListener('pointerleave', () => {
       let needsDraw = false;
-      if (state.snapIndicator && !state.drawing && !state.resizingEndpoint && !state.resizingBox && !state.resizingAreaVertex) {
+      if (state.snapIndicator && !state.drawing && !state.resizingEndpoint && !state.resizingBox && !state.resizingAreaVertex && !state.dragging) {
         clearSnapIndicator();
+        clearMoveEndpointSnap();
         needsDraw = true;
       }
       if (!state.erasing && state.eraserPreview) {
@@ -6195,13 +6319,14 @@
         state.dragOriginals=null;
         state.resizeHistorySaved=false;
         clearSnapIndicator();
+        clearMoveEndpointSnap();
         clearSmartGuides();
         draw();
         return;
       }
       if(state.erasing){ state.erasing=false; state.current=null; state.eraserPreview=rawScreenToWorld(e); clearSnapIndicator(); draw(); updateCursor(e); return; }
       if(state.boxSelecting){ state.boxSelecting=false; state.selectionBox=null; clearSnapIndicator(); draw(); updateCursor(e); return; }
-      if(!state.drawing){ state.dragging=false; state.dragHistorySaved=false; state.dragCopied=false; state.dragCopySourceIds=[]; state.dragCopyCreatedIds=[]; clearDragGuide(); state.dragStartRaw=null; state.dragOriginals=null; clearSnapIndicator(); clearSmartGuides(); draw(); updateCursor(e); return; }
+      if(!state.drawing){ state.dragging=false; state.dragHistorySaved=false; state.dragCopied=false; state.dragCopySourceIds=[]; state.dragCopyCreatedIds=[]; clearDragGuide(); state.dragStartRaw=null; state.dragOriginals=null; clearSnapIndicator(); clearMoveEndpointSnap(); clearSmartGuides(); draw(); updateCursor(e); return; }
       const raw = rawScreenToWorld(e);
       let p=screenToWorld(e);
       if(['line','arrow','wall','dimension','door','window'].includes(state.tool) && e.shiftKey) p = constrainToAngle(state.start, p, 45);
