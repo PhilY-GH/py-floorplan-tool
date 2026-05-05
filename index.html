@@ -1807,6 +1807,17 @@
             </div>
           </div>
           <div class="row">
+            <label>智能辅助线</label>
+            <select id="smartGuideMode" class="hidden-input">
+              <option value="on" selected>开启</option>
+              <option value="off">关闭</option>
+            </select>
+            <div class="segmented" data-segment-target="smartGuideMode">
+              <button type="button" data-value="on" class="active">开</button>
+              <button type="button" data-value="off">关</button>
+            </div>
+          </div>
+          <div class="row">
             <label>网格吸附</label>
             <select id="snapMode" class="hidden-input">
               <option value="on" selected>开启</option>
@@ -2014,7 +2025,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v127';
+    const APP_VERSION = 'v131';
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -2079,6 +2090,7 @@
       backgroundOriginal: null,
       backgroundHistorySaved: false,
       snapIndicator: null,
+      smartGuides: null,
       eraserPreview: null,
       brushColor: '#000000',
       brushOpacity: 1,
@@ -2114,6 +2126,7 @@
       dimensionLabelMode: document.getElementById('dimensionLabelMode'),
       eraserWidth: document.getElementById('eraserWidth'),
       endpointSnapMode: document.getElementById('endpointSnapMode'),
+      smartGuideMode: document.getElementById('smartGuideMode'),
       snapMode: document.getElementById('snapMode'),
       gridSize: document.getElementById('gridSize'),
       unitName: document.getElementById('unitName'),
@@ -2417,6 +2430,151 @@
       state.snapIndicator = point ? { x: point.x, y: point.y } : null;
     }
 
+    function isSmartGuideEnabled() {
+      return !!(els.smartGuideMode && els.smartGuideMode.value !== 'off');
+    }
+
+    function clearSmartGuides() {
+      state.smartGuides = null;
+    }
+
+    function addAlignmentPoint(points, x, y, objectId, kind = 'point') {
+      const px = Number(x), py = Number(y);
+      if (!Number.isFinite(px) || !Number.isFinite(py)) return;
+      points.push({ x: px, y: py, objectId, kind });
+    }
+
+    function getObjectAlignmentPoints(o) {
+      const points = [];
+      if (!o || !isLayerVisible(o)) return points;
+      if (['line', 'arrow', 'wall', 'dimension', 'door', 'window'].includes(o.type)) {
+        addAlignmentPoint(points, o.x1, o.y1, o.id, 'endpoint');
+        addAlignmentPoint(points, o.x2, o.y2, o.id, 'endpoint');
+        return points;
+      }
+      if (o.type === 'area') {
+        (Array.isArray(o.points) ? o.points : []).forEach(pt => addAlignmentPoint(points, pt.x, pt.y, o.id, 'vertex'));
+        return points;
+      }
+      if (o.type === 'rect') {
+        const b = getBoxBounds(o);
+        addAlignmentPoint(points, b.left, b.top, o.id, 'corner');
+        addAlignmentPoint(points, b.right, b.top, o.id, 'corner');
+        addAlignmentPoint(points, b.right, b.bottom, o.id, 'corner');
+        addAlignmentPoint(points, b.left, b.bottom, o.id, 'corner');
+        return points;
+      }
+      if (o.type === 'ellipse') {
+        const b = getBoxBounds(o);
+        const cx = (b.left + b.right) / 2;
+        const cy = (b.top + b.bottom) / 2;
+        addAlignmentPoint(points, cx, b.top, o.id, 'ellipse-control');
+        addAlignmentPoint(points, b.right, cy, o.id, 'ellipse-control');
+        addAlignmentPoint(points, cx, b.bottom, o.id, 'ellipse-control');
+        addAlignmentPoint(points, b.left, cy, o.id, 'ellipse-control');
+      }
+      return points;
+    }
+
+    function getSmartGuideCandidates(excludeIds = []) {
+      const excluded = new Set((excludeIds || []).filter(Boolean));
+      const points = [];
+      state.objects.forEach(o => {
+        if (!o || !o.id || excluded.has(o.id) || o.type === 'brush' || o.type === 'erase') return;
+        points.push(...getObjectAlignmentPoints(o));
+      });
+      return points;
+    }
+
+    function getSmartGuideThreshold() {
+      return Math.max(8 / Math.max(0.0001, state.zoom), 2);
+    }
+
+    function getSmartGuideMatch(activePoints, excludeIds = []) {
+      if (!isSmartGuideEnabled() || !Array.isArray(activePoints) || !activePoints.length) return null;
+      const candidates = getSmartGuideCandidates(excludeIds);
+      if (!candidates.length) return null;
+      const threshold = getSmartGuideThreshold();
+      let bestV = null, bestH = null;
+      activePoints.forEach(ap => {
+        if (!ap || !Number.isFinite(ap.x) || !Number.isFinite(ap.y)) return;
+        candidates.forEach(cp => {
+          const dx = Math.abs(ap.x - cp.x);
+          const dy = Math.abs(ap.y - cp.y);
+          const dist = Math.hypot(ap.x - cp.x, ap.y - cp.y);
+          if (dx <= threshold && (!bestV || dx < bestV.delta - 0.0001 || (Math.abs(dx - bestV.delta) <= 0.0001 && dist < bestV.distance))) {
+            bestV = { x: cp.x, delta: dx, distance: dist, target: cp, active: ap };
+          }
+          if (dy <= threshold && (!bestH || dy < bestH.delta - 0.0001 || (Math.abs(dy - bestH.delta) <= 0.0001 && dist < bestH.distance))) {
+            bestH = { y: cp.y, delta: dy, distance: dist, target: cp, active: ap };
+          }
+        });
+      });
+      if (!bestV && !bestH) return null;
+      const hitPoints = [];
+      if (bestV && bestV.target) hitPoints.push(bestV.target);
+      if (bestH && bestH.target && !hitPoints.some(p => Math.abs(p.x - bestH.target.x) < 0.0001 && Math.abs(p.y - bestH.target.y) < 0.0001)) hitPoints.push(bestH.target);
+      return { vertical: bestV, horizontal: bestH, points: hitPoints };
+    }
+
+    function updateSmartGuidesForPoints(activePoints, excludeIds = []) {
+      const match = getSmartGuideMatch(activePoints, excludeIds);
+      state.smartGuides = match || null;
+    }
+
+    function snapSmartGuidePoint(p, options = {}) {
+      if (!p || !isSmartGuideEnabled()) return { point: p, snapped: false };
+      const match = getSmartGuideMatch([p], options.excludeObjectId ? [options.excludeObjectId] : (options.excludeIds || []));
+      if (!match) {
+        clearSmartGuides();
+        return { point: p, snapped: false };
+      }
+      state.smartGuides = match;
+      return {
+        point: {
+          x: match.vertical ? match.vertical.x : p.x,
+          y: match.horizontal ? match.horizontal.y : p.y
+        },
+        snapped: true
+      };
+    }
+
+    function snapSmartGuideDelta(dx, dy, ids = []) {
+      if (!isSmartGuideEnabled() || !state.dragOriginals || !state.dragOriginals.size) return { dx, dy, snapped: false };
+      const idSet = new Set(ids || []);
+      const activePoints = [];
+      state.dragOriginals.forEach((o, id) => {
+        if (!idSet.has(id)) return;
+        getObjectAlignmentPoints(o).forEach(pt => activePoints.push({ x: pt.x + dx, y: pt.y + dy, objectId: id, kind: pt.kind }));
+      });
+      const match = getSmartGuideMatch(activePoints, [...idSet]);
+      if (!match) {
+        clearSmartGuides();
+        return { dx, dy, snapped: false };
+      }
+      let ndx = dx;
+      let ndy = dy;
+      if (match.vertical && match.vertical.active) ndx += match.vertical.x - match.vertical.active.x;
+      if (match.horizontal && match.horizontal.active) ndy += match.horizontal.y - match.horizontal.active.y;
+      const snappedPoints = [];
+      activePoints.forEach(pt => snappedPoints.push({ x: pt.x + (ndx - dx), y: pt.y + (ndy - dy), objectId: pt.objectId, kind: pt.kind }));
+      state.smartGuides = getSmartGuideMatch(snappedPoints, [...idSet]) || match;
+      return { dx: ndx, dy: ndy, snapped: true };
+    }
+
+    function updateSmartGuidesForObject(o) {
+      if (!o) { clearSmartGuides(); return; }
+      updateSmartGuidesForPoints(getObjectAlignmentPoints(o), [o.id]);
+    }
+
+    function updateSmartGuidesForSelectedObjects() {
+      const ids = new Set(state.selectedIds || []);
+      if (!ids.size) { clearSmartGuides(); return; }
+      const points = [];
+      state.objects.forEach(o => { if (o && ids.has(o.id)) points.push(...getObjectAlignmentPoints(o)); });
+      updateSmartGuidesForPoints(points, [...ids]);
+    }
+
     function snapObjectEndpoint(p, options = {}) {
       if (!p || !isEndpointSnapEnabled()) return null;
       const threshold = Math.max(12 / state.zoom, 6);
@@ -2437,14 +2595,20 @@
     }
 
     function snapWorldPoint(p, options = {}) {
-      if (!p) { clearSnapIndicator(); return p; }
+      if (!p) { clearSnapIndicator(); clearSmartGuides(); return p; }
       const endpoint = snapObjectEndpoint(p, options);
       if (endpoint) {
         setSnapIndicator(endpoint);
+        clearSmartGuides();
         return { x: endpoint.x, y: endpoint.y };
       }
       clearSnapIndicator();
+      if (!options.disableSmartGuide) {
+        const smart = snapSmartGuidePoint(p, options);
+        if (smart.snapped) return smart.point;
+      }
       if (isGridSnapEnabled()) return snapGridPoint(p);
+      clearSmartGuides();
       return p;
     }
 
@@ -2822,6 +2986,7 @@
       });
       if (state.boxSelecting && state.selectionBox) drawSelectionBox(ctx);
       drawShiftDragGuide(ctx);
+      drawSmartGuides(ctx);
       if (state.tool === 'eraser' && (state.current || state.eraserPreview)) drawBrushCursor(ctx);
       drawSnapIndicator(ctx);
       drawBackgroundEditOverlay(ctx);
@@ -5167,6 +5332,40 @@
       c.stroke();
       c.restore();
     }
+    function drawSmartGuides(c){
+      const g = state.smartGuides;
+      if (!g) return;
+      c.save();
+      c.beginPath();
+      c.rect(0, 0, state.pageW, state.pageH);
+      c.clip();
+      c.strokeStyle = 'rgba(148, 163, 184, 0.58)';
+      c.globalAlpha = 1;
+      c.lineWidth = Math.max(1 / state.zoom, 0.8);
+      c.setLineDash([6 / state.zoom, 4 / state.zoom]);
+      if (g.vertical) {
+        c.beginPath();
+        c.moveTo(g.vertical.x, 0);
+        c.lineTo(g.vertical.x, state.pageH);
+        c.stroke();
+      }
+      if (g.horizontal) {
+        c.beginPath();
+        c.moveTo(0, g.horizontal.y);
+        c.lineTo(state.pageW, g.horizontal.y);
+        c.stroke();
+      }
+      c.setLineDash([]);
+      const r = Math.max(4 / state.zoom, 2.5);
+      c.lineWidth = Math.max(1.5 / state.zoom, 1);
+      (g.points || []).forEach(p => {
+        c.beginPath();
+        c.arc(p.x, p.y, r, 0, Math.PI * 2);
+        c.stroke();
+      });
+      c.restore();
+    }
+
     function drawSnapIndicator(c){
       const p = state.snapIndicator;
       if (!p) return;
@@ -5520,6 +5719,7 @@
       state.dragOriginals = null;
       state.selectionBox = null;
       clearSnapIndicator();
+      clearSmartGuides();
       draw();
     }
 
@@ -5739,7 +5939,7 @@
         updateCursor(e);
         return;
       }
-      if(state.tool==='area' && state.areaDrawing){ state.areaPreview=p; draw(); updateCursor(e); return; }
+      if(state.tool==='area' && state.areaDrawing){ state.areaPreview=p; updateSmartGuidesForPoints([p]); draw(); updateCursor(e); return; }
       if(state.drawing && state.start && ['line','arrow','wall','dimension','door','window'].includes(state.tool) && e.shiftKey) {
         p = constrainToAngle(state.start, p, 45);
       }
@@ -5749,6 +5949,8 @@
         if (state.resizingBox) updateBoxResizeFromPointer(e);
         else if (state.resizingAreaVertex) updateAreaVertexFromPointer(e);
         else updateEndpointFromPointer(e);
+        const resizingObject = state.objects.find(x => x.id === state.resizingObjectId);
+        updateSmartGuidesForObject(resizingObject);
         draw(); updateCursor(e); return;
       }
       if(state.erasing){ state.current=raw; state.eraserPreview=raw; const er=state.objects[state.objects.length-1]; if(er&&(er.type==='brush'||er.type==='erase'))er.points.push(raw); draw(); updateCursor(e); return; }
@@ -5761,9 +5963,13 @@
           dx = locked.dx;
           dy = locked.dy;
           updateShiftDragGuide(dx, dy);
+          clearSmartGuides();
         } else {
           clearDragGuide();
-          if(isGridSnapEnabled()){
+          const smartDelta = snapSmartGuideDelta(dx, dy, state.selectedIds);
+          dx = smartDelta.dx;
+          dy = smartDelta.dy;
+          if(!smartDelta.snapped && isGridSnapEnabled()){
             const g=getInputNumber(els.gridSize, 20)||20;
             dx=Math.round(dx/g)*g;
             dy=Math.round(dy/g)*g;
@@ -5777,14 +5983,15 @@
           }
           restoreDragOriginals();
           state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))moveObject(o,dx,dy); });
+          updateSmartGuidesForSelectedObjects();
           draw();
         } else if (hadGuide || state.dragGuide) {
           draw();
         }
         updateCursor(e); return;
       }
-      if(state.drawing){ state.current=p; draw(); updateCursor(e); return; }
-      if(isEndpointSnapDrawingTool() && isEndpointSnapEnabled()){ draw(); updateCursor(e); return; }
+      if(state.drawing){ state.current=p; updateSmartGuidesForPoints([p]); draw(); updateCursor(e); return; }
+      if(isEndpointSnapDrawingTool() && isEndpointSnapEnabled()){ clearSmartGuides(); draw(); updateCursor(e); return; }
       if(state.snapIndicator){ clearSnapIndicator(); draw(); updateCursor(e); }
     }
 
@@ -5890,6 +6097,10 @@
         state.eraserPreview = null;
         needsDraw = true;
       }
+      if (state.smartGuides) {
+        clearSmartGuides();
+        needsDraw = true;
+      }
       if (state.backgroundEditMode && !state.backgroundAdjusting) {
         updateCursor();
       }
@@ -5912,12 +6123,13 @@
         state.dragOriginals=null;
         state.resizeHistorySaved=false;
         clearSnapIndicator();
+        clearSmartGuides();
         draw();
         return;
       }
       if(state.erasing){ state.erasing=false; state.current=null; state.eraserPreview=rawScreenToWorld(e); clearSnapIndicator(); draw(); updateCursor(e); return; }
       if(state.boxSelecting){ state.boxSelecting=false; state.selectionBox=null; clearSnapIndicator(); draw(); updateCursor(e); return; }
-      if(!state.drawing){ state.dragging=false; state.dragHistorySaved=false; state.dragCopied=false; state.dragCopySourceIds=[]; state.dragCopyCreatedIds=[]; clearDragGuide(); state.dragStartRaw=null; state.dragOriginals=null; clearSnapIndicator(); updateCursor(e); return; }
+      if(!state.drawing){ state.dragging=false; state.dragHistorySaved=false; state.dragCopied=false; state.dragCopySourceIds=[]; state.dragCopyCreatedIds=[]; clearDragGuide(); state.dragStartRaw=null; state.dragOriginals=null; clearSnapIndicator(); clearSmartGuides(); draw(); updateCursor(e); return; }
       let p=screenToWorld(e);
       if(['line','arrow','wall','dimension','door','window'].includes(state.tool) && e.shiftKey) p = constrainToAngle(state.start, p, 45);
       if(state.tool==='wall') p = snapWallEndpoint(p);
@@ -5927,7 +6139,7 @@
         clearSnapIndicator();
         addObject(obj);
       }
-      state.drawing=false; state.start=null; state.current=null; clearSnapIndicator(); draw(); updateCursor(e);
+      state.drawing=false; state.start=null; state.current=null; clearSnapIndicator(); clearSmartGuides(); draw(); updateCursor(e);
     }
 
     function editSelectedTextObject() {
@@ -5979,6 +6191,7 @@
       if (tool !== state.tool) cancelAreaDraft(false);
       if (tool !== 'eraser') state.eraserPreview = null;
       clearSnapIndicator();
+      clearSmartGuides();
       document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active', b.dataset.tool === tool));
       state.tool = tool;
       if (tool !== 'select') { state.selectedIds = []; touchInteraction.multiSelectMode = false; }
@@ -6731,6 +6944,7 @@
         view: {
           visibleLayers: state.visibleLayers,
           endpointSnapMode: els.endpointSnapMode ? els.endpointSnapMode.value : 'on',
+          smartGuideMode: els.smartGuideMode ? els.smartGuideMode.value : 'on',
           snapMode: els.snapMode.value,
           gridSize: getInputNumber(els.gridSize, 20),
           unitName: els.unitName.value,
@@ -6835,6 +7049,7 @@
       if(view.scaleFactor || data.scaleFactor) els.scaleFactor.value = view.scaleFactor || data.scaleFactor;
       if(view.gridSize || data.gridSize) els.gridSize.value = view.gridSize || data.gridSize;
       if(view.endpointSnapMode && els.endpointSnapMode) els.endpointSnapMode.value = view.endpointSnapMode;
+      if(view.smartGuideMode && els.smartGuideMode) els.smartGuideMode.value = view.smartGuideMode;
       if(view.snapMode || data.snapMode) els.snapMode.value = view.snapMode || data.snapMode;
       if(exportSettings.format) els.exportFormat.value = exportSettings.format;
       if(exportSettings.scale) els.exportScale.value = exportSettings.scale;
@@ -8419,9 +8634,12 @@
         markProjectDirty();
       });
     }
-    [els.lineWidth,els.wallThickness,els.wallStyle,els.openingThicknessMode,els.areaOpacity,els.fontSize,els.arrowMode,els.arrowSize,els.dimensionLabelMode,els.eraserWidth,els.endpointSnapMode,els.snapMode,els.gridSize,els.unitName,els.scaleFactor,els.layerSelect].forEach(el=>{ if(!el) return; el.addEventListener('input',()=>{ draw(); markProjectDirty(); }); el.addEventListener('change',()=>{ draw(); markProjectDirty(); }); });
+    [els.lineWidth,els.wallThickness,els.wallStyle,els.openingThicknessMode,els.areaOpacity,els.fontSize,els.arrowMode,els.arrowSize,els.dimensionLabelMode,els.eraserWidth,els.endpointSnapMode,els.smartGuideMode,els.snapMode,els.gridSize,els.unitName,els.scaleFactor,els.layerSelect].forEach(el=>{ if(!el) return; el.addEventListener('input',()=>{ draw(); markProjectDirty(); }); el.addEventListener('change',()=>{ draw(); markProjectDirty(); }); });
     if (els.endpointSnapMode) {
       els.endpointSnapMode.addEventListener('change', () => { clearSnapIndicator(); draw(); });
+    }
+    if (els.smartGuideMode) {
+      els.smartGuideMode.addEventListener('change', () => { clearSmartGuides(); draw(); });
     }
     if (els.eraserWidth) {
       ['input', 'change'].forEach(evt => els.eraserWidth.addEventListener(evt, () => saveBrushToolSettingsToStorage()));
