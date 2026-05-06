@@ -990,15 +990,65 @@
       align-items: center;
       height: 12px;
       margin: -2px 0 -2px calc(86px + 8px);
-      color: #1d4ed8;
+      color: #f97316;
       font-size: 15px;
       line-height: 1;
       user-select: none;
+      cursor: pointer;
     }
     .aspect-link.unlocked {
-      color: #94a3b8;
-      opacity: .25;
+      color: #cbd5e1;
+      opacity: 1;
     }
+    .aspect-link svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+    }
+
+    .lock-icon-btn {
+      width: 69px;
+      min-width: 69px;
+      max-width: 69px;
+      height: 30px;
+      min-height: 30px;
+      padding: 0;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #cbd5e1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .lock-icon-btn svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+      stroke: currentColor;
+    }
+    .lock-icon-btn.locked {
+      color: #f97316;
+      border-color: #fdba74;
+      background: #fff7ed;
+      box-shadow: 0 0 0 2px rgba(249,115,22,.10);
+    }
+    .lock-icon-btn:hover { background: #f8fafc; }
+    .lock-icon-btn.locked:hover { background: #ffedd5; }
+    .metric-group.lock-toggle-group {
+      width: 104px;
+      min-width: 104px;
+      max-width: 104px;
+    }
+    .metric-group.lock-toggle-group .metric-label {
+      width: 32px;
+      min-width: 32px;
+    }
+    .locked-selection-badge {
+      pointer-events: none;
+    }
+
     .full { width: 100%; }
     .swatches {
       display: grid;
@@ -1915,7 +1965,7 @@
               <label>宽 px</label>
               <input id="pageWidth" type="number" min="200" max="6000" value="1100" />
             </div>
-            <div id="aspectRatioLink" class="aspect-link" title="锁定宽高比">🔒</div>
+            <div id="aspectRatioLink" class="aspect-link" title="锁定宽高比"></div>
             <div class="row">
               <label>高 px</label>
               <input id="pageHeight" type="number" min="200" max="6000" value="850" />
@@ -1998,6 +2048,7 @@
             <div>拖动节点或控制点时，按 Esc 可取消本次调整</div>
             <div>拖动对象时，Shift 可锁定水平 / 垂直；Alt / Option 可复制拖动</div>
             <div>Alt / Option + Shift 拖动：复制并水平 / 垂直约束移动</div>
+            <div>Alt / Option + L：锁定 / 解锁选中对象</div>
             <div>文字编辑框：Enter 换行；Ctrl / Command + Enter 确定；Esc 取消</div>
             <div>方向键微调 1 px；Shift+方向键移动 10 px，不受吸附限制</div>
             <div>Ctrl+C / Ctrl+V 复制粘贴</div>
@@ -2025,7 +2076,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v142';
+    const APP_VERSION = 'v154';
     const UI_COLORS = {
       selectionBlue: '#2563eb',
       snapOrange: '#f97316',
@@ -2033,7 +2084,8 @@
       closeGreen: '#22c55e',
       closeGreenSoft: '#f0fdf4',
       dangerRed: '#dc2626',
-      guideGray: 'rgba(148, 163, 184, 0.58)'
+      guideGray: 'rgba(148, 163, 184, 0.58)',
+      lockGray: '#cbd5e1'
     };
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -2101,6 +2153,9 @@
       snapIndicator: null,
       smartGuides: null,
       moveEndpointSnap: null,
+      lockBadgeHoverId: null,
+      lockBadgePressId: null,
+      lockBadgePointerId: null,
       eraserPreview: null,
       brushColor: '#000000',
       brushOpacity: 1,
@@ -2399,38 +2454,12 @@
       const points = [];
       const excluded = normalizeExcludedObjectIds(excludeObjectId);
       state.objects.forEach(o => {
-        if (!o || excluded.has(o.id) || !isLayerVisible(o)) return;
-        if (['line', 'arrow', 'wall', 'dimension', 'door', 'window'].includes(o.type)) {
-          addSnapPoint(points, o.x1, o.y1, o.id, 'endpoint', 1);
-          addSnapPoint(points, o.x2, o.y2, o.id, 'endpoint', 2);
-          return;
-        }
-        if (o.type === 'area') {
-          (Array.isArray(o.points) ? o.points : []).forEach((pt, index) => addSnapPoint(points, pt.x, pt.y, o.id, 'vertex', index));
-          return;
-        }
-        if (o.type === 'rect') {
-          const b = getBoxBounds(o);
-          addSnapPoint(points, b.left, b.top, o.id, 'corner', 'nw');
-          addSnapPoint(points, b.right, b.top, o.id, 'corner', 'ne');
-          addSnapPoint(points, b.right, b.bottom, o.id, 'corner', 'se');
-          addSnapPoint(points, b.left, b.bottom, o.id, 'corner', 'sw');
-          return;
-        }
-        if (o.type === 'ellipse') {
-          const b = getBoxBounds(o);
-          const cx = (b.left + b.right) / 2;
-          const cy = (b.top + b.bottom) / 2;
-          addSnapPoint(points, cx, b.top, o.id, 'ellipse-control', 'n');
-          addSnapPoint(points, b.right, cy, o.id, 'ellipse-control', 'e');
-          addSnapPoint(points, cx, b.bottom, o.id, 'ellipse-control', 's');
-          addSnapPoint(points, b.left, cy, o.id, 'ellipse-control', 'w');
-          return;
-        }
-        if (o.type === 'text') {
-          addTextBoxSnapPoints(points, o);
-          return;
-        }
+        if (!o || !o.id || excluded.has(o.id) || o.type === 'brush' || o.type === 'erase') return;
+        // V143：端点吸附、移动对象端点吸附、智能辅助线统一使用同一套对象参考点。
+        // 这样后续新增对象参考点时，不会出现“辅助线能识别，但端点吸附不能识别”的不一致。
+        getObjectAlignmentPoints(o).forEach(pt => {
+          addSnapPoint(points, pt.x, pt.y, pt.objectId || o.id, pt.kind, pt.key);
+        });
       });
       return points;
     }
@@ -2467,6 +2496,31 @@
       const px = Number(x), py = Number(y);
       if (!Number.isFinite(px) || !Number.isFinite(py)) return;
       points.push({ x: px, y: py, objectId, kind, key });
+    }
+
+    // V145：吸附手感优化。新增中点、中心点和文字框参考点后，必须让“真实端点/角点/节点”优先，
+    // 避免中点、中心点或文字框参考点抢走主要吸附目标。
+    function getAlignmentPointPriority(point) {
+      const kind = point && point.kind;
+      if (kind === 'endpoint' || kind === 'vertex' || kind === 'corner') return 0;
+      if (kind === 'ellipse-control') return 1;
+      if (kind === 'midpoint') return 2;
+      if (kind === 'center') return 3;
+      if (kind === 'text-box') return 4;
+      return 2;
+    }
+
+    function getAlignmentPriorityPenalty(point, factor = 1) {
+      const unit = Math.max(2.5 / Math.max(0.0001, state.zoom), 0.75);
+      return getAlignmentPointPriority(point) * unit * factor;
+    }
+
+    function getAlignmentPointScore(distance, point, factor = 1) {
+      return distance + getAlignmentPriorityPenalty(point, factor);
+    }
+
+    function getAlignmentPairScore(distance, source, target) {
+      return distance + getAlignmentPriorityPenalty(source, 0.55) + getAlignmentPriorityPenalty(target, 1);
     }
 
     function getTextAlignmentBox(o) {
@@ -2516,6 +2570,8 @@
       if (['line', 'arrow', 'wall', 'dimension', 'door', 'window'].includes(o.type)) {
         addAlignmentPoint(points, o.x1, o.y1, o.id, 'endpoint', 1);
         addAlignmentPoint(points, o.x2, o.y2, o.id, 'endpoint', 2);
+        // V144：线形对象补充中点，让线、箭头、墙、标尺、门、窗都能作为“动态对象网格”的中点参考。
+        addAlignmentPoint(points, (o.x1 + o.x2) / 2, (o.y1 + o.y2) / 2, o.id, 'midpoint', 'mid');
         return points;
       }
       if (o.type === 'area') {
@@ -2524,10 +2580,18 @@
       }
       if (o.type === 'rect') {
         const b = getBoxBounds(o);
+        const cx = (b.left + b.right) / 2;
+        const cy = (b.top + b.bottom) / 2;
+        // V144：矩形从四角扩展为 9 点，和文字框的参考逻辑保持一致。
         addAlignmentPoint(points, b.left, b.top, o.id, 'corner', 'nw');
+        addAlignmentPoint(points, cx, b.top, o.id, 'corner', 'n');
         addAlignmentPoint(points, b.right, b.top, o.id, 'corner', 'ne');
+        addAlignmentPoint(points, b.right, cy, o.id, 'corner', 'e');
         addAlignmentPoint(points, b.right, b.bottom, o.id, 'corner', 'se');
+        addAlignmentPoint(points, cx, b.bottom, o.id, 'corner', 's');
         addAlignmentPoint(points, b.left, b.bottom, o.id, 'corner', 'sw');
+        addAlignmentPoint(points, b.left, cy, o.id, 'corner', 'w');
+        addAlignmentPoint(points, cx, cy, o.id, 'center', 'c');
         return points;
       }
       if (o.type === 'ellipse') {
@@ -2538,6 +2602,8 @@
         addAlignmentPoint(points, b.right, cy, o.id, 'ellipse-control', 'e');
         addAlignmentPoint(points, cx, b.bottom, o.id, 'ellipse-control', 's');
         addAlignmentPoint(points, b.left, cy, o.id, 'ellipse-control', 'w');
+        // V144：椭圆补充中心点；外接矩形四角暂不作为参考点，避免和椭圆视觉边界产生误解。
+        addAlignmentPoint(points, cx, cy, o.id, 'center', 'c');
         return points;
       }
       if (o.type === 'text') {
@@ -2573,11 +2639,14 @@
           const dx = Math.abs(ap.x - cp.x);
           const dy = Math.abs(ap.y - cp.y);
           const dist = Math.hypot(ap.x - cp.x, ap.y - cp.y);
-          if (dx <= threshold && (!bestV || dx < bestV.delta - 0.0001 || (Math.abs(dx - bestV.delta) <= 0.0001 && dist < bestV.distance))) {
-            bestV = { x: cp.x, delta: dx, distance: dist, target: cp, active: ap };
+          // V145：在接近程度相近时优先端点/角点/节点，降低中点、中心点、文字框参考点抢线概率。
+          const vScore = dx + getAlignmentPriorityPenalty(ap, 0.35) + getAlignmentPriorityPenalty(cp, 0.75);
+          const hScore = dy + getAlignmentPriorityPenalty(ap, 0.35) + getAlignmentPriorityPenalty(cp, 0.75);
+          if (dx <= threshold && (!bestV || vScore < bestV.score - 0.0001 || (Math.abs(vScore - bestV.score) <= 0.0001 && dist < bestV.distance))) {
+            bestV = { x: cp.x, delta: dx, score: vScore, distance: dist, target: cp, active: ap };
           }
-          if (dy <= threshold && (!bestH || dy < bestH.delta - 0.0001 || (Math.abs(dy - bestH.delta) <= 0.0001 && dist < bestH.distance))) {
-            bestH = { y: cp.y, delta: dy, distance: dist, target: cp, active: ap };
+          if (dy <= threshold && (!bestH || hScore < bestH.score - 0.0001 || (Math.abs(hScore - bestH.score) <= 0.0001 && dist < bestH.distance))) {
+            bestH = { y: cp.y, delta: dy, score: hScore, distance: dist, target: cp, active: ap };
           }
         });
       });
@@ -2650,11 +2719,14 @@
       if (!p || !isEndpointSnapEnabled()) return null;
       const threshold = Math.max(12 / state.zoom, 6);
       let best = null;
+      let bestScore = Infinity;
       let bestDist = Infinity;
       getSnapEndpointCandidates(options.excludeObjectId || null).forEach(ep => {
         const d = Math.hypot(p.x - ep.x, p.y - ep.y);
-        if (d <= threshold && d < bestDist) {
+        const score = getAlignmentPointScore(d, ep);
+        if (d <= threshold && (score < bestScore - 0.0001 || (Math.abs(score - bestScore) <= 0.0001 && d < bestDist))) {
           best = ep;
+          bestScore = score;
           bestDist = d;
         }
       });
@@ -2692,12 +2764,15 @@
 
     function findMoveEndpointSnapPair(sources, targets, threshold) {
       let best = null;
+      let bestScore = Infinity;
       let bestDist = Infinity;
       sources.forEach(src => {
         targets.forEach(tgt => {
           const d = Math.hypot(src.x - tgt.x, src.y - tgt.y);
-          if (d <= threshold && d < bestDist) {
-            best = { source: src, target: tgt, distance: d };
+          const score = getAlignmentPairScore(d, src, tgt);
+          if (d <= threshold && (score < bestScore - 0.0001 || (Math.abs(score - bestScore) <= 0.0001 && d < bestDist))) {
+            best = { source: src, target: tgt, distance: d, score };
+            bestScore = score;
             bestDist = d;
           }
         });
@@ -2712,7 +2787,7 @@
       if (!src || !tgt) return null;
       const d = Math.hypot(src.x - tgt.x, src.y - tgt.y);
       if (d > threshold) return null;
-      return { source: src, target: tgt, distance: d };
+      return { source: src, target: tgt, distance: d, score: getAlignmentPairScore(d, src, tgt) };
     }
 
     function snapMoveEndpointDelta(dx, dy, ids = []) {
@@ -2732,7 +2807,8 @@
       }
       let best = findMoveEndpointSnapPair(sources, targets, threshold);
       const current = findSpecificMoveEndpointSnapPair(sources, targets, state.moveEndpointSnap, detachThreshold);
-      if (current && (!best || best.distance > current.distance - switchMargin)) best = current;
+      // V145：目标切换防抖也按优先级后的 score 判断，避免中点/中心点在密集区域轻易抢走端点目标。
+      if (current && (!best || best.score > current.score - switchMargin)) best = current;
       if (!best) {
         clearMoveEndpointSnap();
         return { dx, dy, snapped: false };
@@ -3178,6 +3254,18 @@
       updateObjectMetrics();
     }
 
+    let transientStatusTimer = null;
+    function showStatusMessage(message, duration = 1400) {
+      if (!els.status || state.modalOpen) return;
+      const previous = els.status.innerHTML;
+      els.status.innerHTML = `<span class="status-tool">${escapeHtml(message || '')}</span>`;
+      if (transientStatusTimer) clearTimeout(transientStatusTimer);
+      transientStatusTimer = setTimeout(() => {
+        transientStatusTimer = null;
+        updateStatus();
+      }, duration);
+    }
+
     function updateCanvasFloatBars() {
       const wrap = document.querySelector('.canvas-wrap');
       const statusBar = els.status;
@@ -3224,7 +3312,7 @@
     function getSingleEditableLineObject() {
       if (state.selectedIds.length !== 1) return null;
       const o = state.objects.find(x => x.id === state.selectedIds[0]);
-      return isEditableLineObject(o) ? o : null;
+      return isEditableLineObject(o) && !isObjectLocked(o) ? o : null;
     }
 
     function getObjectPixelLength(o) {
@@ -3251,15 +3339,17 @@
 
     function getPropertyDefs(o) {
       if (!o || o.type === 'erase') return [];
+      if (isObjectLocked(o)) return [{ key:'locked', label:'锁定', type:'lockToggle' }];
       if (o.type === 'brush') {
         return [
+          { key:'locked', label:'锁定', type:'lockToggle' },
           { key:'color', label:'颜色', type:'swatches' },
           { key:'brushObjectWidth', label:'大小', type:'number', unit:'px' },
           { key:'brushObjectOpacity', label:'透明', type:'number', unit:'%' },
           { key:'layer', label:'图层', type:'select', options:[['areas','区域'],['walls','墙体'],['symbols','门窗'],['shapes','图形'],['annotations','标注'],['text','文字']] }
         ];
       }
-      const defs = [];
+      const defs = [{ key:'locked', label:'锁定', type:'lockToggle' }];
       if (isEditableLineObject(o)) {
         defs.push({ key:'length', label:'长度', type:'number', unit: els.unitName.value.trim() || 'unit' });
         defs.push({ key:'angle', label:'角度', type:'number', unit:'°', cls:'angle-input' });
@@ -3310,6 +3400,7 @@
         const b = getObjectBox(o);
         return formatNumber(key === 'width' ? Math.abs(b.w) : Math.abs(b.h));
       }
+      if (key === 'locked') return isObjectLocked(o) ? 'true' : 'false';
       if (key === 'textPreview') return o.text || '文字';
       if (key === 'text') return o.text || '文字';
       if (key === 'color') return o.color || '#111827';
@@ -3360,22 +3451,25 @@
 
     function getMultiPropertyDefs(objects) {
       if (!objects || objects.length < 2) return [];
+      const lockDef = { key:'locked', label:'锁定', type:'lockToggle' };
+      if (objects.some(isObjectLocked)) return [lockDef];
       const types = [...new Set(objects.map(o => o.type === 'erase' ? 'brush' : o.type))];
       const allFillableShapes = objects.every(o => isFillableShapeObject(o));
       if (types.length > 1) {
         if (allFillableShapes) {
           const allFillEnabled = objects.every(o => getShapeFillEnabled(o));
           return [
+            lockDef,
             { key:'color', label:'颜色', type:'swatches' },
             { key:'fillEnabled', label:'填充', type:'select', options:[['false','无'],['true','有']] },
             { key:'fillOpacity', label:'透明', type:'number', unit:'%', disabled: !allFillEnabled, disabledTitle: '填充为无时，透明度保留但不参与显示' },
             { key:'lineWidth', label:'线宽', type:'number', unit:'px' }
           ];
         }
-        return [{ key:'color', label:'颜色', type:'swatches' }];
+        return [lockDef, { key:'color', label:'颜色', type:'swatches' }];
       }
       const type = types[0];
-      const defs = [{ key:'color', label:'颜色', type:'swatches' }];
+      const defs = [lockDef, { key:'color', label:'颜色', type:'swatches' }];
       if (isFillableShapeType(type)) {
         const allFillEnabled = objects.every(o => getShapeFillEnabled(o));
         defs.push({ key:'fillEnabled', label:'填充', type:'select', options:[['false','无'],['true','有']] });
@@ -3439,7 +3533,9 @@
 
     function applyObjectProperty(o, key, raw, n) {
       if (!canObjectReceiveMultiProperty(o, key)) return false;
-      if (key === 'color') {
+      if (key === 'locked') {
+        o.locked = String(raw) === 'true' || raw === true;
+      } else if (key === 'color') {
         o.color = raw;
       } else if (key === 'lineWidth') {
         o.lineWidth = Math.max(1, n);
@@ -3489,6 +3585,7 @@
       const objects = getSelectedObjects();
       if (!input || objects.length < 2) return false;
       const key = input.dataset.prop;
+      if (objects.some(isObjectLocked) && key !== 'locked') { updateObjectMetrics(true); return true; }
       const raw = input.dataset.value ?? input.value;
       if (isMixedPropertyValue(raw) || String(raw ?? '').trim() === MIXED_PROPERTY_LABEL) { updateObjectMetrics(true); return true; }
       if (isNumericPropertyKey(key) && String(raw ?? '').trim() === '') { updateObjectMetrics(true); return true; }
@@ -3641,6 +3738,21 @@
       if (def.title) label.title = def.title;
       group.appendChild(label);
       let input;
+      if (def.type === 'lockToggle') {
+        group.classList.add('lock-toggle-group');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'lock-icon-btn';
+        btn.dataset.prop = def.key;
+        const locked = value === 'true' || value === true;
+        setLockButtonVisual(btn, locked);
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          toggleSelectedLock();
+        });
+        group.appendChild(btn);
+        return group;
+      }
       if (def.type === 'swatches') {
         const picker = document.createElement('span');
         picker.className = 'prop-color-picker';
@@ -4168,7 +4280,22 @@
       }
       direct.forEach(def => {
         const value = getValue(def);
-        if (def.type === 'swatches') {
+        if (def.type === 'lockToggle') {
+        group.classList.add('lock-toggle-group');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'lock-icon-btn';
+        btn.dataset.prop = def.key;
+        const locked = value === 'true' || value === true;
+        setLockButtonVisual(btn, locked);
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          toggleSelectedLock();
+        });
+        group.appendChild(btn);
+        return group;
+      }
+      if (def.type === 'swatches') {
           const btn = fields.querySelector(`[data-prop="${def.key}"]`);
           updateColorPropertyButton(btn, value);
           return;
@@ -4215,6 +4342,7 @@
       if (!o && state.tool === 'eraser') { applyBrushToolPropertyInput(input); return; }
       if (!o) return;
       const key = input.dataset.prop;
+      if (isObjectLocked(o) && key !== 'locked') { updateObjectMetrics(true); return; }
       const raw = input.dataset.value ?? input.value;
       if (isMixedPropertyValue(raw) || String(raw ?? '').trim() === MIXED_PROPERTY_LABEL) { updateObjectMetrics(true); return; }
       const n = Number(raw);
@@ -5421,16 +5549,125 @@
       return getSelectionNormalColor();
     }
 
+
+    function isObjectLocked(o) {
+      return !!(o && o.locked === true);
+    }
+    function hasLockedSelection() {
+      return getSelectedObjects().some(isObjectLocked);
+    }
+    function getUnlockedSelectedObjects() {
+      return getSelectedObjects().filter(o => !isObjectLocked(o));
+    }
+    function lockIconSvgMarkup() {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>';
+    }
+    function setLockButtonVisual(btn, locked, titleBase = '') {
+      if (!btn) return;
+      btn.classList.toggle('locked', !!locked);
+      btn.innerHTML = lockIconSvgMarkup();
+      btn.title = titleBase || (locked ? '解锁对象 Alt/Option + L' : '锁定对象 Alt/Option + L');
+      btn.setAttribute('aria-label', locked ? '已锁定，点击解锁' : '未锁定，点击锁定');
+    }
+    function toggleSelectedLock() {
+      const selected = getSelectedObjects().filter(o => o && o.type !== 'erase');
+      if (!selected.length) return;
+      const allLocked = selected.every(isObjectLocked);
+      saveHistory();
+      selected.forEach(o => { o.locked = !allLocked; });
+      draw();
+      updateObjectMetrics(true);
+      markProjectDirty();
+    }
+
+    function getLockedSelectionBadgeBox(o) {
+      if (!o || !isObjectLocked(o)) return null;
+      const b = getObjectBox(o);
+      const size = Math.max(18 / state.zoom, 14);
+      return {
+        x: b.x + b.w + 8,
+        y: b.y - 8 - size,
+        size
+      };
+    }
+    function hitLockedSelectionBadge(raw, pointerEvent = null) {
+      if (!raw || state.tool !== 'select' || state.selectedIds.length !== 1) return null;
+      const o = state.objects.find(obj => obj.id === state.selectedIds[0] && obj.type !== 'erase');
+      if (!o || !isObjectLocked(o)) return null;
+      const box = getLockedSelectionBadgeBox(o);
+      if (!box) return null;
+      // V150：小锁 hover 后视觉范围比图标略明显，点击热区也同步放大，避免用户点到边缘/光晕附近却无法解锁。
+      const pad = isTouchLike(pointerEvent) ? Math.max(16 / state.zoom, 8) : Math.max(8 / state.zoom, 5);
+      if (raw.x >= box.x - pad && raw.x <= box.x + box.size + pad && raw.y >= box.y - pad && raw.y <= box.y + box.size + pad) return o;
+      return null;
+    }
+    function drawCanvasLockIcon(c, x, y, size, color) {
+      // 与属性栏 SVG 锁图标采用同一 viewBox 比例：rect 5 10 14 10 rx 2；path M8 10 V7 a4 4 0 0 1 8 0 v3
+      const sx = size / 24;
+      const px = v => x + v * sx;
+      const py = v => y + v * sx;
+      c.save();
+      c.strokeStyle = color;
+      c.lineWidth = Math.max(2.2 * sx, 0.75 / state.zoom);
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      c.setLineDash([]);
+      c.beginPath();
+      const rx = 2 * sx;
+      const left = px(5), top = py(10), w = 14 * sx, h = 10 * sx;
+      if (c.roundRect) c.roundRect(left, top, w, h, rx);
+      else c.rect(left, top, w, h);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(px(8), py(10));
+      c.lineTo(px(8), py(7));
+      c.bezierCurveTo(px(8), py(4.8), px(9.8), py(3), px(12), py(3));
+      c.bezierCurveTo(px(14.2), py(3), px(16), py(4.8), px(16), py(7));
+      c.lineTo(px(16), py(10));
+      c.stroke();
+      c.restore();
+    }
+
     function drawSelection(c,o){
       const b=getObjectBox(o);
-      const accent = getSelectionAccentColor();
+      const locked = isObjectLocked(o);
+      const accent = locked ? '#64748b' : getSelectionAccentColor();
       c.save();
-      c.setLineDash([5,4]);
+      c.setLineDash(locked ? [7,5] : [5,4]);
       c.strokeStyle=accent;
       c.lineWidth=getSelectionStrokeWidth();
       c.strokeRect(b.x-6,b.y-6,b.w+12,b.h+12);
+      if (locked) {
+        const badge = getLockedSelectionBadgeBox(o);
+        if (badge) {
+          const { x, y, size } = badge;
+          c.setLineDash([]);
+          const badgeHover = state.lockBadgeHoverId === o.id;
+          const badgePress = state.lockBadgePressId === o.id;
+          const cornerRadius = Math.max(5 / state.zoom, 3);
+          c.save();
+          c.setLineDash([]);
+          // 与属性栏锁按钮保持一致：hover/按下时只让背景色稍微加深，边框与图标颜色不额外变重。
+          c.fillStyle = (badgeHover || badgePress) ? 'rgba(255,237,213,.98)' : 'rgba(255,247,237,.95)';
+          c.strokeStyle = '#fdba74';
+          c.lineWidth = Math.max(1 / state.zoom, .7);
+          // V152：绘制画布小锁背景前必须开启新路径，避免沿用上一对象路径，导致箭头/线条内出现橙色杂线。
+          c.beginPath();
+          if (c.roundRect) c.roundRect(x, y, size, size, cornerRadius);
+          else c.rect(x, y, size, size);
+          c.fill();
+          c.stroke();
+          c.restore();
+
+          // V150：锁定提示小图标 hover 效果与属性栏统一，仅加深背景；点击热区扩大，避免视觉反馈影响解锁。
+          const iconSize = size * 0.58;
+          const ix = x + (size - iconSize) / 2;
+          const iy = y + (size - iconSize) / 2;
+          drawCanvasLockIcon(c, ix, iy, iconSize, UI_COLORS.snapOrange);
+        }
+      }
       c.restore();
-      if (state.selectedIds.length === 1) {
+      if (!locked && state.selectedIds.length === 1) {
         if (isEditableLineObject(o)) drawEndpointHandles(c, o);
         else if (isResizableBoxObject(o)) drawBoxResizeHandles(c, o);
         else if (o.type === 'area') drawAreaVertexHandles(c, o);
@@ -5640,7 +5877,7 @@
     function hitBoxResizeHandle(p) {
       if (state.selectedIds.length !== 1) return null;
       const o = state.objects.find(x => x.id === state.selectedIds[0]);
-      if (!isResizableBoxObject(o)) return null;
+      if (!isResizableBoxObject(o) || isObjectLocked(o)) return null;
       const tolerance = getHandleHitTolerance();
       let best = null;
       let bestDist = Infinity;
@@ -5654,7 +5891,7 @@
     function hitAreaVertexHandle(p) {
       if (state.selectedIds.length !== 1) return null;
       const o = state.objects.find(x => x.id === state.selectedIds[0]);
-      if (!o || o.type !== 'area') return null;
+      if (!o || o.type !== 'area' || isObjectLocked(o)) return null;
       const pts = Array.isArray(o.points) ? o.points : [];
       if (pts.length < 3) return null;
       const tolerance = getHandleHitTolerance();
@@ -5699,10 +5936,17 @@
         cursor = 'default';
       } else if (e) {
         const raw = rawScreenToWorld(e);
+        const lockBadgeHit = hitLockedSelectionBadge(raw, e);
+        const prevLockBadgeHoverId = state.lockBadgeHoverId;
+        state.lockBadgeHoverId = lockBadgeHit ? lockBadgeHit.id : null;
+        if (prevLockBadgeHoverId !== state.lockBadgeHoverId) draw();
         const resizeHit = hitResizeHandle(raw);
-        if (resizeHit) cursor = resizeHit.cursor || 'pointer';
+        if (lockBadgeHit) cursor = 'pointer';
+        else if (resizeHit) cursor = resizeHit.cursor || 'pointer';
         else if (hitTest(raw)) cursor = 'move';
         else cursor = 'default';
+      } else {
+        if (state.lockBadgeHoverId !== null) { state.lockBadgeHoverId = null; draw(); }
       }
 
       canvas.style.cursor = cursor;
@@ -6019,6 +6263,21 @@
       // 选择工具按下时只用于选中 / 拖动 / 控制点命中，不应触发端点吸附反馈。
       // 否则 iPad 上只是按住端点，还没真正吸附到其他端点，选中框和控制点也会误变红。
       if (state.tool === 'select') clearSnapIndicator();
+      if (state.tool === 'select') {
+        const lockBadgeHit = hitLockedSelectionBadge(raw, e);
+        if (lockBadgeHit) {
+          e.preventDefault();
+          e.stopPropagation();
+          // V151：小锁按标准按钮流程处理。按下只记录状态，松手仍在小锁范围内才解锁。
+          // 避免 pointerdown 立即解锁后又进入普通画布 pointerup 逻辑，导致 hover/press 状态卡住或解锁失效。
+          state.lockBadgePressId = lockBadgeHit.id;
+          state.lockBadgeHoverId = lockBadgeHit.id;
+          state.lockBadgePointerId = e.pointerId;
+          draw();
+          updateCursor(e);
+          return;
+        }
+      }
       updateCursor(e);
       if(state.tool==='wall') p = snapWallEndpoint(p);
       startCanvasInteraction(e, p, raw);
@@ -6077,7 +6336,7 @@
           }
           else if(!state.selectedIds.includes(found.id)) state.selectedIds=ids;
           beginTouchLongPress(isTouchLike(e) ? found : null);
-          if(state.selectedIds.length){
+          if(state.selectedIds.length && !hasLockedSelection()){
             state.dragging=true;
             state.dragHistorySaved=false;
             state.dragCopied=false;
@@ -6162,6 +6421,16 @@
       }
 
       let raw=rawScreenToWorld(e), p = state.tool === 'eraser' ? raw : screenToWorld(e);
+      if (state.lockBadgePressId !== null && state.lockBadgePointerId === e.pointerId) {
+        const hit = hitLockedSelectionBadge(raw, e);
+        const nextHoverId = hit && hit.id === state.lockBadgePressId ? hit.id : null;
+        if (state.lockBadgeHoverId !== nextHoverId) {
+          state.lockBadgeHoverId = nextHoverId;
+          draw();
+        }
+        canvas.style.cursor = nextHoverId ? 'pointer' : 'default';
+        return;
+      }
       updateCursor(e);
       if(state.tool === 'eraser') {
         clearSnapIndicator();
@@ -6230,7 +6499,7 @@
             state.dragHistorySaved = true;
           }
           restoreDragOriginals();
-          state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))moveObject(o,dx,dy); });
+          state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id) && !isObjectLocked(o))moveObject(o,dx,dy); });
           if (endpointDragSnapped) clearSmartGuides();
           else updateSmartGuidesForSelectedObjects();
           draw();
@@ -6252,6 +6521,31 @@
       clearTouchLongPress();
       activePointers.delete(e.pointerId);
       try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+
+      if (state.lockBadgePressId !== null && state.lockBadgePointerId === e.pointerId) {
+        e.preventDefault();
+        e.stopPropagation();
+        const raw = rawScreenToWorld(e);
+        const hit = hitLockedSelectionBadge(raw, e);
+        const shouldUnlock = !!(hit && hit.id === state.lockBadgePressId);
+        state.lockBadgePressId = null;
+        state.lockBadgeHoverId = null;
+        state.lockBadgePointerId = null;
+        if (wasTouch) {
+          touchInteraction.primaryId = null;
+          touchInteraction.emptyPanCandidate = false;
+          touchInteraction.panStarted = false;
+          touchInteraction.pinchMode = false;
+        }
+        if (shouldUnlock) {
+          toggleSelectedLock();
+          showStatusMessage('对象已解锁');
+        } else {
+          draw();
+        }
+        updateCursor(e);
+        return;
+      }
 
       if (state.backgroundEditMode) {
         e.stopPropagation();
@@ -6293,6 +6587,14 @@
       clearTouchLongPress();
       activePointers.delete(e.pointerId);
       try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+      if (state.lockBadgePressId !== null && state.lockBadgePointerId === e.pointerId) {
+        state.lockBadgePressId = null;
+        state.lockBadgeHoverId = null;
+        state.lockBadgePointerId = null;
+        draw();
+        updateCursor(e);
+        return;
+      }
       if (state.backgroundEditMode) {
         if (state.backgroundAdjusting) {
           restoreBackgroundAdjustOriginal();
@@ -6319,6 +6621,14 @@
     canvas.addEventListener('pointermove', handlePointerMove);
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('pointercancel', handlePointerCancel);
+    canvas.addEventListener('pointerleave', () => {
+      if (state.lockBadgeHoverId !== null || state.lockBadgePressId !== null) {
+        state.lockBadgeHoverId = null;
+        state.lockBadgePressId = null;
+        state.lockBadgePointerId = null;
+        draw();
+      }
+    });
     const canvasWrapForTouchGuards = getCanvasWrap();
     if (canvasWrapForTouchGuards) {
       ['touchstart','touchmove'].forEach(type => {
@@ -6359,7 +6669,7 @@
     canvas.addEventListener('lostpointercapture', e => {
       if (activePointers.has(e.pointerId)) handlePointerCancel(e);
     });
-    canvas.addEventListener('dblclick', e=>{ if(state.modalOpen || state.backgroundEditMode){ e.preventDefault(); e.stopPropagation(); return; } if(state.tool==='area'){ e.preventDefault(); completeAreaDraft(); return; } const t=hitText(rawScreenToWorld(e)); if(t){ e.preventDefault(); editTextObject(t); } });
+    canvas.addEventListener('dblclick', e=>{ if(state.modalOpen || state.backgroundEditMode){ e.preventDefault(); e.stopPropagation(); return; } if(state.tool==='area'){ e.preventDefault(); completeAreaDraft(); return; } const t=hitText(rawScreenToWorld(e)); if(t){ e.preventDefault(); if(isObjectLocked(t)){ showStatusMessage('已锁定文字不能编辑'); return; } editTextObject(t); } });
 
     function finishPointer(e){
       if(state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex){
@@ -6401,6 +6711,7 @@
         showMessageDialog('未选择文字', '请先选中一个文字标签。');
         return;
       }
+      if (isObjectLocked(o)) { showStatusMessage('已锁定文字不能编辑'); return; }
       editTextObject(o);
     }
 
@@ -6491,8 +6802,8 @@
     }
     els.status.addEventListener('pointerdown', handleStatusAction);
 
-    function deleteSelected(){ if(!state.selectedIds.length)return; saveHistory(); state.objects=state.objects.filter(o=>!state.selectedIds.includes(o.id)); state.selectedIds=[]; draw(); }
-    function copySelected(){ state.clipboard=state.objects.filter(o=>state.selectedIds.includes(o.id)).map(o=>JSON.parse(JSON.stringify(o))); }
+    function deleteSelected(){ if(!state.selectedIds.length)return; const locked = state.objects.filter(o=>state.selectedIds.includes(o.id)&&isObjectLocked(o)); const deleteIds = new Set(state.selectedIds.filter(id=>!locked.some(o=>o.id===id))); if(!deleteIds.size){ showStatusMessage('已锁定对象不能删除'); return; } saveHistory(); state.objects=state.objects.filter(o=>!deleteIds.has(o.id)); state.selectedIds=state.selectedIds.filter(id=>!deleteIds.has(id)); draw(); updateObjectMetrics(true); markProjectDirty(); }
+    function copySelected(){ state.clipboard=state.objects.filter(o=>state.selectedIds.includes(o.id)&&!isObjectLocked(o)).map(o=>JSON.parse(JSON.stringify(o))); if(!state.clipboard.length && state.selectedIds.length) showStatusMessage('已锁定对象不能复制'); }
     function pasteClipboard(){ if(!state.clipboard.length)return; saveHistory(); const newIds=[]; const groupMap={}; state.clipboard.forEach(src=>{ const o=JSON.parse(JSON.stringify(src)); const oldGroup=o.groupId; o.id=uid(); if(oldGroup){ if(!groupMap[oldGroup])groupMap[oldGroup]=uid(); o.groupId=groupMap[oldGroup]; } moveObject(o,20,20); state.objects.push(o); newIds.push(o.id); }); state.selectedIds=newIds; draw(); }
 
 
@@ -6558,6 +6869,7 @@
         showMessageDialog('未选择对象', '请先选择一个或多个对象。');
         return;
       }
+      if (getSelectedObjects().every(isObjectLocked)) { showStatusMessage('已锁定对象不能修改属性'); return; }
       saveHistory();
 
       const color = els.strokeColor.value;
@@ -6574,7 +6886,7 @@
       const areaOpacity = getDefaultAreaFillOpacity();
 
       state.objects.forEach(o=>{
-        if(!state.selectedIds.includes(o.id) || o.type==='erase') return;
+        if(!state.selectedIds.includes(o.id) || o.type==='erase' || isObjectLocked(o)) return;
 
         // 通用属性：所有可见对象都允许后续改颜色、图层
         o.color = color;
@@ -6618,10 +6930,10 @@
       draw();
     }
 
-    function groupSelected(){ if(state.selectedIds.length<2)return; saveHistory(); const gid=uid(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))o.groupId=gid; }); draw(); }
-    function ungroupSelected(){ if(!state.selectedIds.length)return; saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))delete o.groupId; }); draw(); }
+    function groupSelected(){ if(state.selectedIds.length<2)return; if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法组合'); return; } saveHistory(); const gid=uid(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))o.groupId=gid; }); draw(); }
+    function ungroupSelected(){ if(!state.selectedIds.length)return; if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法取消组合'); return; } saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))delete o.groupId; }); draw(); }
 
-    function alignSelected(mode){ if(state.selectedIds.length<2)return; saveHistory(); const selected=state.objects.filter(o=>state.selectedIds.includes(o.id)); const boxes=selected.map(getObjectBox); const left=Math.min(...boxes.map(b=>b.x)), right=Math.max(...boxes.map(b=>b.x+b.w)), top=Math.min(...boxes.map(b=>b.y)), bottom=Math.max(...boxes.map(b=>b.y+b.h)); const cx=(left+right)/2, cy=(top+bottom)/2; selected.forEach((o,i)=>{ const b=boxes[i]; let dx=0,dy=0; if(mode==='left')dx=left-b.x; if(mode==='center')dx=cx-(b.x+b.w/2); if(mode==='right')dx=right-(b.x+b.w); if(mode==='top')dy=top-b.y; if(mode==='middle')dy=cy-(b.y+b.h/2); if(mode==='bottom')dy=bottom-(b.y+b.h); moveObject(o,dx,dy); }); draw(); }
+    function alignSelected(mode){ if(state.selectedIds.length<2)return; if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法对齐'); return; } saveHistory(); const selected=state.objects.filter(o=>state.selectedIds.includes(o.id)); const boxes=selected.map(getObjectBox); const left=Math.min(...boxes.map(b=>b.x)), right=Math.max(...boxes.map(b=>b.x+b.w)), top=Math.min(...boxes.map(b=>b.y)), bottom=Math.max(...boxes.map(b=>b.y+b.h)); const cx=(left+right)/2, cy=(top+bottom)/2; selected.forEach((o,i)=>{ const b=boxes[i]; let dx=0,dy=0; if(mode==='left')dx=left-b.x; if(mode==='center')dx=cx-(b.x+b.w/2); if(mode==='right')dx=right-(b.x+b.w); if(mode==='top')dy=top-b.y; if(mode==='middle')dy=cy-(b.y+b.h/2); if(mode==='bottom')dy=bottom-(b.y+b.h); moveObject(o,dx,dy); }); draw(); }
 
     document.getElementById('undoBtn').onclick=undo;
     document.getElementById('redoBtn').onclick=redo;
@@ -6675,13 +6987,21 @@
       if (!els.aspectRatioLink) return;
       const locked = isAspectRatioLocked();
       els.aspectRatioLink.classList.toggle('unlocked', !locked);
-      els.aspectRatioLink.textContent = '🔒';
+      els.aspectRatioLink.innerHTML = lockIconSvgMarkup();
       els.aspectRatioLink.title = locked ? '已锁定宽高比' : '未锁定宽高比';
     }
 
     function updateAspectRatioFromPage() {
       state.aspectRatio = Math.max(0.0001, state.pageW / Math.max(1, state.pageH));
       updateAspectRatioLockVisual();
+    }
+    if (els.aspectRatioLink) {
+      els.aspectRatioLink.addEventListener('click', () => {
+        els.aspectRatioLock.value = isAspectRatioLocked() ? 'off' : 'on';
+        syncSegmentedControls('aspectRatioLock');
+        updateAspectRatioFromPage();
+        markProjectDirty();
+      });
     }
     function getBackgroundContentBox() {
       const bg = state.backgroundImage;
@@ -7217,6 +7537,7 @@
 
     function normalizeLoadedObjects(objects){
       return (objects || []).map(o=>{
+        o.locked = o.locked === true;
         if((o.type==='door'||o.type==='window')&&!o.openingThicknessMode) {
           o.openingThicknessMode = o.openingUseWallThickness ? 'wall' : 'linear';
         }
@@ -8874,9 +9195,10 @@
       if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='v'){ e.preventDefault(); pasteClipboard(); return; }
       if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='g'&&!e.shiftKey){ e.preventDefault(); groupSelected(); return; }
       if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='g'){ e.preventDefault(); ungroupSelected(); return; }
+      if(e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase()==='l'){ e.preventDefault(); toggleSelectedLock(); return; }
       if(shouldDeleteObjectFromKey(e)){ e.preventDefault(); deleteSelected(); return; }
       const keys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
-      if(keys.includes(e.key)&&state.selectedIds.length){ e.preventDefault(); const step=e.shiftKey?10:1; let dx=0,dy=0; if(e.key==='ArrowLeft')dx=-step; if(e.key==='ArrowRight')dx=step; if(e.key==='ArrowUp')dy=-step; if(e.key==='ArrowDown')dy=step; saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))moveObject(o,dx,dy); }); draw(); }
+      if(keys.includes(e.key)&&state.selectedIds.length){ e.preventDefault(); if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法移动'); return; } const step=e.shiftKey?10:1; let dx=0,dy=0; if(e.key==='ArrowLeft')dx=-step; if(e.key==='ArrowRight')dx=step; if(e.key==='ArrowUp')dy=-step; if(e.key==='ArrowDown')dy=step; saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))moveObject(o,dx,dy); }); draw(); markProjectDirty(); }
     });
 
     if (els.strokeColor) {
