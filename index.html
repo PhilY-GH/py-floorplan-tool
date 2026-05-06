@@ -1036,6 +1036,13 @@
     }
     .lock-icon-btn:hover { background: #f8fafc; }
     .lock-icon-btn.locked:hover { background: #ffedd5; }
+    .lock-icon-btn.mixed {
+      color: #2563eb;
+      border-color: #93c5fd;
+      background: #eff6ff;
+      box-shadow: 0 0 0 2px rgba(37,99,235,.08);
+    }
+    .lock-icon-btn.mixed:hover { background: #dbeafe; }
     .metric-group.lock-toggle-group {
       width: 104px;
       min-width: 104px;
@@ -2076,7 +2083,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v154';
+    const APP_VERSION = 'v155';
     const UI_COLORS = {
       selectionBlue: '#2563eb',
       snapOrange: '#f97316',
@@ -3234,6 +3241,16 @@
       updateStatus();
     }
 
+    function getSelectionLockStatusText() {
+      const selectedObjects = getSelectedObjects();
+      if (!selectedObjects.length) return '';
+      const lockedCount = selectedObjects.filter(isObjectLocked).length;
+      if (!lockedCount) return '';
+      if (selectedObjects.length === 1) return '（已锁定）';
+      if (lockedCount === selectedObjects.length) return '（全部已锁定）';
+      return `（含 ${lockedCount} 个锁定对象）`;
+    }
+
     function updateStatus() {
       const count = state.selectedIds.length;
       els.status.classList.toggle('multi-select', !!touchInteraction.multiSelectMode && !state.backgroundEditMode);
@@ -3248,7 +3265,8 @@
         els.status.classList.remove('multi-select');
         els.status.innerHTML = `<span class="status-tool">当前工具：区域</span><span>｜</span><span class="status-area-info">已绘 ${pointCount} 个点</span><button type="button" class="status-action-btn primary" data-status-action="complete-area" ${canComplete ? '' : 'disabled'}>完成</button><button type="button" class="status-action-btn" data-status-action="cancel-area">取消</button>`;
       } else {
-        els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">已选 ${count} 个对象</span>`;
+        const lockInfo = getSelectionLockStatusText();
+        els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">已选 ${count} 个对象${lockInfo}</span>`;
       }
       if (document.activeElement !== els.zoomInput) els.zoomInput.value = `${Math.round(state.zoom * 100)}%`;
       updateObjectMetrics();
@@ -3744,8 +3762,8 @@
         btn.type = 'button';
         btn.className = 'lock-icon-btn';
         btn.dataset.prop = def.key;
-        const locked = value === 'true' || value === true;
-        setLockButtonVisual(btn, locked);
+        const lockState = isMixedPropertyValue(value) ? 'mixed' : ((value === 'true' || value === true) ? 'locked' : 'unlocked');
+        setLockButtonVisual(btn, lockState);
         btn.addEventListener('click', e => {
           e.stopPropagation();
           toggleSelectedLock();
@@ -4281,21 +4299,12 @@
       direct.forEach(def => {
         const value = getValue(def);
         if (def.type === 'lockToggle') {
-        group.classList.add('lock-toggle-group');
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'lock-icon-btn';
-        btn.dataset.prop = def.key;
-        const locked = value === 'true' || value === true;
-        setLockButtonVisual(btn, locked);
-        btn.addEventListener('click', e => {
-          e.stopPropagation();
-          toggleSelectedLock();
-        });
-        group.appendChild(btn);
-        return group;
-      }
-      if (def.type === 'swatches') {
+          const btn = fields.querySelector(`[data-prop="${def.key}"]`);
+          const lockState = isMixedPropertyValue(value) ? 'mixed' : ((value === 'true' || value === true) ? 'locked' : 'unlocked');
+          setLockButtonVisual(btn, lockState);
+          return;
+        }
+        if (def.type === 'swatches') {
           const btn = fields.querySelector(`[data-prop="${def.key}"]`);
           updateColorPropertyButton(btn, value);
           return;
@@ -5562,12 +5571,27 @@
     function lockIconSvgMarkup() {
       return '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>';
     }
-    function setLockButtonVisual(btn, locked, titleBase = '') {
+    function normalizeLockVisualState(value) {
+      if (isMixedPropertyValue(value) || value === 'mixed') return 'mixed';
+      if (value === true || value === 'true' || value === 'locked') return 'locked';
+      return 'unlocked';
+    }
+    function setLockButtonVisual(btn, stateValue, titleBase = '') {
       if (!btn) return;
-      btn.classList.toggle('locked', !!locked);
+      const visualState = normalizeLockVisualState(stateValue);
+      const locked = visualState === 'locked';
+      const mixed = visualState === 'mixed';
+      btn.classList.toggle('locked', locked);
+      btn.classList.toggle('mixed', mixed);
       btn.innerHTML = lockIconSvgMarkup();
-      btn.title = titleBase || (locked ? '解锁对象 Alt/Option + L' : '锁定对象 Alt/Option + L');
-      btn.setAttribute('aria-label', locked ? '已锁定，点击解锁' : '未锁定，点击锁定');
+      if (titleBase) {
+        btn.title = titleBase;
+      } else if (mixed) {
+        btn.title = '部分对象已锁定，点击锁定全部 Alt/Option + L';
+      } else {
+        btn.title = locked ? '解锁对象 Alt/Option + L' : '锁定对象 Alt/Option + L';
+      }
+      btn.setAttribute('aria-label', mixed ? '部分对象已锁定，点击锁定全部' : (locked ? '已锁定，点击解锁' : '未锁定，点击锁定'));
     }
     function toggleSelectedLock() {
       const selected = getSelectedObjects().filter(o => o && o.type !== 'erase');
