@@ -1909,12 +1909,12 @@
           <div class="row">
             <label>智能辅助线</label>
             <select id="smartGuideMode" class="hidden-input">
-              <option value="on" selected>开启</option>
-              <option value="off">关闭</option>
+              <option value="on">开启</option>
+              <option value="off" selected>关闭</option>
             </select>
             <div class="segmented" data-segment-target="smartGuideMode">
-              <button type="button" data-value="on" class="active">开</button>
-              <button type="button" data-value="off">关</button>
+              <button type="button" data-value="on">开</button>
+              <button type="button" data-value="off" class="active">关</button>
             </div>
           </div>
           <div class="row">
@@ -1968,10 +1968,10 @@
           <div class="group-body">
           <div class="grid-3 arrange-grid">
             <button id="alignLeftBtn" class="arrange-action-btn" title="左对齐"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="3" x2="4" y2="21"/><rect x="7" y="5" width="8" height="3" rx="1"/><rect x="7" y="10.5" width="13" height="3" rx="1"/><rect x="7" y="16" width="8" height="3" rx="1"/></svg><span>左对齐</span></button>
-            <button id="alignCenterBtn" class="arrange-action-btn" title="水平居中"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="3" x2="12" y2="21"/><rect x="8" y="5" width="8" height="3" rx="1"/><rect x="5.5" y="10.5" width="13" height="3" rx="1"/><rect x="8" y="16" width="8" height="3" rx="1"/></svg><span>水平居中</span></button>
+            <button id="alignCenterBtn" class="arrange-action-btn" title="水平居中：对齐对象的水平中心"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="3" x2="12" y2="21"/><rect x="8" y="5" width="8" height="3" rx="1"/><rect x="5.5" y="10.5" width="13" height="3" rx="1"/><rect x="8" y="16" width="8" height="3" rx="1"/></svg><span>水平居中</span></button>
             <button id="alignRightBtn" class="arrange-action-btn" title="右对齐"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="20" y1="3" x2="20" y2="21"/><rect x="9" y="5" width="8" height="3" rx="1"/><rect x="4" y="10.5" width="13" height="3" rx="1"/><rect x="9" y="16" width="8" height="3" rx="1"/></svg><span>右对齐</span></button>
             <button id="alignTopBtn" class="arrange-action-btn" title="上对齐"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="4" x2="21" y2="4"/><rect x="5" y="7" width="3" height="8" rx="1"/><rect x="10.5" y="7" width="3" height="13" rx="1"/><rect x="16" y="7" width="3" height="8" rx="1"/></svg><span>上对齐</span></button>
-            <button id="alignMiddleBtn" class="arrange-action-btn" title="垂直居中"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"/><rect x="5" y="8" width="3" height="8" rx="1"/><rect x="10.5" y="5.5" width="3" height="13" rx="1"/><rect x="16" y="8" width="3" height="8" rx="1"/></svg><span>垂直居中</span></button>
+            <button id="alignMiddleBtn" class="arrange-action-btn" title="垂直居中：对齐对象的垂直中心"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"/><rect x="5" y="8" width="3" height="8" rx="1"/><rect x="10.5" y="5.5" width="3" height="13" rx="1"/><rect x="16" y="8" width="3" height="8" rx="1"/></svg><span>垂直居中</span></button>
             <button id="alignBottomBtn" class="arrange-action-btn" title="下对齐"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="20" x2="21" y2="20"/><rect x="5" y="9" width="3" height="8" rx="1"/><rect x="10.5" y="4" width="3" height="13" rx="1"/><rect x="16" y="9" width="3" height="8" rx="1"/></svg><span>下对齐</span></button>
           </div>
           <div style="height:8px"></div>
@@ -2099,7 +2099,7 @@
             <div>点击画布左上角状态栏中的“已选 x 个对象”可开启 / 关闭多选模式</div>
             <div>绘制线、箭、墙、尺时，按 Shift 可锁定 0° / 45° / 90°</div>
             <div>拖动方 / 圆角点时，按 Shift 可保持比例</div>
-            <div>绘制区域时，按 Enter 完成闭合；按 Esc 取消绘制</div>
+            <div>绘制区域时，按 Enter 完成闭合；按 Esc 取消；Ctrl / Command + Z 或 Delete 可撤销上一个点</div>
             <div>拖动节点或控制点时，按 Esc 可取消本次调整</div>
             <div>拖动对象时，Shift 可锁定水平 / 垂直；Alt / Option 可复制拖动</div>
             <div>Alt / Option + Shift 拖动：复制并水平 / 垂直约束移动</div>
@@ -2132,7 +2132,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v166';
+    const APP_VERSION = 'v168';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -3373,7 +3373,7 @@
           const pointCount = (state.areaPoints || []).length;
           const canComplete = pointCount >= 3;
           els.status.classList.remove('multi-select');
-          els.status.innerHTML = `<span class="status-tool">当前工具：区域</span><span>｜</span><span class="status-area-info">已绘 ${pointCount} 个点</span><button type="button" class="status-action-btn primary" data-status-action="complete-area" ${canComplete ? '' : 'disabled'}>完成</button><button type="button" class="status-action-btn" data-status-action="cancel-area">取消</button>`;
+          els.status.innerHTML = `<span class="status-tool">当前工具：区域</span><span>｜</span><span class="status-area-info">已绘 ${pointCount} 个点</span><button type="button" class="status-action-btn" data-status-action="undo-area-point" ${pointCount ? '' : 'disabled'} title="撤销上一个区域点">撤销</button><button type="button" class="status-action-btn primary" data-status-action="complete-area" ${canComplete ? '' : 'disabled'}>完成</button><button type="button" class="status-action-btn" data-status-action="cancel-area">取消</button>`;
         } else {
           const selectionText = getSelectionStatusText();
           els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">${selectionText}</span>`;
@@ -4692,28 +4692,35 @@
       const len = Math.hypot(o.x2 - o.x1, o.y2 - o.y1);
       if (len < 0.001) return [];
       const color = o.color || '#111827';
-      const windowLineWidth = o.lineWidth || 2;
+      const windowLineWidth = Math.max(1, Number(o.lineWidth) || 2);
       const useWallThickness = usesWallThickness(o);
-      const wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 10) || 10;
-      const openingThickness = useWallThickness ? wallThickness : Math.max(windowLineWidth + 4, 7);
+      const wallThickness = Math.max(1, Number(o.wallThickness || getInputNumber(els.wallThickness, 10) || 10));
+      const minSymbolThickness = 8;
+      const minRailSpan = 7;
+      const maxRailSpan = 24;
+      // V168：窗体符号不再简单随线宽或墙厚无限压缩/膨胀。
+      // 外部闭口负责匹配开口厚度，内部三根窗线保留最小间距，并在墙体模式下随墙厚适度展开。
+      const openingThickness = useWallThickness ? Math.max(wallThickness, minSymbolThickness) : minSymbolThickness;
+      const wallInnerPadding = useWallThickness ? Math.max(2, wallThickness * 0.18) : 0;
+      const desiredRailSpan = useWallThickness ? (wallThickness - wallInnerPadding * 2) : minRailSpan;
+      const railSpan = useWallThickness
+        ? Math.max(minRailSpan, Math.min(maxRailSpan, desiredRailSpan))
+        : minRailSpan;
+      const railOffset = railSpan / 2;
+      const internalWindowLineWidth = Math.max(1, Math.min(windowLineWidth, 3, railOffset * 0.65));
       const cutWidth = useWallThickness
-        ? Math.max(wallThickness + windowLineWidth + 4, windowLineWidth + 8)
-        : Math.max(windowLineWidth + 3, 5);
+        ? Math.max(wallThickness + windowLineWidth + 4, openingThickness + windowLineWidth + 4, windowLineWidth + 8)
+        : Math.max(openingThickness + internalWindowLineWidth + 3, windowLineWidth + 3, 7);
       const sealLineWidth = Math.max(windowLineWidth + 1, 3);
-      const sealHalf = useWallThickness
-        ? openingThickness / 2 + Math.max(1.5, sealLineWidth * 0.45)
-        : Math.max(windowLineWidth / 2 + 3, 4.5);
-      const railOffset = useWallThickness
-        ? Math.max(4, Math.min(7, openingThickness * 0.25))
-        : Math.max(3, Math.min(5, windowLineWidth + 1));
+      const sealHalf = Math.max(openingThickness / 2, railOffset) + Math.max(1, sealLineWidth * 0.35);
       const transform = { x: o.x1, y: o.y1, rotation: a };
       return applyPreviewDash(o, [
         renderLine(0, 0, len, 0, '#ffffff', cutWidth, 'butt', 'round', { transform }),
         renderRect(-sealLineWidth / 2, -sealHalf, sealLineWidth, sealHalf * 2, color, null, 0, { transform }),
         renderRect(len - sealLineWidth / 2, -sealHalf, sealLineWidth, sealHalf * 2, color, null, 0, { transform }),
-        renderLine(0, -railOffset, len, -railOffset, color, windowLineWidth, 'butt', 'round', { transform }),
-        renderLine(0, railOffset, len, railOffset, color, windowLineWidth, 'butt', 'round', { transform }),
-        renderLine(0, 0, len, 0, color, windowLineWidth, 'butt', 'round', { transform })
+        renderLine(0, -railOffset, len, -railOffset, color, internalWindowLineWidth, 'butt', 'round', { transform }),
+        renderLine(0, railOffset, len, railOffset, color, internalWindowLineWidth, 'butt', 'round', { transform }),
+        renderLine(0, 0, len, 0, color, internalWindowLineWidth, 'butt', 'round', { transform })
       ]);
     }
 
@@ -5448,6 +5455,22 @@
       state.areaPreview = null;
       clearSnapIndicator();
       if (shouldDraw) draw();
+    }
+
+    function undoLastAreaPoint(shouldDraw = true) {
+      if (!state.areaDrawing || !(state.areaPoints || []).length) return false;
+      state.areaPoints.pop();
+      if (!state.areaPoints.length) {
+        state.areaDrawing = false;
+        state.areaPreview = null;
+      } else {
+        const last = state.areaPoints[state.areaPoints.length - 1];
+        state.areaPreview = last ? { x: last.x, y: last.y } : null;
+      }
+      clearSnapIndicator();
+      clearSmartGuides();
+      if (shouldDraw) draw();
+      return true;
     }
 
     function completeAreaDraft() {
@@ -7030,6 +7053,13 @@
       const action = target.dataset.statusAction;
       e.preventDefault();
       e.stopPropagation();
+      if (action === 'undo-area-point') {
+        if (!target.disabled && state.tool === 'area' && state.areaDrawing) {
+          undoLastAreaPoint(true);
+          updateCursor();
+        }
+        return;
+      }
       if (action === 'complete-area') {
         if (!target.disabled && state.tool === 'area' && state.areaDrawing) {
           completeAreaDraft();
@@ -7215,9 +7245,11 @@
         const b = item.b;
         let dx = 0, dy = 0;
         if(mode === 'left') dx = left - b.x;
+        // 水平居中：对齐对象的水平中心，即 X 方向中心点；图标表现为竖向中心线。
         if(mode === 'center') dx = cx - (b.x + b.w / 2);
         if(mode === 'right') dx = right - (b.x + b.w);
         if(mode === 'top') dy = top - b.y;
+        // 垂直居中：对齐对象的垂直中心，即 Y 方向中心点；图标表现为横向中心线。
         if(mode === 'middle') dy = cy - (b.y + b.h / 2);
         if(mode === 'bottom') dy = bottom - (b.y + b.h);
         if(Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001){
@@ -9626,6 +9658,18 @@
       }
       if((e.key === 'Enter' || e.key === 'Return') && state.tool === 'area' && state.areaDrawing){
         if(state.areaPoints.length >= 3 && completeAreaDraft()){ e.preventDefault(); updateCursor(); }
+        return;
+      }
+      if(state.tool === 'area' && state.areaDrawing && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z'){
+        e.preventDefault();
+        undoLastAreaPoint(true);
+        updateCursor();
+        return;
+      }
+      if(state.tool === 'area' && state.areaDrawing && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'Delete' || e.key === 'Backspace')){
+        e.preventDefault();
+        undoLastAreaPoint(true);
+        updateCursor();
         return;
       }
       if(e.key === 'Escape'){ e.preventDefault(); cancelCurrentOperation(); return; }
