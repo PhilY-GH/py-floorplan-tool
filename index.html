@@ -867,7 +867,7 @@
     .brush-icon svg { width: 18px; height: 18px; display: block; overflow: visible; }
     .arrow-svg-v81 { width: 17px !important; height: 17px !important; }
     .door-svg-large { width: 19px !important; height: 19px !important; margin-left: -1px; margin-right: -1px; }
-    .dimension-svg-wide { width: 21px !important; height: 17px !important; margin-left: -2px; margin-right: -2px; }
+    .dimension-svg-wide { width: 21px !important; height: 17px !important; margin-left: -2px; margin-right: -2px; transform: translateY(-2px); }
 
     .save-icon { border: 2px solid currentColor; border-radius: 3px; }
     .save-icon::before { content:""; position:absolute; left:3px; right:3px; bottom:2px; height:4px; border:1.5px solid currentColor; border-radius:1px; }
@@ -2122,7 +2122,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v164';
+    const APP_VERSION = 'v165';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -2334,6 +2334,16 @@
     }
 
     function uid() { return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()); }
+
+    function clonePlain(value) {
+      if (value === undefined || value === null) return value;
+      try {
+        if (typeof structuredClone === 'function') return structuredClone(value);
+      } catch (err) {
+        console.warn('[PY平面图工具] structuredClone 失败，改用 JSON 深克隆', err);
+      }
+      return JSON.parse(JSON.stringify(value));
+    }
 
     function initSwatches() {
       const box = document.getElementById('swatches');
@@ -2920,18 +2930,23 @@
     function rawScreenToWorld(e) { return screenToWorld(e, false); }
 
     function createHistorySnapshot(includeBackground = false) {
-      const snapshot = {
-        objects: state.objects,
-        groups: state.groups,
-        pageW: state.pageW,
-        pageH: state.pageH,
-        aspectRatio: state.aspectRatio,
-        // V159：撤销 / 重做应同时保留选择状态，尤其是多选后执行对齐、分布、锁定等操作。
-        selectedIds: Array.isArray(state.selectedIds) ? state.selectedIds.slice() : [],
-        multiSelectMode: !!(typeof touchInteraction !== 'undefined' && touchInteraction.multiSelectMode)
-      };
-      if (includeBackground) snapshot.backgroundImage = state.backgroundImage;
-      return JSON.stringify(snapshot);
+      try {
+        const snapshot = {
+          objects: state.objects,
+          groups: state.groups,
+          pageW: state.pageW,
+          pageH: state.pageH,
+          aspectRatio: state.aspectRatio,
+          // V159：撤销 / 重做应同时保留选择状态，尤其是多选后执行对齐、分布、锁定等操作。
+          selectedIds: Array.isArray(state.selectedIds) ? state.selectedIds.slice() : [],
+          multiSelectMode: !!(typeof touchInteraction !== 'undefined' && touchInteraction.multiSelectMode)
+        };
+        if (includeBackground) snapshot.backgroundImage = state.backgroundImage;
+        return JSON.stringify(snapshot);
+      } catch (err) {
+        console.error('[PY平面图工具] 历史记录快照创建失败', err);
+        return null;
+      }
     }
 
     function applyHistorySnapshot(snapshotText) {
@@ -2980,18 +2995,29 @@
     }
 
     function saveHistory(includeBackground = false) {
-      state.history.push(createHistorySnapshot(includeBackground));
+      const snapshot = createHistorySnapshot(includeBackground);
+      if (!snapshot) {
+        state.redoHistory = [];
+        showStatusMessage('历史记录保存失败，当前操作可能无法撤销');
+        updateHistoryButtons();
+        return false;
+      }
+      state.history.push(snapshot);
       if (state.history.length > HISTORY_LIMIT) state.history.shift();
       state.redoHistory = [];
       updateHistoryButtons();
       markProjectDirty();
+      return true;
     }
 
     function undo() {
       if (!state.history.length) return;
       const oldSnapshot = state.history.pop();
-      state.redoHistory.push(createHistorySnapshot(snapshotIncludesBackground(oldSnapshot)));
-      if (state.redoHistory.length > HISTORY_LIMIT) state.redoHistory.shift();
+      const redoSnapshot = createHistorySnapshot(snapshotIncludesBackground(oldSnapshot));
+      if (redoSnapshot) {
+        state.redoHistory.push(redoSnapshot);
+        if (state.redoHistory.length > HISTORY_LIMIT) state.redoHistory.shift();
+      }
       applyHistorySnapshot(oldSnapshot);
       updateHistoryButtons();
       markProjectDirty();
@@ -3000,8 +3026,11 @@
     function redo() {
       if (!state.redoHistory.length) return;
       const nextSnapshot = state.redoHistory.pop();
-      state.history.push(createHistorySnapshot(snapshotIncludesBackground(nextSnapshot)));
-      if (state.history.length > HISTORY_LIMIT) state.history.shift();
+      const undoSnapshot = createHistorySnapshot(snapshotIncludesBackground(nextSnapshot));
+      if (undoSnapshot) {
+        state.history.push(undoSnapshot);
+        if (state.history.length > HISTORY_LIMIT) state.history.shift();
+      }
       applyHistorySnapshot(nextSnapshot);
       updateHistoryButtons();
       markProjectDirty();
@@ -5239,7 +5268,7 @@
         return;
       }
       state.backgroundStartRaw = { x: raw.x, y: raw.y };
-      state.backgroundOriginal = JSON.parse(JSON.stringify(state.backgroundImage));
+      state.backgroundOriginal = clonePlain(state.backgroundImage);
       state.backgroundHistorySaved = false;
       draw();
       updateCursor(e);
@@ -5316,7 +5345,7 @@
     }
 
     function restoreBackgroundAdjustOriginal() {
-      if (state.backgroundOriginal) state.backgroundImage = JSON.parse(JSON.stringify(state.backgroundOriginal));
+      if (state.backgroundOriginal) state.backgroundImage = clonePlain(state.backgroundOriginal);
       state.backgroundAdjusting = false;
       state.backgroundAdjustMode = null;
       state.backgroundAdjustHandle = null;
@@ -6113,8 +6142,8 @@
 
     function expandSelectionWithGroup(id){ const o=state.objects.find(x=>x.id===id); if(!o||!o.groupId)return [id]; return state.objects.filter(x=>x.groupId===o.groupId).map(x=>x.id); }
 
-    function captureSelectedOriginals(){ const m=new Map(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))m.set(o.id,JSON.parse(JSON.stringify(o))); }); return m; }
-    function restoreDragOriginals(){ if(!state.dragOriginals)return; state.objects=state.objects.map(o=>state.dragOriginals.has(o.id)?JSON.parse(JSON.stringify(state.dragOriginals.get(o.id))):o); }
+    function captureSelectedOriginals(){ const m=new Map(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))m.set(o.id,clonePlain(o)); }); return m; }
+    function restoreDragOriginals(){ if(!state.dragOriginals)return; state.objects=state.objects.map(o=>state.dragOriginals.has(o.id)?clonePlain(state.dragOriginals.get(o.id)):o); }
     function moveObject(o,dx,dy){ if(o.type==='text'){o.x+=dx;o.y+=dy;} else if(o.type==='erase'||o.type==='brush'||o.type==='area'){(o.points||[]).forEach(p=>{p.x+=dx;p.y+=dy;});} else {o.x1+=dx;o.y1+=dy;o.x2+=dx;o.y2+=dy;} }
 
     function constrainDeltaToAxis(dx, dy) {
@@ -6129,7 +6158,7 @@
       const clones = [];
       state.objects.forEach(src => {
         if (!sourceSet.has(src.id)) return;
-        const clone = JSON.parse(JSON.stringify(src));
+        const clone = clonePlain(src);
         const oldGroupId = clone.groupId;
         clone.id = uid();
         if (oldGroupId) {
@@ -6806,10 +6835,10 @@
     }
 
     async function editTextObject(o){
-      const original = JSON.parse(JSON.stringify(o));
+      const original = clonePlain(o);
       const restoreOriginal = snapshot => {
         Object.keys(o).forEach(key => delete o[key]);
-        Object.assign(o, JSON.parse(JSON.stringify(snapshot)));
+        Object.assign(o, clonePlain(snapshot));
         state.selectedIds = [o.id];
         draw();
         updateObjectMetrics(true);
@@ -6893,8 +6922,8 @@
     els.status.addEventListener('pointerdown', handleStatusAction);
 
     function deleteSelected(){ if(!state.selectedIds.length)return; const locked = state.objects.filter(o=>state.selectedIds.includes(o.id)&&isObjectLocked(o)); const deleteIds = new Set(state.selectedIds.filter(id=>!locked.some(o=>o.id===id))); if(!deleteIds.size){ showStatusMessage('已锁定对象不能删除'); return; } saveHistory(); state.objects=state.objects.filter(o=>!deleteIds.has(o.id)); state.selectedIds=state.selectedIds.filter(id=>!deleteIds.has(id)); draw(); updateObjectMetrics(true); markProjectDirty(); }
-    function copySelected(){ state.clipboard=state.objects.filter(o=>state.selectedIds.includes(o.id)&&!isObjectLocked(o)).map(o=>JSON.parse(JSON.stringify(o))); if(!state.clipboard.length && state.selectedIds.length) showStatusMessage('已锁定对象不能复制'); }
-    function pasteClipboard(){ if(!state.clipboard.length)return; saveHistory(); const newIds=[]; const groupMap={}; state.clipboard.forEach(src=>{ const o=JSON.parse(JSON.stringify(src)); const oldGroup=o.groupId; o.id=uid(); if(oldGroup){ if(!groupMap[oldGroup])groupMap[oldGroup]=uid(); o.groupId=groupMap[oldGroup]; } moveObject(o,20,20); state.objects.push(o); newIds.push(o.id); }); state.selectedIds=newIds; draw(); }
+    function copySelected(){ state.clipboard=state.objects.filter(o=>state.selectedIds.includes(o.id)&&!isObjectLocked(o)).map(o=>clonePlain(o)); if(!state.clipboard.length && state.selectedIds.length) showStatusMessage('已锁定对象不能复制'); }
+    function pasteClipboard(){ if(!state.clipboard.length)return; saveHistory(); const newIds=[]; const groupMap={}; state.clipboard.forEach(src=>{ const o=clonePlain(src); const oldGroup=o.groupId; o.id=uid(); if(oldGroup){ if(!groupMap[oldGroup])groupMap[oldGroup]=uid(); o.groupId=groupMap[oldGroup]; } moveObject(o,20,20); state.objects.push(o); newIds.push(o.id); }); state.selectedIds=newIds; draw(); }
 
 
     function syncSegmentedControls(targetId) {
@@ -7806,15 +7835,18 @@
       if (!data || typeof data !== 'object' || Array.isArray(data)) {
         throw new Error('工程文件结构无效：根数据不是对象');
       }
-      const expectedKeys = ['version', 'appVersion', 'page', 'pageW', 'pageH', 'defaults', 'view', 'objects', 'groups', 'backgroundImage', 'visibleLayers'];
-      const hasExpectedKey = expectedKeys.some(key => Object.prototype.hasOwnProperty.call(data, key));
-      if (!hasExpectedKey) {
-        throw new Error('工程文件结构无效：缺少工程数据字段');
+      if (!Array.isArray(data.objects)) {
+        throw new Error('工程文件结构无效：缺少 objects 数组');
       }
-      if (Object.prototype.hasOwnProperty.call(data, 'objects') && !Array.isArray(data.objects)) {
-        throw new Error('工程文件结构无效：objects 必须是数组');
+      const hasPageObject = data.page && typeof data.page === 'object' && !Array.isArray(data.page);
+      const pageWidth = hasPageObject ? Number(data.page.width) : NaN;
+      const pageHeight = hasPageObject ? Number(data.page.height) : NaN;
+      const hasValidPageObject = hasPageObject && (Number.isFinite(pageWidth) || Number.isFinite(pageHeight));
+      const hasLegacyPageSize = Number.isFinite(Number(data.pageW)) || Number.isFinite(Number(data.pageH));
+      if (!hasValidPageObject && !hasLegacyPageSize) {
+        throw new Error('工程文件结构无效：缺少页面尺寸数据');
       }
-      if (data.page !== undefined && (!data.page || typeof data.page !== 'object' || Array.isArray(data.page))) {
+      if (data.page !== undefined && !hasPageObject) {
         throw new Error('工程文件结构无效：page 必须是对象');
       }
     }
@@ -8217,7 +8249,7 @@
       return new Promise(resolve => {
         beginModalLock();
         const previewTarget = options.previewTarget || null;
-        const originalSnapshot = options.originalSnapshot ? JSON.parse(JSON.stringify(options.originalSnapshot)) : null;
+        const originalSnapshot = options.originalSnapshot ? clonePlain(options.originalSnapshot) : null;
         const onPreview = typeof options.onPreview === 'function' ? options.onPreview : null;
         const onRestore = typeof options.onRestore === 'function' ? options.onRestore : null;
 
