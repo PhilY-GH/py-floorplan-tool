@@ -942,6 +942,16 @@
       gap: 4px;
       font-size: 11px;
       line-height: 1;
+      color: #0f172a;
+      -webkit-tap-highlight-color: transparent;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .arrange-grid button.arrange-action-btn:hover { color: #1d4ed8; }
+    }
+    @media (hover: none), (pointer: coarse) {
+      .arrange-grid button.arrange-action-btn:hover {
+        color: #0f172a;
+      }
     }
     .arrange-action-btn svg {
       width: 20px;
@@ -2122,7 +2132,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v165';
+    const APP_VERSION = 'v166';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -2964,7 +2974,7 @@
       els.pageHeight.value = state.pageH;
       const existingIds = new Set((state.objects || []).map(o => o && o.id).filter(Boolean));
       state.selectedIds = Array.isArray(old.selectedIds)
-        ? old.selectedIds.filter(id => existingIds.has(id))
+        ? expandSelectionIdsWithGroups(old.selectedIds.filter(id => existingIds.has(id)))
         : [];
       if (typeof touchInteraction !== 'undefined') {
         touchInteraction.multiSelectMode = !!(old.multiSelectMode && state.selectedIds.length > 1);
@@ -3316,9 +3326,7 @@
         drawCanvasRenderItems(ctx, buildObjectRenderItems(buildShapeFromPoints(state.tool, state.start, state.current, true)));
       }
       if (state.areaDrawing) drawAreaDraft(ctx);
-      state.objects.forEach(obj => {
-        if (obj.id && state.selectedIds.includes(obj.id) && obj.type !== 'erase') drawSelection(ctx, obj);
-      });
+      drawCurrentSelections(ctx);
       if (state.boxSelecting && state.selectionBox) drawSelectionBox(ctx);
       drawShiftDragGuide(ctx);
       drawSmartGuides(ctx);
@@ -3329,18 +3337,27 @@
       updateStatus();
     }
 
-    function getSelectionLockStatusText() {
+    function getSelectionStatusText() {
+      const units = getSelectedUnits();
+      if (!units.length) return '已选 0 个对象';
+      const groupCount = units.filter(unit => unit.type === 'group').length;
       const selectedObjects = getSelectedObjects();
-      if (!selectedObjects.length) return '';
-      const lockedCount = selectedObjects.filter(isObjectLocked).length;
-      if (!lockedCount) return '';
-      if (selectedObjects.length === 1) return '（已锁定）';
-      if (lockedCount === selectedObjects.length) return '（全部已锁定）';
-      return `（含 ${lockedCount} 个锁定对象）`;
+      const lockedObjectCount = selectedObjects.filter(isObjectLocked).length;
+      let label = '';
+      if (units.length === 1 && units[0].type === 'group') label = '已选 1 个组合';
+      else label = `已选 ${units.length} 个对象`;
+      const notes = [];
+      if (units.length > 1 && groupCount) notes.push(`含 ${groupCount} 个组合`);
+      if (lockedObjectCount) {
+        const allObjectsLocked = selectedObjects.length > 0 && lockedObjectCount === selectedObjects.length;
+        if (units.length === 1 && allObjectsLocked) notes.push('已锁定');
+        else if (units.length > 1 && allObjectsLocked) notes.push('全部已锁定');
+        else notes.push(`含 ${lockedObjectCount} 个锁定对象`);
+      }
+      return notes.length ? `${label}（${notes.join('，')}）` : label;
     }
 
     function updateStatus() {
-      const count = state.selectedIds.length;
       // V163：临时状态提示显示期间，不允许 draw() / updateStatus() 立刻覆盖提示内容。
       // 但缩放输入框和属性栏仍继续刷新，避免界面状态停住。
       const transientStatusActive = transientStatusTimer !== null;
@@ -3358,8 +3375,8 @@
           els.status.classList.remove('multi-select');
           els.status.innerHTML = `<span class="status-tool">当前工具：区域</span><span>｜</span><span class="status-area-info">已绘 ${pointCount} 个点</span><button type="button" class="status-action-btn primary" data-status-action="complete-area" ${canComplete ? '' : 'disabled'}>完成</button><button type="button" class="status-action-btn" data-status-action="cancel-area">取消</button>`;
         } else {
-          const lockInfo = getSelectionLockStatusText();
-          els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">已选 ${count} 个对象${lockInfo}</span>`;
+          const selectionText = getSelectionStatusText();
+          els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">${selectionText}</span>`;
         }
       }
       if (document.activeElement !== els.zoomInput) els.zoomInput.value = `${Math.round(state.zoom * 100)}%`;
@@ -5703,23 +5720,19 @@
 
     function getLockedSelectionBadgeBox(o) {
       if (!o || !isObjectLocked(o)) return null;
-      const b = getObjectBox(o);
-      const size = Math.max(18 / state.zoom, 14);
-      return {
-        x: b.x + b.w + 8,
-        y: b.y - 8 - size,
-        size
-      };
+      return getLockedSelectionBadgeBoxFromBounds(getObjectBox(o));
     }
     function hitLockedSelectionBadge(raw, pointerEvent = null) {
-      if (!raw || state.tool !== 'select' || state.selectedIds.length !== 1) return null;
-      const o = state.objects.find(obj => obj.id === state.selectedIds[0] && obj.type !== 'erase');
-      if (!o || !isObjectLocked(o)) return null;
-      const box = getLockedSelectionBadgeBox(o);
+      if (!raw || state.tool !== 'select') return null;
+      const units = getSelectedUnits();
+      if (units.length !== 1) return null;
+      const unit = units[0];
+      // 只有单个锁定对象，或一个“全部已锁定”的组合，才显示可点击小锁并允许直接解锁。
+      if (!unit.allLocked) return null;
+      const box = unit.type === 'group' ? getLockedSelectionBadgeBoxFromBounds(unit.b) : getLockedSelectionBadgeBox(unit.o || unit.objects[0]);
       if (!box) return null;
-      // V150：小锁 hover 后视觉范围比图标略明显，点击热区也同步放大，避免用户点到边缘/光晕附近却无法解锁。
       const pad = isTouchLike(pointerEvent) ? Math.max(16 / state.zoom, 8) : Math.max(8 / state.zoom, 5);
-      if (raw.x >= box.x - pad && raw.x <= box.x + box.size + pad && raw.y >= box.y - pad && raw.y <= box.y + box.size + pad) return o;
+      if (raw.x >= box.x - pad && raw.x <= box.x + box.size + pad && raw.y >= box.y - pad && raw.y <= box.y + box.size + pad) return { id: unit.id };
       return null;
     }
     function drawCanvasLockIcon(c, x, y, size, color) {
@@ -5747,6 +5760,65 @@
       c.lineTo(px(16), py(10));
       c.stroke();
       c.restore();
+    }
+
+    function getLockedSelectionBadgeBoxFromBounds(b) {
+      if (!b) return null;
+      const size = Math.max(18 / state.zoom, 14);
+      return { x: b.x + b.w + 8, y: b.y - 8 - size, size };
+    }
+
+    function drawSelectionBounds(c, b, options = {}) {
+      if (!b) return;
+      const locked = !!options.locked;
+      const accent = locked ? '#64748b' : getSelectionAccentColor();
+      c.save();
+      c.setLineDash(locked ? [7,5] : [5,4]);
+      c.strokeStyle = accent;
+      c.lineWidth = getSelectionStrokeWidth();
+      c.strokeRect(b.x - 6, b.y - 6, b.w + 12, b.h + 12);
+      if (locked && options.badgeId) {
+        const badge = getLockedSelectionBadgeBoxFromBounds(b);
+        if (badge) {
+          const { x, y, size } = badge;
+          const badgeHover = state.lockBadgeHoverId === options.badgeId;
+          const badgePress = state.lockBadgePressId === options.badgeId;
+          const cornerRadius = Math.max(5 / state.zoom, 3);
+          c.save();
+          c.setLineDash([]);
+          c.fillStyle = (badgeHover || badgePress) ? 'rgba(255,237,213,.98)' : 'rgba(255,247,237,.95)';
+          c.strokeStyle = '#fdba74';
+          c.lineWidth = Math.max(1 / state.zoom, .7);
+          c.beginPath();
+          if (c.roundRect) c.roundRect(x, y, size, size, cornerRadius);
+          else c.rect(x, y, size, size);
+          c.fill();
+          c.stroke();
+          c.restore();
+          const iconSize = size * 0.58;
+          const ix = x + (size - iconSize) / 2;
+          const iy = y + (size - iconSize) / 2;
+          drawCanvasLockIcon(c, ix, iy, iconSize, UI_COLORS.snapOrange);
+        }
+      }
+      c.restore();
+    }
+
+    function drawCurrentSelections(c) {
+      const units = getSelectedUnits();
+      const drawnGroupIds = new Set();
+      const skipIds = new Set();
+      units.forEach(unit => {
+        if (unit.type !== 'group') return;
+        drawnGroupIds.add(unit.groupId);
+        unit.ids.forEach(id => skipIds.add(id));
+        // 组合在普通选择状态下作为一个整体显示；只有整组对象全部锁定时才显示可点击小锁。
+        drawSelectionBounds(c, unit.b, { locked: unit.locked, badgeId: unit.allLocked ? unit.id : null });
+      });
+      state.objects.forEach(obj => {
+        if (!obj || !obj.id || obj.type === 'erase' || !state.selectedIds.includes(obj.id) || skipIds.has(obj.id)) return;
+        drawSelection(c, obj);
+      });
     }
 
     function drawSelection(c,o){
@@ -6139,6 +6211,76 @@
       pts[index].y = p.y;
     }
     function boxIntersectsObject(box,o){ const b=getObjectBox(o); return !(b.x>box.x+box.w||b.x+b.w<box.x||b.y>box.y+box.h||b.y+b.h<box.y); }
+
+    function getBoundsForObjects(objects = []) {
+      const boxes = (objects || []).map(getObjectBox).filter(b => b && Number.isFinite(b.x) && Number.isFinite(b.y) && Number.isFinite(b.w) && Number.isFinite(b.h));
+      if (!boxes.length) return { x: 0, y: 0, w: 0, h: 0 };
+      const left = Math.min(...boxes.map(b => b.x));
+      const top = Math.min(...boxes.map(b => b.y));
+      const right = Math.max(...boxes.map(b => b.x + b.w));
+      const bottom = Math.max(...boxes.map(b => b.y + b.h));
+      return { x: left, y: top, w: right - left, h: bottom - top };
+    }
+
+    function getSelectedUnits(ids = state.selectedIds) {
+      const selectedSet = new Set(ids || []);
+      const visitedGroups = new Set();
+      const units = [];
+      state.objects.forEach(o => {
+        if (!o || !o.id || !selectedSet.has(o.id) || o.type === 'erase') return;
+        if (o.groupId) {
+          if (visitedGroups.has(o.groupId)) return;
+          visitedGroups.add(o.groupId);
+          const objects = state.objects.filter(item => item && item.groupId === o.groupId && item.type !== 'erase');
+          const idsForGroup = objects.map(item => item.id);
+          const lockedCount = objects.filter(isObjectLocked).length;
+          units.push({
+            id: `group:${o.groupId}`,
+            type: 'group',
+            groupId: o.groupId,
+            ids: idsForGroup,
+            objects,
+            b: getBoundsForObjects(objects),
+            locked: lockedCount > 0,
+            allLocked: objects.length > 0 && lockedCount === objects.length,
+            lockedCount
+          });
+        } else {
+          const locked = isObjectLocked(o);
+          units.push({
+            id: o.id,
+            type: 'object',
+            ids: [o.id],
+            objects: [o],
+            o,
+            b: getObjectBox(o),
+            locked,
+            allLocked: locked,
+            lockedCount: locked ? 1 : 0
+          });
+        }
+      });
+      return units;
+    }
+
+    function expandSelectionIdsWithGroups(ids = []) {
+      const out = [];
+      const seen = new Set();
+      (ids || []).forEach(id => {
+        expandSelectionWithGroup(id).forEach(nextId => {
+          if (!seen.has(nextId)) {
+            seen.add(nextId);
+            out.push(nextId);
+          }
+        });
+      });
+      return out;
+    }
+
+    function moveSelectionUnit(unit, dx, dy) {
+      if (!unit || !Array.isArray(unit.objects)) return;
+      unit.objects.forEach(o => moveObject(o, dx, dy));
+    }
 
     function expandSelectionWithGroup(id){ const o=state.objects.find(x=>x.id===id); if(!o||!o.groupId)return [id]; return state.objects.filter(x=>x.groupId===o.groupId).map(x=>x.id); }
 
@@ -6582,7 +6724,7 @@
         draw(); updateCursor(e); return;
       }
       if(state.erasing){ state.current=raw; state.eraserPreview=raw; const er=state.objects[state.objects.length-1]; if(er&&(er.type==='brush'||er.type==='erase'))er.points.push(raw); draw(); updateCursor(e); return; }
-      if(state.boxSelecting&&state.selectionBox){ state.selectionBox.x2=raw.x; state.selectionBox.y2=raw.y; const box=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); state.selectedIds=state.objects.filter(o=>o.type!=='erase'&&isLayerVisible(o)&&boxIntersectsObject(box,o)).map(o=>o.id); draw(); updateCursor(e); return; }
+      if(state.boxSelecting&&state.selectionBox){ state.selectionBox.x2=raw.x; state.selectionBox.y2=raw.y; const box=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); state.selectedIds=expandSelectionIdsWithGroups(state.objects.filter(o=>o.type!=='erase'&&isLayerVisible(o)&&boxIntersectsObject(box,o)).map(o=>o.id)); draw(); updateCursor(e); return; }
       if(state.dragging&&state.selectedIds.length){
         let dx=raw.x-state.dragStartRaw.x,dy=raw.y-state.dragStartRaw.y;
         const hadGuide = !!state.dragGuide;
@@ -7053,14 +7195,13 @@
     function ungroupSelected(){ if(!state.selectedIds.length)return; if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法取消组合'); return; } saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))delete o.groupId; }); draw(); }
 
     function alignSelected(mode){
-      if(state.selectedIds.length < 2) return;
-      const selected = state.objects.filter(o => state.selectedIds.includes(o.id));
-      if(selected.length < 2) return;
-      const entries = selected.map(o => ({ o, b: getObjectBox(o), locked: isObjectLocked(o) }));
+      const units = getSelectedUnits();
+      if(units.length < 2) return;
+      const entries = units.map(unit => ({ unit, b: unit.b, locked: unit.locked }));
       const movable = entries.filter(item => !item.locked);
       if(!movable.length){ showStatusMessage('没有可移动对象，无法对齐', 1800, 'warning'); return; }
 
-      // V162：对齐规则与分布规则统一。锁定对象不移动，但仍作为整体边界参考。
+      // 组合对象按整体外框参与对齐；组内含锁定对象时，整组不移动，只作为参考。
       const left = Math.min(...entries.map(item => item.b.x));
       const right = Math.max(...entries.map(item => item.b.x + item.b.w));
       const top = Math.min(...entries.map(item => item.b.y));
@@ -7080,7 +7221,7 @@
         if(mode === 'middle') dy = cy - (b.y + b.h / 2);
         if(mode === 'bottom') dy = bottom - (b.y + b.h);
         if(Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001){
-          moveObject(item.o, dx, dy);
+          moveSelectionUnit(item.unit, dx, dy);
           moved = true;
         }
       });
@@ -7097,10 +7238,10 @@
     }
 
     function distributeSelected(axis){
-      const selected = state.objects.filter(o => state.selectedIds.includes(o.id));
-      if(selected.length < 3){ showStatusMessage('分布功能需要至少 3 个对象', 1800, 'warning'); return; }
+      const units = getSelectedUnits();
+      if(units.length < 3){ showStatusMessage('分布功能需要至少 3 个对象', 1800, 'warning'); return; }
       const horizontal = axis === 'horizontal';
-      const entries = selected.map(o => ({ o, b: getObjectBox(o), locked: isObjectLocked(o) }));
+      const entries = units.map(unit => ({ unit, b: unit.b, locked: unit.locked }));
       const movable = entries.filter(item => !item.locked);
       if(!movable.length){ showStatusMessage('没有可移动对象，无法分布', 1800, 'warning'); return; }
 
@@ -7115,7 +7256,7 @@
       const setTarget = (item, target) => {
         const dx = horizontal ? target - item.b.x : 0;
         const dy = horizontal ? 0 : target - item.b.y;
-        if(Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001){ moveObject(item.o, dx, dy); return true; }
+        if(Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001){ moveSelectionUnit(item.unit, dx, dy); return true; }
         return false;
       };
 
