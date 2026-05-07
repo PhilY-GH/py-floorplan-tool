@@ -932,6 +932,39 @@
       gap: 8px;
     }
 
+    .arrange-grid button.arrange-action-btn {
+      min-height: 44px;
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-size: 11px;
+      line-height: 1;
+    }
+    .arrange-action-btn svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+      flex: 0 0 auto;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .arrange-action-btn span {
+      white-space: nowrap;
+      line-height: 1;
+    }
+    .status.status-warning {
+      color: #9a3412;
+      background: #fff7ed;
+      border-color: #fdba74;
+      box-shadow: 0 6px 18px rgba(154, 52, 18, .12);
+    }
+
     .segmented {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1923,18 +1956,23 @@
             <button class="group-toggle-btn" type="button" aria-label="折叠 / 展开">▾</button>
           </div>
           <div class="group-body">
-          <div class="grid-3">
-            <button id="alignLeftBtn">左对齐</button>
-            <button id="alignCenterBtn">居中</button>
-            <button id="alignRightBtn">右对齐</button>
-            <button id="alignTopBtn">上对齐</button>
-            <button id="alignMiddleBtn">中线</button>
-            <button id="alignBottomBtn">下对齐</button>
+          <div class="grid-3 arrange-grid">
+            <button id="alignLeftBtn" class="arrange-action-btn" title="左对齐"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="3" x2="4" y2="21"/><rect x="7" y="5" width="8" height="3" rx="1"/><rect x="7" y="10.5" width="13" height="3" rx="1"/><rect x="7" y="16" width="8" height="3" rx="1"/></svg><span>左对齐</span></button>
+            <button id="alignCenterBtn" class="arrange-action-btn" title="水平居中"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="3" x2="12" y2="21"/><rect x="8" y="5" width="8" height="3" rx="1"/><rect x="5.5" y="10.5" width="13" height="3" rx="1"/><rect x="8" y="16" width="8" height="3" rx="1"/></svg><span>水平居中</span></button>
+            <button id="alignRightBtn" class="arrange-action-btn" title="右对齐"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="20" y1="3" x2="20" y2="21"/><rect x="9" y="5" width="8" height="3" rx="1"/><rect x="4" y="10.5" width="13" height="3" rx="1"/><rect x="9" y="16" width="8" height="3" rx="1"/></svg><span>右对齐</span></button>
+            <button id="alignTopBtn" class="arrange-action-btn" title="上对齐"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="4" x2="21" y2="4"/><rect x="5" y="7" width="3" height="8" rx="1"/><rect x="10.5" y="7" width="3" height="13" rx="1"/><rect x="16" y="7" width="3" height="8" rx="1"/></svg><span>上对齐</span></button>
+            <button id="alignMiddleBtn" class="arrange-action-btn" title="垂直居中"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"/><rect x="5" y="8" width="3" height="8" rx="1"/><rect x="10.5" y="5.5" width="3" height="13" rx="1"/><rect x="16" y="8" width="3" height="8" rx="1"/></svg><span>垂直居中</span></button>
+            <button id="alignBottomBtn" class="arrange-action-btn" title="下对齐"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="20" x2="21" y2="20"/><rect x="5" y="9" width="3" height="8" rx="1"/><rect x="10.5" y="4" width="3" height="13" rx="1"/><rect x="16" y="9" width="3" height="8" rx="1"/></svg><span>下对齐</span></button>
           </div>
           <div style="height:8px"></div>
-          <div class="grid-2">
-            <button id="groupSidebarBtn">组合</button>
-            <button id="ungroupSidebarBtn">取消组合</button>
+          <div class="grid-2 arrange-grid">
+            <button id="distributeHBtn" class="arrange-action-btn" title="水平分布：将 3 个以上对象按水平间距均匀分布"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="4" height="12" rx="1"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="17" y="6" width="4" height="12" rx="1"/></svg><span>水平分布</span></button>
+            <button id="distributeVBtn" class="arrange-action-btn" title="垂直分布：将 3 个以上对象按垂直间距均匀分布"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="4" rx="1"/><rect x="6" y="10" width="12" height="4" rx="1"/><rect x="6" y="17" width="12" height="4" rx="1"/></svg><span>垂直分布</span></button>
+          </div>
+          <div style="height:8px"></div>
+          <div class="grid-2 arrange-grid">
+            <button id="groupSidebarBtn" class="arrange-action-btn" title="组合"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5"/><rect x="10" y="10" width="9" height="9" rx="1.5"/></svg><span>组合</span></button>
+            <button id="ungroupSidebarBtn" class="arrange-action-btn" title="取消组合"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg><span>取消组合</span></button>
           </div>
                   </div>
         </div>
@@ -2060,6 +2098,7 @@
             <div>方向键微调 1 px；Shift+方向键移动 10 px，不受吸附限制</div>
             <div>Ctrl+C / Ctrl+V 复制粘贴</div>
             <div>Ctrl+G 组合；Ctrl+Shift+G 取消组合</div>
+            <div>水平分布 / 垂直分布：侧边栏 → 排列 / 组合</div>
           </div>
         </div>
                         </div>
@@ -2083,7 +2122,8 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v155';
+    const APP_VERSION = 'v164';
+    const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
       snapOrange: '#f97316',
@@ -2880,7 +2920,16 @@
     function rawScreenToWorld(e) { return screenToWorld(e, false); }
 
     function createHistorySnapshot(includeBackground = false) {
-      const snapshot = { objects: state.objects, groups: state.groups, pageW: state.pageW, pageH: state.pageH, aspectRatio: state.aspectRatio };
+      const snapshot = {
+        objects: state.objects,
+        groups: state.groups,
+        pageW: state.pageW,
+        pageH: state.pageH,
+        aspectRatio: state.aspectRatio,
+        // V159：撤销 / 重做应同时保留选择状态，尤其是多选后执行对齐、分布、锁定等操作。
+        selectedIds: Array.isArray(state.selectedIds) ? state.selectedIds.slice() : [],
+        multiSelectMode: !!(typeof touchInteraction !== 'undefined' && touchInteraction.multiSelectMode)
+      };
       if (includeBackground) snapshot.backgroundImage = state.backgroundImage;
       return JSON.stringify(snapshot);
     }
@@ -2898,9 +2947,19 @@
       }
       els.pageWidth.value = state.pageW;
       els.pageHeight.value = state.pageH;
-      state.selectedIds = [];
+      const existingIds = new Set((state.objects || []).map(o => o && o.id).filter(Boolean));
+      state.selectedIds = Array.isArray(old.selectedIds)
+        ? old.selectedIds.filter(id => existingIds.has(id))
+        : [];
+      if (typeof touchInteraction !== 'undefined') {
+        touchInteraction.multiSelectMode = !!(old.multiSelectMode && state.selectedIds.length > 1);
+      }
+      clearSnapIndicator();
+      clearSmartGuides();
+      clearMoveEndpointSnap();
       refreshSidebarUnitizedInputs();
       resizeCanvas();
+      updateObjectMetrics(true);
       draw();
     }
 
@@ -2922,7 +2981,7 @@
 
     function saveHistory(includeBackground = false) {
       state.history.push(createHistorySnapshot(includeBackground));
-      if (state.history.length > 100) state.history.shift();
+      if (state.history.length > HISTORY_LIMIT) state.history.shift();
       state.redoHistory = [];
       updateHistoryButtons();
       markProjectDirty();
@@ -2932,7 +2991,7 @@
       if (!state.history.length) return;
       const oldSnapshot = state.history.pop();
       state.redoHistory.push(createHistorySnapshot(snapshotIncludesBackground(oldSnapshot)));
-      if (state.redoHistory.length > 100) state.redoHistory.shift();
+      if (state.redoHistory.length > HISTORY_LIMIT) state.redoHistory.shift();
       applyHistorySnapshot(oldSnapshot);
       updateHistoryButtons();
       markProjectDirty();
@@ -2942,7 +3001,7 @@
       if (!state.redoHistory.length) return;
       const nextSnapshot = state.redoHistory.pop();
       state.history.push(createHistorySnapshot(snapshotIncludesBackground(nextSnapshot)));
-      if (state.history.length > 100) state.history.shift();
+      if (state.history.length > HISTORY_LIMIT) state.history.shift();
       applyHistorySnapshot(nextSnapshot);
       updateHistoryButtons();
       markProjectDirty();
@@ -3253,33 +3312,42 @@
 
     function updateStatus() {
       const count = state.selectedIds.length;
-      els.status.classList.toggle('multi-select', !!touchInteraction.multiSelectMode && !state.backgroundEditMode);
-      els.status.classList.toggle('background-edit-status', !!state.backgroundEditMode);
-      if (state.backgroundEditMode) {
-        els.status.classList.remove('multi-select');
-        const bgScale = getBackgroundScalePercent();
-        els.status.innerHTML = `<span class="status-tool">当前模式：底图手动调整</span><button type="button" class="status-action-btn" data-status-action="restore-background-original" title="恢复底图原始尺寸，保持当前位置中心不变">原始</button><span class="status-bg-scale-info" title="相对底图原始尺寸的比例">缩放 ${bgScale}%</span><button type="button" class="status-action-btn" data-status-action="exit-background-edit">退出</button>`;
-      } else if (state.tool === 'area' && state.areaDrawing) {
-        const pointCount = (state.areaPoints || []).length;
-        const canComplete = pointCount >= 3;
-        els.status.classList.remove('multi-select');
-        els.status.innerHTML = `<span class="status-tool">当前工具：区域</span><span>｜</span><span class="status-area-info">已绘 ${pointCount} 个点</span><button type="button" class="status-action-btn primary" data-status-action="complete-area" ${canComplete ? '' : 'disabled'}>完成</button><button type="button" class="status-action-btn" data-status-action="cancel-area">取消</button>`;
-      } else {
-        const lockInfo = getSelectionLockStatusText();
-        els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">已选 ${count} 个对象${lockInfo}</span>`;
+      // V163：临时状态提示显示期间，不允许 draw() / updateStatus() 立刻覆盖提示内容。
+      // 但缩放输入框和属性栏仍继续刷新，避免界面状态停住。
+      const transientStatusActive = transientStatusTimer !== null;
+      if (!transientStatusActive) {
+        els.status.classList.toggle('multi-select', !!touchInteraction.multiSelectMode && !state.backgroundEditMode);
+        els.status.classList.toggle('background-edit-status', !!state.backgroundEditMode);
+        els.status.classList.remove('status-warning');
+        if (state.backgroundEditMode) {
+          els.status.classList.remove('multi-select');
+          const bgScale = getBackgroundScalePercent();
+          els.status.innerHTML = `<span class="status-tool">当前模式：底图手动调整</span><button type="button" class="status-action-btn" data-status-action="restore-background-original" title="恢复底图原始尺寸，保持当前位置中心不变">原始</button><span class="status-bg-scale-info" title="相对底图原始尺寸的比例">缩放 ${bgScale}%</span><button type="button" class="status-action-btn" data-status-action="exit-background-edit">退出</button>`;
+        } else if (state.tool === 'area' && state.areaDrawing) {
+          const pointCount = (state.areaPoints || []).length;
+          const canComplete = pointCount >= 3;
+          els.status.classList.remove('multi-select');
+          els.status.innerHTML = `<span class="status-tool">当前工具：区域</span><span>｜</span><span class="status-area-info">已绘 ${pointCount} 个点</span><button type="button" class="status-action-btn primary" data-status-action="complete-area" ${canComplete ? '' : 'disabled'}>完成</button><button type="button" class="status-action-btn" data-status-action="cancel-area">取消</button>`;
+        } else {
+          const lockInfo = getSelectionLockStatusText();
+          els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">已选 ${count} 个对象${lockInfo}</span>`;
+        }
       }
       if (document.activeElement !== els.zoomInput) els.zoomInput.value = `${Math.round(state.zoom * 100)}%`;
       updateObjectMetrics();
     }
 
     let transientStatusTimer = null;
-    function showStatusMessage(message, duration = 1400) {
+    function showStatusMessage(message, duration = 1400, variant = '') {
       if (!els.status || state.modalOpen) return;
-      const previous = els.status.innerHTML;
-      els.status.innerHTML = `<span class="status-tool">${escapeHtml(message || '')}</span>`;
       if (transientStatusTimer) clearTimeout(transientStatusTimer);
+      // V163：提示本身作为短暂的状态栏模式，先清除普通状态栏样式，避免被多选/底图模式样式混淆。
+      els.status.classList.remove('multi-select', 'background-edit-status');
+      els.status.classList.toggle('status-warning', variant === 'warning');
+      els.status.innerHTML = `<span class="status-tool">${escapeHtml(message || '')}</span>`;
       transientStatusTimer = setTimeout(() => {
         transientStatusTimer = null;
+        els.status.classList.remove('status-warning');
         updateStatus();
       }, duration);
     }
@@ -6645,14 +6713,6 @@
     canvas.addEventListener('pointermove', handlePointerMove);
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('pointercancel', handlePointerCancel);
-    canvas.addEventListener('pointerleave', () => {
-      if (state.lockBadgeHoverId !== null || state.lockBadgePressId !== null) {
-        state.lockBadgeHoverId = null;
-        state.lockBadgePressId = null;
-        state.lockBadgePointerId = null;
-        draw();
-      }
-    });
     const canvasWrapForTouchGuards = getCanvasWrap();
     if (canvasWrapForTouchGuards) {
       ['touchstart','touchmove'].forEach(type => {
@@ -6672,6 +6732,12 @@
     }
     canvas.addEventListener('pointerleave', () => {
       let needsDraw = false;
+      if (state.lockBadgeHoverId !== null || state.lockBadgePressId !== null) {
+        state.lockBadgeHoverId = null;
+        state.lockBadgePressId = null;
+        state.lockBadgePointerId = null;
+        needsDraw = true;
+      }
       if (state.snapIndicator && !state.drawing && !state.resizingEndpoint && !state.resizingBox && !state.resizingAreaVertex && !state.dragging) {
         clearSnapIndicator();
         clearMoveEndpointSnap();
@@ -6957,7 +7023,149 @@
     function groupSelected(){ if(state.selectedIds.length<2)return; if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法组合'); return; } saveHistory(); const gid=uid(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))o.groupId=gid; }); draw(); }
     function ungroupSelected(){ if(!state.selectedIds.length)return; if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法取消组合'); return; } saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))delete o.groupId; }); draw(); }
 
-    function alignSelected(mode){ if(state.selectedIds.length<2)return; if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法对齐'); return; } saveHistory(); const selected=state.objects.filter(o=>state.selectedIds.includes(o.id)); const boxes=selected.map(getObjectBox); const left=Math.min(...boxes.map(b=>b.x)), right=Math.max(...boxes.map(b=>b.x+b.w)), top=Math.min(...boxes.map(b=>b.y)), bottom=Math.max(...boxes.map(b=>b.y+b.h)); const cx=(left+right)/2, cy=(top+bottom)/2; selected.forEach((o,i)=>{ const b=boxes[i]; let dx=0,dy=0; if(mode==='left')dx=left-b.x; if(mode==='center')dx=cx-(b.x+b.w/2); if(mode==='right')dx=right-(b.x+b.w); if(mode==='top')dy=top-b.y; if(mode==='middle')dy=cy-(b.y+b.h/2); if(mode==='bottom')dy=bottom-(b.y+b.h); moveObject(o,dx,dy); }); draw(); }
+    function alignSelected(mode){
+      if(state.selectedIds.length < 2) return;
+      const selected = state.objects.filter(o => state.selectedIds.includes(o.id));
+      if(selected.length < 2) return;
+      const entries = selected.map(o => ({ o, b: getObjectBox(o), locked: isObjectLocked(o) }));
+      const movable = entries.filter(item => !item.locked);
+      if(!movable.length){ showStatusMessage('没有可移动对象，无法对齐', 1800, 'warning'); return; }
+
+      // V162：对齐规则与分布规则统一。锁定对象不移动，但仍作为整体边界参考。
+      const left = Math.min(...entries.map(item => item.b.x));
+      const right = Math.max(...entries.map(item => item.b.x + item.b.w));
+      const top = Math.min(...entries.map(item => item.b.y));
+      const bottom = Math.max(...entries.map(item => item.b.y + item.b.h));
+      const cx = (left + right) / 2;
+      const cy = (top + bottom) / 2;
+
+      saveHistory();
+      let moved = false;
+      movable.forEach(item => {
+        const b = item.b;
+        let dx = 0, dy = 0;
+        if(mode === 'left') dx = left - b.x;
+        if(mode === 'center') dx = cx - (b.x + b.w / 2);
+        if(mode === 'right') dx = right - (b.x + b.w);
+        if(mode === 'top') dy = top - b.y;
+        if(mode === 'middle') dy = cy - (b.y + b.h / 2);
+        if(mode === 'bottom') dy = bottom - (b.y + b.h);
+        if(Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001){
+          moveObject(item.o, dx, dy);
+          moved = true;
+        }
+      });
+
+      if(!moved){
+        state.history.pop();
+        updateHistoryButtons();
+        showStatusMessage('对象已处于当前对齐位置', 1400);
+        return;
+      }
+      if(entries.some(item => item.locked)) showStatusMessage('仅移动了非锁定对象');
+      draw();
+      markProjectDirty();
+    }
+
+    function distributeSelected(axis){
+      const selected = state.objects.filter(o => state.selectedIds.includes(o.id));
+      if(selected.length < 3){ showStatusMessage('分布功能需要至少 3 个对象', 1800, 'warning'); return; }
+      const horizontal = axis === 'horizontal';
+      const entries = selected.map(o => ({ o, b: getObjectBox(o), locked: isObjectLocked(o) }));
+      const movable = entries.filter(item => !item.locked);
+      if(!movable.length){ showStatusMessage('没有可移动对象，无法分布', 1800, 'warning'); return; }
+
+      entries.sort((a,b) => horizontal
+        ? ((a.b.x + a.b.w / 2) - (b.b.x + b.b.w / 2))
+        : ((a.b.y + a.b.h / 2) - (b.b.y + b.b.h / 2))
+      );
+
+      const getStart = item => horizontal ? item.b.x : item.b.y;
+      const getEnd = item => horizontal ? item.b.x + item.b.w : item.b.y + item.b.h;
+      const getSize = item => horizontal ? item.b.w : item.b.h;
+      const setTarget = (item, target) => {
+        const dx = horizontal ? target - item.b.x : 0;
+        const dy = horizontal ? 0 : target - item.b.y;
+        if(Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001){ moveObject(item.o, dx, dy); return true; }
+        return false;
+      };
+
+      const layoutSegment = (segment, leftBoundary, rightBoundary, hasLeftLock, hasRightLock) => {
+        if(!segment.length) return false;
+        const totalSize = segment.reduce((sum, item) => sum + getSize(item), 0);
+        const available = rightBoundary - leftBoundary - totalSize;
+        let gapCount = Math.max(1, segment.length - 1);
+        let cursor = leftBoundary;
+        if(hasLeftLock && hasRightLock){
+          gapCount = segment.length + 1;
+          const gap = available / gapCount;
+          cursor = leftBoundary + gap;
+          let changed = false;
+          segment.forEach(item => {
+            changed = setTarget(item, cursor) || changed;
+            cursor += getSize(item) + gap;
+          });
+          return changed;
+        }
+        if(hasLeftLock && !hasRightLock){
+          gapCount = segment.length;
+          const gap = available / gapCount;
+          cursor = leftBoundary + gap;
+          let changed = false;
+          segment.forEach(item => {
+            changed = setTarget(item, cursor) || changed;
+            cursor += getSize(item) + gap;
+          });
+          return changed;
+        }
+        if(!hasLeftLock && hasRightLock){
+          gapCount = segment.length;
+          const gap = available / gapCount;
+          let changed = false;
+          segment.forEach(item => {
+            changed = setTarget(item, cursor) || changed;
+            cursor += getSize(item) + gap;
+          });
+          return changed;
+        }
+        const gap = available / gapCount;
+        let changed = false;
+        segment.forEach(item => {
+          changed = setTarget(item, cursor) || changed;
+          cursor += getSize(item) + gap;
+        });
+        return changed;
+      };
+
+      const overallStart = Math.min(...entries.map(getStart));
+      const overallEnd = Math.max(...entries.map(getEnd));
+      saveHistory();
+      let moved = false;
+
+      if(entries.some(item => item.locked)){
+        let segment = [];
+        let leftBoundary = overallStart;
+        let hasLeftLock = false;
+        entries.forEach(item => {
+          if(item.locked){
+            moved = layoutSegment(segment, leftBoundary, getStart(item), hasLeftLock, true) || moved;
+            segment = [];
+            leftBoundary = getEnd(item);
+            hasLeftLock = true;
+          } else {
+            segment.push(item);
+          }
+        });
+        moved = layoutSegment(segment, leftBoundary, overallEnd, hasLeftLock, false) || moved;
+      } else {
+        moved = layoutSegment(entries, overallStart, overallEnd, false, false);
+      }
+
+      if(!moved){ state.history.pop(); updateHistoryButtons(); showStatusMessage('对象已处于当前分布位置', 1400); return; }
+      if(entries.some(item => item.locked)) showStatusMessage('仅移动了非锁定对象');
+      draw();
+      markProjectDirty();
+    }
 
     document.getElementById('undoBtn').onclick=undo;
     document.getElementById('redoBtn').onclick=redo;
@@ -6985,6 +7193,8 @@
     document.getElementById('alignTopBtn').onclick=()=>alignSelected('top');
     document.getElementById('alignMiddleBtn').onclick=()=>alignSelected('middle');
     document.getElementById('alignBottomBtn').onclick=()=>alignSelected('bottom');
+    document.getElementById('distributeHBtn').onclick=()=>distributeSelected('horizontal');
+    document.getElementById('distributeVBtn').onclick=()=>distributeSelected('vertical');
     document.getElementById('clearBtn').onclick=async()=>{
       const choice = await showChoiceDialog('清空画布', '确定清空当前平面图？此操作会同时清除本地草稿。', [
         { label: '取消', value: 'cancel' },
@@ -7590,6 +7800,23 @@
         }
         return o;
       });
+    }
+
+    function validateProjectDataForOpen(data) {
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        throw new Error('工程文件结构无效：根数据不是对象');
+      }
+      const expectedKeys = ['version', 'appVersion', 'page', 'pageW', 'pageH', 'defaults', 'view', 'objects', 'groups', 'backgroundImage', 'visibleLayers'];
+      const hasExpectedKey = expectedKeys.some(key => Object.prototype.hasOwnProperty.call(data, key));
+      if (!hasExpectedKey) {
+        throw new Error('工程文件结构无效：缺少工程数据字段');
+      }
+      if (Object.prototype.hasOwnProperty.call(data, 'objects') && !Array.isArray(data.objects)) {
+        throw new Error('工程文件结构无效：objects 必须是数组');
+      }
+      if (data.page !== undefined && (!data.page || typeof data.page !== 'object' || Array.isArray(data.page))) {
+        throw new Error('工程文件结构无效：page 必须是对象');
+      }
     }
 
     function loadProjectData(data, options = {}){
@@ -9067,13 +9294,30 @@
       if(!file)return;
       const reader=new FileReader();
       reader.onload=()=>{
+        let parsed;
         try{
-          loadProjectData(JSON.parse(reader.result), { clearDraft: true });
+          parsed = JSON.parse(reader.result);
+        }
+        catch(err){
+          console.error('[PY平面图工具] JSON 解析失败', err);
+          showMessageDialog('文件格式错误', '所选文件不是有效的 JSON 文件。请确认文件没有损坏，或重新选择由本工具保存的工程文件。');
+          return;
+        }
+        try{
+          validateProjectDataForOpen(parsed);
+          loadProjectData(parsed, { clearDraft: true });
           currentProjectFileName = file.name || '';
           currentProjectDisplayName = getProjectDisplayName(currentProjectFileName);
           updateDocumentTitle();
         }
-        catch(err){ showMessageDialog('打开失败', '无法打开这个工程文件。请确认文件是由本工具保存的 JSON 工程文件。'); }
+        catch(err){
+          console.error('[PY平面图工具] 工程文件加载失败', err);
+          showMessageDialog('打开失败', '这个 JSON 文件无法作为本工具工程文件加载。可能是文件结构不符合、版本不兼容，或数据已经损坏。');
+        }
+      };
+      reader.onerror=err=>{
+        console.error('[PY平面图工具] 工程文件读取失败', err);
+        showMessageDialog('读取失败', '无法读取所选文件。请重新选择文件后再试。');
       };
       reader.readAsText(file);
       e.target.value='';
