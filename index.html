@@ -1347,7 +1347,7 @@
     }
 
     .text-dialog-box-v95 {
-      width: min(660px, calc(100vw - 32px));
+      width: min(720px, calc(100vw - 32px));
       max-height: calc(100vh - 32px);
       overflow: visible;
       background: #fff;
@@ -1426,7 +1426,7 @@
     .text-dialog-section-v97 {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      column-gap: 22px;
+      column-gap: 18px;
       row-gap: 10px;
       padding-bottom: 12px;
       margin-bottom: 12px;
@@ -1477,30 +1477,22 @@
       border-color: #93c5fd;
       box-shadow: 0 0 0 2px rgba(147,197,253,.25);
     }
+    /* V177：文字编辑面板控件宽度收口。
+       输入框 W = 132px；文字型单选按钮宽度 = W / 2 = 66px；
+       小型属性按钮（背景色/文字色/B/I/U）三枚含 2 个 6px 间隔后总宽 = W，
+       因此单枚小型属性按钮宽度 = 40px。 */
     .text-align-segment-v98 button {
-      width: 64px;
-      min-width: 64px;
+      width: 66px;
+      min-width: 66px;
+      flex: 0 0 66px;
       text-align: center;
       justify-content: center;
     }
-    .text-style-group-v102 .text-style-btn-v96 {
-      width: 40px;
-      min-width: 40px;
-      flex: 0 0 40px;
-      box-sizing: border-box;
-    }
-    .text-fonttype-segment-v102 button {
-      width: 63px;
-      min-width: 63px;
-      flex: 0 0 63px;
-      text-align: center;
-      justify-content: center;
-      box-sizing: border-box;
-    }
+    .text-fonttype-segment-v102 button,
     .text-align-segment-v102 button {
-      width: 63px;
-      min-width: 63px;
-      flex: 0 0 63px;
+      width: 66px;
+      min-width: 66px;
+      flex: 0 0 66px;
       text-align: center;
       justify-content: center;
       box-sizing: border-box;
@@ -1526,7 +1518,8 @@
       align-items: center;
       flex-wrap: nowrap;
     }
-    .text-swatch-btn-v95 {
+    .text-swatch-btn-v95,
+    .text-style-btn-v96 {
       width: 40px;
       min-width: 40px;
       flex: 0 0 40px;
@@ -1541,11 +1534,18 @@
       justify-content: center;
       box-sizing: border-box;
     }
-    .text-swatch-btn-v95.active {
+    .text-swatch-btn-v95.active,
+    .text-style-btn-v96.active {
       border-color: #1d4ed8;
       box-shadow: 0 0 0 2px rgba(37,99,235,.20);
     }
-    .text-swatch-btn-v95:hover {
+    .text-style-btn-v96.active {
+      color: #1d4ed8;
+      background: #fff;
+      font-weight: 800;
+    }
+    .text-swatch-btn-v95:hover,
+    .text-style-btn-v96:hover {
       border-color: #93c5fd;
       background: #f8fafc;
     }
@@ -1582,27 +1582,63 @@
       text-align: left;
     }
     .text-style-btn-v96 {
-      min-width: 34px;
-      height: 30px;
-      border: 1px solid #cbd5e1;
-      background: #fff;
-      border-radius: 8px;
-      padding: 0;
-      cursor: pointer;
       color: #0f172a;
       font-size: 14px;
       line-height: 1;
+    }
+
+    .text-dialog-mixed-badge-v174 {
+      margin-left: 8px;
+      flex: 0 0 auto;
+      min-width: 38px;
+      height: 24px;
+      padding: 0 8px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      box-sizing: border-box;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      pointer-events: none;
+      white-space: nowrap;
     }
-    .text-style-btn-v96.active {
-      border-color: #1d4ed8;
-      background: #1d4ed8;
-      color: #fff;
-      box-shadow: 0 0 0 2px rgba(37,99,235,.16);
-      font-weight: 800;
+    .text-dialog-mixed-badge-v174.hidden {
+      display: none;
+    }
+    .text-dialog-content-note-v174 {
+      width: 100%;
+      min-height: 54px;
+      margin-bottom: 12px;
+      padding: 14px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.55;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+    }
+    .text-dialog-style-row-v95 > .text-align-segment,
+    .text-dialog-style-row-v95 > .text-swatch-segment-v95,
+    .text-dialog-style-row-v95 > .text-dialog-size-input-v97 {
+      flex: 0 0 auto;
+    }
+    .text-dialog-style-row-v95 > .text-dialog-mixed-badge-v174 {
+      flex: 0 0 auto;
+    }
+    .text-dialog-style-row-v95 > .text-style-group-v102,
+    .text-dialog-style-row-v95 > .text-fonttype-segment-v102,
+    .text-dialog-style-row-v95 > .text-align-segment-v102 {
+      flex-shrink: 0;
+    }
+    .text-swatch-btn-v95.mixed .text-swatch-chip-v95 {
+      background: linear-gradient(135deg, #111827 0 25%, #ffffff 25% 50%, #111827 50% 75%, #ffffff 75% 100%) !important;
     }
     .text-style-btn-v96.bold {
       font-weight: 900;
@@ -1812,7 +1848,7 @@
           </div>
           <div class="row">
             <label>墙体厚度</label>
-            <input id="wallThickness" type="number" min="4" max="120" value="10" />
+            <input id="wallThickness" type="number" min="4" max="120" value="8" />
           </div>
           <div class="row">
             <label>墙体样式</label>
@@ -2132,7 +2168,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v170';
+    const APP_VERSION = 'v177';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -3290,7 +3326,7 @@
         arrowMode: els.arrowMode.value || 'end',
         arrowSize: getInputNumber(els.arrowSize, 14) || 14,
         dimensionLabelMode: els.dimensionLabelMode.value || 'inline',
-        wallThickness: getInputNumber(els.wallThickness, 10) || 10,
+        wallThickness: getInputNumber(els.wallThickness, 8) || 10,
         wallStyle: els.wallStyle.value || 'hollow',
         openingThicknessMode: els.openingThicknessMode.value || 'linear',
         openingUseWallThickness: els.openingThicknessMode.value === 'wall',
@@ -3504,7 +3540,11 @@
         defs.push({ key:'wallThickness', label:'墙厚', type:'number', unit:'px' });
         defs.push({ key:'wallStyle', label:'墙体', type:'select', options:[['hollow','空心'],['solid','实心']] });
       }
-      if (['door','window'].includes(o.type)) defs.push({ key:'openingThicknessMode', label:'厚度', type:'select', options:[['linear','线性'],['wall','墙体']] });
+      if (['door','window'].includes(o.type)) {
+        const wallThicknessEnabled = usesWallThickness(o);
+        defs.push({ key:'openingThicknessMode', label:'厚度', type:'select', options:[['linear','线性'],['wall','墙体']] });
+        defs.push({ key:'wallThickness', label:'墙厚', type:'number', unit:'px', disabled: !wallThicknessEnabled, disabledTitle: '厚度为线性时，墙厚不参与门窗显示' });
+      }
       if (o.type === 'door') defs.push({ key:'doorSwing', label:'开向', type:'select', options:[['right','右开'],['left','左开']] });
       if (o.type === 'dimension') {
         const customTextEnabled = (o.dimensionTextMode || 'auto') === 'custom';
@@ -3541,7 +3581,7 @@
       if (key === 'brushObjectOpacity') return Math.round((Number.isFinite(Number(o.opacity)) ? Math.max(0, Math.min(1, Number(o.opacity))) : 1) * 100);
       if (key === 'fillEnabled') return getShapeFillEnabled(o) ? 'true' : 'false';
       if (key === 'fillOpacity') return Math.round(getShapeFillOpacity(o) * 100);
-      if (key === 'wallThickness') return o.wallThickness || 10;
+      if (key === 'wallThickness') return o.wallThickness || 8;
       if (key === 'wallStyle') return o.wallStyle || 'hollow';
       if (key === 'openingThicknessMode') return o.openingThicknessMode || (o.openingUseWallThickness ? 'wall' : 'linear');
       if (key === 'doorSwing') return o.doorSwing || o.swing || 'right';
@@ -3581,6 +3621,36 @@
       return allSame ? first : MIXED_PROPERTY_VALUE;
     }
 
+
+    function getCommonTextDialogValue(objects, getter, normalizer = value => value) {
+      if (!objects || !objects.length) return '';
+      const values = objects.map(o => normalizer(getter(o)));
+      const first = values[0];
+      const firstComparable = propertyComparableValue(first);
+      const allSame = values.every(v => propertyComparableValue(v) === firstComparable);
+      return allSame ? first : MIXED_PROPERTY_VALUE;
+    }
+
+    function applyTextDialogResultToObject(o, result, options = {}) {
+      if (!o || o.type !== 'text' || !result) return false;
+      const dirty = result.dirtyFields || {};
+      const onlyDirty = !!options.onlyDirty;
+      const skipText = !!options.skipText;
+      const shouldApply = key => !onlyDirty || !!dirty[key];
+      if (!skipText && shouldApply('text')) o.text = normalizeTextContent(result.text, '文字');
+      if (shouldApply('align')) o.textAlign = normalizeTextAlign(result.align);
+      if (shouldApply('color')) o.color = normalizeHexColor(result.color, o.color || '#111827');
+      if (shouldApply('backgroundMode')) o.textBackgroundMode = normalizeTextBackgroundMode(result.backgroundMode);
+      if (shouldApply('backgroundColor')) o.textBackgroundColor = normalizeHexColor(result.backgroundColor, '#ffffff');
+      if (shouldApply('backgroundOpacity')) o.textBackgroundOpacity = normalizeTextBackgroundOpacity(result.backgroundOpacity);
+      if (shouldApply('bold')) o.textBold = normalizeTextStyleFlag(result.bold);
+      if (shouldApply('italic')) o.textItalic = normalizeTextStyleFlag(result.italic);
+      if (shouldApply('underline')) o.textUnderline = normalizeTextStyleFlag(result.underline);
+      if (shouldApply('fontSize')) o.fontSize = Math.max(1, Number(result.fontSize) || o.fontSize || 20);
+      if (shouldApply('fontType')) o.fontType = normalizeFontType(result.fontType);
+      return true;
+    }
+
     function getMultiPropertyDefs(objects) {
       if (!objects || objects.length < 2) return [];
       const lockDef = { key:'locked', label:'锁定', type:'lockToggle' };
@@ -3601,7 +3671,11 @@
         return [lockDef, { key:'color', label:'颜色', type:'swatches' }];
       }
       const type = types[0];
-      const defs = [lockDef, { key:'color', label:'颜色', type:'swatches' }];
+      const defs = [lockDef];
+      if (type === 'text') {
+        defs.push({ key:'textPreview', label:'内容', type:'readonlyText', batchTextPreview: true });
+      }
+      defs.push({ key:'color', label:'颜色', type:'swatches' });
       if (isFillableShapeType(type)) {
         const allFillEnabled = objects.every(o => getShapeFillEnabled(o));
         defs.push({ key:'fillEnabled', label:'填充', type:'select', options:[['false','无'],['true','有']] });
@@ -3616,7 +3690,11 @@
         defs.push({ key:'wallThickness', label:'墙厚', type:'number', unit:'px' });
         defs.push({ key:'wallStyle', label:'墙体', type:'select', options:[['hollow','空心'],['solid','实心']] });
       }
-      if (['door','window'].includes(type)) defs.push({ key:'openingThicknessMode', label:'厚度', type:'select', options:[['linear','线性'],['wall','墙体']] });
+      if (['door','window'].includes(type)) {
+        const allUseWallThickness = objects.every(o => usesWallThickness(o));
+        defs.push({ key:'openingThicknessMode', label:'厚度', type:'select', options:[['linear','线性'],['wall','墙体']] });
+        defs.push({ key:'wallThickness', label:'墙厚', type:'number', unit:'px', disabled: !allUseWallThickness, disabledTitle: '厚度为线性或混合时，墙厚不参与门窗显示' });
+      }
       if (type === 'door') defs.push({ key:'doorSwing', label:'开向', type:'select', options:[['right','右开'],['left','左开']] });
       if (type === 'arrow') {
         defs.push({ key:'arrowSize', label:'箭头', type:'number', unit:'px' });
@@ -3638,6 +3716,7 @@
     }
 
     function getMultiPropertyValue(objects, def) {
+      if (def && def.batchTextPreview) return `已选 ${Array.isArray(objects) ? objects.length : 0} 个文字`;
       return getCommonPropertyValue(objects, def.key);
     }
 
@@ -3652,7 +3731,8 @@
       if (key === 'lineWidth') return ['wall','line','arrow','rect','ellipse','dimension','door','window','area'].includes(o.type);
       if (key === 'fillEnabled' || key === 'fillOpacity') return isFillableShapeObject(o);
       if (key === 'brushObjectWidth' || key === 'brushObjectOpacity') return o.type === 'brush' || o.type === 'erase';
-      if (key === 'wallThickness' || key === 'wallStyle') return o.type === 'wall';
+      if (key === 'wallThickness') return o.type === 'wall' || o.type === 'door' || o.type === 'window';
+      if (key === 'wallStyle') return o.type === 'wall';
       if (key === 'openingThicknessMode') return o.type === 'door' || o.type === 'window';
       if (key === 'doorSwing') return o.type === 'door';
       if (key === 'fontSize') return o.type === 'text' || o.type === 'dimension';
@@ -3687,7 +3767,7 @@
       } else if (key === 'openingThicknessMode') {
         o.openingThicknessMode = raw;
         o.openingUseWallThickness = raw === 'wall';
-        if (raw === 'wall') o.wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 10) || 10;
+        if (raw === 'wall') o.wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 8) || 8;
       } else if (key === 'doorSwing') {
         o.doorSwing = raw === 'left' ? 'left' : 'right';
         o.swing = o.doorSwing;
@@ -3728,7 +3808,7 @@
       saveHistory();
       targets.forEach(o => applyObjectProperty(o, key, raw, n));
       draw();
-      updateObjectMetrics(key === 'dimensionTextMode' || key === 'fillEnabled');
+      updateObjectMetrics(key === 'dimensionTextMode' || key === 'fillEnabled' || key === 'openingThicknessMode');
       updateDimensionCustomTextInputState();
       markProjectDirty();
       return true;
@@ -3781,7 +3861,7 @@
 
     const sidebarUnitizedInputDefs = [
       { id: 'lineWidth', unit: 'px', fallback: 2, min: 1, max: 30 },
-      { id: 'wallThickness', unit: 'px', fallback: 10, min: 4, max: 120 },
+      { id: 'wallThickness', unit: 'px', fallback: 8, min: 4, max: 120 },
       { id: 'areaOpacity', unit: '%', fallback: 50, min: 0, max: 100 },
       { id: 'fontSize', unit: 'px', fallback: 20, min: 8, max: 96 },
       { id: 'arrowSize', unit: 'px', fallback: 14, min: 4, max: 80 },
@@ -4497,7 +4577,7 @@
         applyObjectProperty(o, key, raw, n);
       }
       draw();
-      updateObjectMetrics(key === 'dimensionTextMode' || key === 'fillEnabled');
+      updateObjectMetrics(key === 'dimensionTextMode' || key === 'fillEnabled' || key === 'openingThicknessMode');
       updateDimensionCustomTextInputState();
       markProjectDirty();
     }
@@ -4594,7 +4674,7 @@
       if (len < 0.001) return [];
       const color = o.color || '#111827';
       const width = o.lineWidth || 3;
-      const thickness = o.wallThickness || 10;
+      const thickness = o.wallThickness || 8;
       const nx = -dy / len * (thickness / 2);
       const ny = dx / len * (thickness / 2);
       const isSolid = (o.wallStyle || 'hollow') === 'solid';
@@ -4658,10 +4738,20 @@
       return width;
     }
 
-    function getSymbolCapLength(useWallThickness, baseThickness, lineWidth) {
-      // V170：门窗接口采用“视觉厚度接平”规则；门封口线宽度与门体线宽保持一致。
-      // 线性模式按线宽接平；墙体模式按墙体厚度 + 线宽接平；低于 8px 时保持最小可读厚度。
-      return Math.max(8, getOpeningVisualThickness(useWallThickness, baseThickness, lineWidth));
+    function getSymbolCapLength(useWallThickness, baseThickness, lineWidth, minLinearCapLength = 8, minWallCapLength = 8) {
+      // V172：门窗接口规则分离。门追求与承载线/墙接平，不强制 8px 最小厚度；窗体保留 8px，避免三根窗线过薄糊在一起。
+      const visualThickness = getOpeningVisualThickness(useWallThickness, baseThickness, lineWidth);
+      const minCapLength = useWallThickness
+        ? Math.max(0, Number(minWallCapLength) || 0)
+        : Math.max(0, Number(minLinearCapLength) || 0);
+      return Math.max(minCapLength, visualThickness);
+    }
+
+    function getDoorLeafExtend(capLength, doorLineWidth, useWallThickness) {
+      if (!useWallThickness) return 0;
+      // V173：门取消 8px 最小厚度后，薄墙模式下门扇直线不再使用固定 4px 延伸。
+      // 让门扇圆头刚好落在门口厚度边界内，避免直线边“穿脚”。
+      return Math.max(0, (Number(capLength) || 0) / 2 - (Math.max(1, Number(doorLineWidth) || 1)) / 2);
     }
 
     function buildDoorRenderItems(o) {
@@ -4671,11 +4761,11 @@
       const color = o.color || '#111827';
       const doorLineWidth = Math.max(1, Number(o.lineWidth) || 2);
       const useWallThickness = usesWallThickness(o);
-      const wallThickness = Math.max(1, Number(o.wallThickness || getInputNumber(els.wallThickness, 10) || 10));
+      const wallThickness = Math.max(1, Number(o.wallThickness || getInputNumber(els.wallThickness, 8) || 10));
       const openingThickness = useWallThickness ? wallThickness : doorLineWidth;
-      const capLength = getSymbolCapLength(useWallThickness, wallThickness, doorLineWidth);
-      const cutWidth = capLength + Math.max(2, doorLineWidth * 0.5);
-      const extend = useWallThickness ? Math.max(4, openingThickness / 2) : 0;
+      const capLength = getSymbolCapLength(useWallThickness, wallThickness, doorLineWidth, 0, 0);
+      const cutWidth = capLength + 2; // V172：门白色切口固定为总宽度多 2px，并跟随门实际封口长度。
+      const extend = getDoorLeafExtend(capLength, doorLineWidth, useWallThickness);
       const wallFaceOffset = useWallThickness ? Math.min(openingThickness / 2, len * 0.35) : 0;
       const arcEndAngle = useWallThickness ? -Math.asin(Math.min(0.35, wallFaceOffset / Math.max(len, 1))) : 0;
       const sealLineWidth = doorLineWidth; // V170：门封口线宽度与门扇/门弧保持一致，不再额外加宽。
@@ -4703,7 +4793,7 @@
       const color = o.color || '#111827';
       const windowLineWidth = Math.max(1, Number(o.lineWidth) || 2);
       const useWallThickness = usesWallThickness(o);
-      const wallThickness = Math.max(1, Number(o.wallThickness || getInputNumber(els.wallThickness, 10) || 10));
+      const wallThickness = Math.max(1, Number(o.wallThickness || getInputNumber(els.wallThickness, 8) || 10));
       const capLength = getSymbolCapLength(useWallThickness, wallThickness, windowLineWidth);
       // V169：窗体内部三根线不再使用固定线宽上限；厚度方向按封口长度比例分配。
       // 比例：外空白 1｜线 1｜中空白 1.2｜线 1｜中空白 1.2｜线 1｜外空白 1，总比例 7.4。
@@ -4714,7 +4804,7 @@
       const railTop = -capLength / 2 + outerGap + internalWindowLineWidth / 2;
       const railMid = railTop + internalWindowLineWidth / 2 + middleGap + internalWindowLineWidth / 2;
       const railBottom = railMid + internalWindowLineWidth / 2 + middleGap + internalWindowLineWidth / 2;
-      const cutWidth = capLength + Math.max(2, windowLineWidth * 0.5);
+      const cutWidth = capLength + 2; // V172：窗白色切口固定为总宽度多 2px，约等于两边各多 1px。
       const sealLineWidth = Math.max(windowLineWidth + 1, 3);
       const sealHalf = capLength / 2;
       const transform = { x: o.x1, y: o.y1, rotation: a };
@@ -5624,10 +5714,11 @@
       if(o.type==='door') {
         const a = Math.atan2(o.y2-o.y1, o.x2-o.x1);
         const len = Math.hypot(o.x2-o.x1, o.y2-o.y1);
-        const wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 10) || 10;
+        const wallThickness = Math.max(1, Number(o.wallThickness || getInputNumber(els.wallThickness, 8) || 10));
+        const doorLineWidth = Math.max(1, Number(o.lineWidth) || 2);
         const useWallThickness = usesWallThickness(o);
-        const openingThickness = useWallThickness ? wallThickness : (o.lineWidth || 2);
-        const extend = useWallThickness ? Math.max(4, openingThickness / 2) : 0;
+        const capLength = getSymbolCapLength(useWallThickness, wallThickness, doorLineWidth, 0, 0);
+        const extend = getDoorLeafExtend(capLength, doorLineWidth, useWallThickness);
         const swing = getDoorSwing(o);
         const hingeX = swing === 'right' ? len : 0;
         const arcAngles = swing === 'right'
@@ -5646,7 +5737,7 @@
       }
       if(o.type==='window') {
         const b = normalizeBox(o.x1,o.y1,o.x2,o.y2);
-        const wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 10) || 10;
+        const wallThickness = o.wallThickness || getInputNumber(els.wallThickness, 8) || 10;
         const pad = Math.max(10, (o.lineWidth || 2) + 7, wallThickness / 2 + 4);
         return {x:b.x-pad, y:b.y-pad, w:b.w+pad*2, h:b.h+pad*2};
       }
@@ -6994,13 +7085,22 @@
     }
 
     function editSelectedTextObject() {
-      const o = state.objects.find(x => state.selectedIds.includes(x.id) && x.type === 'text');
-      if (!o) {
+      const selectedObjects = getSelectedObjects();
+      const selectedTextObjects = selectedObjects.filter(x => x && x.type === 'text');
+      if (!selectedTextObjects.length) {
         showMessageDialog('未选择文字', '请先选中一个文字标签。');
         return;
       }
-      if (isObjectLocked(o)) { showStatusMessage('已锁定文字不能编辑'); return; }
-      editTextObject(o);
+      if (selectedObjects.length > 1 && selectedTextObjects.length !== selectedObjects.length) {
+        showMessageDialog('不能批量编辑', '请只选择文字对象后再使用文字编辑。');
+        return;
+      }
+      if (selectedTextObjects.some(isObjectLocked)) { showStatusMessage('已锁定文字不能编辑'); return; }
+      if (selectedTextObjects.length > 1) {
+        editTextObjectsBatch(selectedTextObjects);
+        return;
+      }
+      editTextObject(selectedTextObjects[0]);
     }
 
     async function editTextObject(o){
@@ -7021,18 +7121,93 @@
       if(result === null) return;
       restoreOriginal(original);
       saveHistory();
-      o.text = normalizeTextContent(result.text, '文字');
-      o.textAlign = normalizeTextAlign(result.align);
-      o.color = normalizeHexColor(result.color, o.color || '#111827');
-      o.textBackgroundMode = normalizeTextBackgroundMode(result.backgroundMode);
-      o.textBackgroundColor = normalizeHexColor(result.backgroundColor, '#ffffff');
-      o.textBackgroundOpacity = normalizeTextBackgroundOpacity(result.backgroundOpacity);
-      o.textBold = normalizeTextStyleFlag(result.bold);
-      o.textItalic = normalizeTextStyleFlag(result.italic);
-      o.textUnderline = normalizeTextStyleFlag(result.underline);
-      o.fontSize = Math.max(1, Number(result.fontSize) || o.fontSize || 20);
-      o.fontType = normalizeFontType(result.fontType);
+      applyTextDialogResultToObject(o, result);
       state.selectedIds = [o.id];
+      draw();
+      updateObjectMetrics(true);
+      markProjectDirty();
+    }
+
+    async function editTextObjectsBatch(objects){
+      const targets = (objects || []).filter(o => o && o.type === 'text' && !isObjectLocked(o));
+      if (targets.length < 2) return;
+      const originals = targets.map(o => clonePlain(o));
+      const originalSelection = state.selectedIds.slice();
+      const restoreOriginals = snapshots => {
+        targets.forEach((o, index) => {
+          const snapshot = snapshots[index];
+          if (!snapshot) return;
+          Object.keys(o).forEach(key => delete o[key]);
+          Object.assign(o, clonePlain(snapshot));
+        });
+        state.selectedIds = originalSelection.filter(id => state.objects.some(o => o && o.id === id));
+        draw();
+        updateObjectMetrics(true);
+      };
+      const previewUpdate = () => {
+        state.selectedIds = originalSelection.filter(id => state.objects.some(o => o && o.id === id));
+        draw();
+        updateObjectMetrics(true);
+      };
+      const first = targets[0];
+      const commonAlign = getCommonTextDialogValue(targets, o => o.textAlign || 'left', normalizeTextAlign);
+      const commonColor = getCommonTextDialogValue(targets, o => o.color || '#111827', value => normalizeHexColor(value, '#111827'));
+      const commonBgMode = getCommonTextDialogValue(targets, o => o.textBackgroundMode || 'none', normalizeTextBackgroundMode);
+      const commonBgColor = getCommonTextDialogValue(targets, o => o.textBackgroundColor || '#ffffff', value => normalizeHexColor(value, '#ffffff'));
+      const commonBgOpacity = getCommonTextDialogValue(targets, o => getTextBackgroundOpacity(o), value => Math.round(normalizeTextBackgroundOpacity(value) * 1000) / 1000);
+      const commonBold = getCommonTextDialogValue(targets, o => !!o.textBold, value => !!value);
+      const commonItalic = getCommonTextDialogValue(targets, o => !!o.textItalic, value => !!value);
+      const commonUnderline = getCommonTextDialogValue(targets, o => !!o.textUnderline, value => !!value);
+      const commonFontSize = getCommonTextDialogValue(targets, o => Number(o.fontSize || 20), value => Number(value) || 20);
+      const commonFontType = getCommonTextDialogValue(targets, o => o.fontType || 'default', normalizeFontType);
+      const mixedFields = {
+        align: isMixedPropertyValue(commonAlign),
+        color: isMixedPropertyValue(commonColor),
+        backgroundMode: isMixedPropertyValue(commonBgMode),
+        backgroundColor: isMixedPropertyValue(commonBgColor),
+        backgroundOpacity: isMixedPropertyValue(commonBgOpacity),
+        bold: isMixedPropertyValue(commonBold),
+        italic: isMixedPropertyValue(commonItalic),
+        underline: isMixedPropertyValue(commonUnderline),
+        fontSize: isMixedPropertyValue(commonFontSize),
+        fontType: isMixedPropertyValue(commonFontType)
+      };
+      const result = await showMultilineTextDialog(
+        '批量编辑文字样式',
+        '',
+        '',
+        '',
+        mixedFields.align ? (first.textAlign || 'left') : commonAlign,
+        mixedFields.color ? (first.color || '#111827') : commonColor,
+        mixedFields.backgroundMode ? (first.textBackgroundMode || 'none') : commonBgMode,
+        mixedFields.backgroundColor ? (first.textBackgroundColor || '#ffffff') : commonBgColor,
+        {
+          batchTextStyle: true,
+          selectedCount: targets.length,
+          previewTargets: targets,
+          originalSnapshots: originals,
+          onPreview: previewUpdate,
+          onRestore: restoreOriginals,
+          mixedFields,
+          initialBold: mixedFields.bold ? !!first.textBold : commonBold,
+          initialItalic: mixedFields.italic ? !!first.textItalic : commonItalic,
+          initialUnderline: mixedFields.underline ? !!first.textUnderline : commonUnderline,
+          initialFontSize: mixedFields.fontSize ? (first.fontSize || 20) : commonFontSize,
+          initialFontType: mixedFields.fontType ? (first.fontType || 'default') : commonFontType,
+          initialBackgroundOpacity: mixedFields.backgroundOpacity ? getTextBackgroundOpacity(first) : commonBgOpacity
+        }
+      );
+      if (result === null) return;
+      restoreOriginals(originals);
+      const dirty = result.dirtyFields || {};
+      if (!Object.keys(dirty).some(key => dirty[key])) {
+        draw();
+        updateObjectMetrics(true);
+        return;
+      }
+      saveHistory();
+      targets.forEach(o => applyTextDialogResultToObject(o, result, { onlyDirty: true, skipText: true }));
+      state.selectedIds = originalSelection.filter(id => state.objects.some(o => o && o.id === id));
       draw();
       updateObjectMetrics(true);
       markProjectDirty();
@@ -7169,7 +7344,7 @@
 
       const color = els.strokeColor.value;
       const lineWidth = getInputNumber(els.lineWidth, 2) || 2;
-      const wallThickness = getInputNumber(els.wallThickness, 10) || 10;
+      const wallThickness = getInputNumber(els.wallThickness, 8) || 10;
       const wallStyle = els.wallStyle.value || 'hollow';
       const fontSize = getInputNumber(els.fontSize, 20) || 20;
       const arrowMode = els.arrowMode.value || 'end';
@@ -7942,7 +8117,7 @@
           layer: els.layerSelect.value,
           color: els.strokeColor.value,
           lineWidth: getInputNumber(els.lineWidth, 2),
-          wallThickness: getInputNumber(els.wallThickness, 10),
+          wallThickness: getInputNumber(els.wallThickness, 8),
           wallStyle: els.wallStyle.value,
           openingThicknessMode: els.openingThicknessMode.value,
           areaOpacity: getInputNumber(els.areaOpacity, 50),
@@ -8425,10 +8600,15 @@
     function showMultilineTextDialog(title, message, initialValue = '', placeholder = '', initialAlign = 'left', initialColor = '#111827', initialBgMode = 'none', initialBgColor = '#ffffff', options = {}) {
       return new Promise(resolve => {
         beginModalLock();
+        const batchMode = !!options.batchTextStyle;
         const previewTarget = options.previewTarget || null;
+        const previewTargets = Array.isArray(options.previewTargets) ? options.previewTargets : [];
         const originalSnapshot = options.originalSnapshot ? clonePlain(options.originalSnapshot) : null;
+        const originalSnapshots = Array.isArray(options.originalSnapshots) ? clonePlain(options.originalSnapshots) : null;
         const onPreview = typeof options.onPreview === 'function' ? options.onPreview : null;
         const onRestore = typeof options.onRestore === 'function' ? options.onRestore : null;
+        const mixedFields = options.mixedFields || {};
+        const dirtyFields = {};
 
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(15,23,42,.20);padding:0;';
@@ -8448,6 +8628,17 @@
         titlebar.appendChild(h);
         titlebar.appendChild(closeBtn);
 
+        let textAlignMixed = !!mixedFields.align;
+        let textColorMixed = !!mixedFields.color;
+        let backgroundModeMixed = !!mixedFields.backgroundMode;
+        let backgroundColorMixed = !!mixedFields.backgroundColor;
+        let backgroundOpacityMixed = !!mixedFields.backgroundOpacity;
+        let textBoldMixed = !!mixedFields.bold;
+        let textItalicMixed = !!mixedFields.italic;
+        let textUnderlineMixed = !!mixedFields.underline;
+        let fontSizeMixed = !!mixedFields.fontSize;
+        let fontTypeMixed = !!mixedFields.fontType;
+
         let textAlignValue = normalizeTextAlign(initialAlign);
         let textColorValue = normalizeHexColor(initialColor, '#111827');
         let backgroundModeValue = normalizeTextBackgroundMode(initialBgMode);
@@ -8465,6 +8656,25 @@
         input.rows = 7;
         input.style.cssText = 'width:100%;min-height:150px;resize:vertical;border:1px solid #cbd5e1;border-radius:9px;padding:9px 10px;font-size:13px;line-height:1.45;margin-bottom:12px;outline:none;font-family:Arial,"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif;';
 
+        const contentNote = document.createElement('div');
+        contentNote.className = 'text-dialog-content-note-v174';
+        contentNote.textContent = `已选定 ${Number(options.selectedCount || previewTargets.length || 0)} 个文字对象。文字内容不可编辑。`;
+
+        function markDirty(key) {
+          dirtyFields[key] = true;
+        }
+
+        function setMixedBadgeVisible(badge, visible) {
+          if (badge) badge.classList.toggle('hidden', !visible);
+        }
+
+        function makeMixedBadge() {
+          const badge = document.createElement('span');
+          badge.className = 'text-dialog-mixed-badge-v174';
+          badge.textContent = '混合';
+          return badge;
+        }
+
         function currentResult() {
           return {
             text: input.value,
@@ -8477,28 +8687,29 @@
             italic: textItalicValue,
             underline: textUnderlineValue,
             fontSize: fontSizeValue,
-            fontType: fontTypeValue
+            fontType: fontTypeValue,
+            dirtyFields: { ...dirtyFields }
           };
         }
 
         function applyPreview() {
-          if (!previewTarget || !onPreview) return;
+          if (!onPreview) return;
           const result = currentResult();
-          previewTarget.text = normalizeTextContent(result.text, '文字');
-          previewTarget.textAlign = normalizeTextAlign(result.align);
-          previewTarget.color = normalizeHexColor(result.color, previewTarget.color || '#111827');
-          previewTarget.textBackgroundMode = normalizeTextBackgroundMode(result.backgroundMode);
-          previewTarget.textBackgroundColor = normalizeHexColor(result.backgroundColor, '#ffffff');
-          previewTarget.textBackgroundOpacity = normalizeTextBackgroundOpacity(result.backgroundOpacity);
-          previewTarget.textBold = normalizeTextStyleFlag(result.bold);
-          previewTarget.textItalic = normalizeTextStyleFlag(result.italic);
-          previewTarget.textUnderline = normalizeTextStyleFlag(result.underline);
-          previewTarget.fontSize = Math.max(1, Number(result.fontSize) || previewTarget.fontSize || 20);
-          previewTarget.fontType = normalizeFontType(result.fontType);
+          if (batchMode && previewTargets.length) {
+            previewTargets.forEach(target => applyTextDialogResultToObject(target, result, { onlyDirty: true, skipText: true }));
+            onPreview(previewTargets);
+            return;
+          }
+          if (!previewTarget) return;
+          applyTextDialogResultToObject(previewTarget, result);
           onPreview(previewTarget);
         }
 
         function restoreOriginal() {
+          if (batchMode && previewTargets.length && originalSnapshots && onRestore) {
+            onRestore(originalSnapshots);
+            return;
+          }
           if (previewTarget && originalSnapshot && onRestore) onRestore(originalSnapshot);
         }
 
@@ -8558,28 +8769,32 @@
         bgGroup.appendChild(bgColorBtn);
         bgGroup.appendChild(bgNoneBtn);
         bgRow.appendChild(bgGroup);
+        const bgMixedBadge = makeMixedBadge();
+        bgRow.appendChild(bgMixedBadge);
 
         const bgOpacityRow = makeRow('背景透明');
         const bgOpacityInput = document.createElement('input');
         bgOpacityInput.type = 'text';
         bgOpacityInput.className = 'text-dialog-size-input-v97';
-        bgOpacityInput.value = `${Math.round(backgroundOpacityValue * 100)}%`;
+        bgOpacityInput.value = backgroundOpacityMixed ? MIXED_PROPERTY_LABEL : `${Math.round(backgroundOpacityValue * 100)}%`;
         bgOpacityInput.inputMode = 'decimal';
         bgOpacityInput.title = '只影响文字背景，不影响文字本身；100% 为完全不透明';
         bgOpacityInput.addEventListener('focus', () => {
-          bgOpacityInput.value = String(Math.round(backgroundOpacityValue * 100));
+          bgOpacityInput.value = backgroundOpacityMixed ? '' : String(Math.round(backgroundOpacityValue * 100));
           bgOpacityInput.select();
         });
         bgOpacityInput.addEventListener('input', () => {
           const raw = String(bgOpacityInput.value || '').replace(/%/g, '').trim();
           const n = Number(raw);
           if (Number.isFinite(n)) {
+            backgroundOpacityMixed = false;
+            markDirty('backgroundOpacity');
             backgroundOpacityValue = Math.max(0, Math.min(100, n)) / 100;
             applyPreview();
           }
         });
         bgOpacityInput.addEventListener('blur', () => {
-          bgOpacityInput.value = `${Math.round(backgroundOpacityValue * 100)}%`;
+          bgOpacityInput.value = backgroundOpacityMixed ? MIXED_PROPERTY_LABEL : `${Math.round(backgroundOpacityValue * 100)}%`;
         });
         bgOpacityRow.appendChild(bgOpacityInput);
 
@@ -8610,88 +8825,112 @@
         underlineBtn.title = '下划线';
         [boldBtn, italicBtn, underlineBtn].forEach(btn => styleGroup.appendChild(btn));
         styleRow.appendChild(styleGroup);
+        const styleMixedBadge = makeMixedBadge();
+        styleRow.appendChild(styleMixedBadge);
 
         const fontTypeRow = makeRow('字体类型');
         const fontTypeGroup = document.createElement('div');
         fontTypeGroup.className = 'text-align-segment text-fonttype-segment-v102';
+        const fontTypeMixedBadge = makeMixedBadge();
         [['default','默认'],['monospace','等宽']].forEach(([value, label]) => {
           const b = document.createElement('button');
           b.type = 'button';
           b.textContent = label;
           b.dataset.fontType = value;
-          b.className = value === fontTypeValue ? 'active' : '';
+          b.className = (!fontTypeMixed && value === fontTypeValue) ? 'active' : '';
           b.addEventListener('click', () => {
             fontTypeValue = value;
+            fontTypeMixed = false;
+            markDirty('fontType');
             fontTypeGroup.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.fontType === value));
+            setMixedBadgeVisible(fontTypeMixedBadge, false);
             applyPreview();
           });
           fontTypeGroup.appendChild(b);
         });
         fontTypeRow.appendChild(fontTypeGroup);
+        fontTypeRow.appendChild(fontTypeMixedBadge);
 
         const sizeRow = makeRow('字号');
         const sizeInput = document.createElement('input');
         sizeInput.type = 'text';
         sizeInput.className = 'text-dialog-size-input-v97';
-        sizeInput.value = `${fontSizeValue} px`;
+        sizeInput.value = fontSizeMixed ? MIXED_PROPERTY_LABEL : `${fontSizeValue} px`;
         sizeInput.inputMode = 'decimal';
         sizeInput.addEventListener('focus', () => {
-          sizeInput.value = String(fontSizeValue);
+          sizeInput.value = fontSizeMixed ? '' : String(fontSizeValue);
           sizeInput.select();
         });
         sizeInput.addEventListener('input', () => {
           const raw = String(sizeInput.value || '').replace(/px/i, '').trim();
           const n = Number(raw);
           if (Number.isFinite(n) && n > 0) {
+            fontSizeMixed = false;
+            markDirty('fontSize');
             fontSizeValue = n;
             applyPreview();
           }
         });
         sizeInput.addEventListener('blur', () => {
-          sizeInput.value = `${Math.round(fontSizeValue * 100) / 100} px`;
+          sizeInput.value = fontSizeMixed ? MIXED_PROPERTY_LABEL : `${Math.round(fontSizeValue * 100) / 100} px`;
         });
         sizeRow.appendChild(sizeInput);
 
         const alignRow = makeRow('对齐方式');
         const alignGroup = document.createElement('div');
         alignGroup.className = 'text-align-segment text-align-segment-v102';
+        const alignMixedBadge = makeMixedBadge();
         [['left','左对齐'],['center','居中'],['right','右对齐']].forEach(([value, label]) => {
           const b = document.createElement('button');
           b.type = 'button';
           b.textContent = label;
           b.dataset.align = value;
-          b.className = value === textAlignValue ? 'active' : '';
+          b.className = (!textAlignMixed && value === textAlignValue) ? 'active' : '';
           b.addEventListener('click', () => {
             textAlignValue = value;
+            textAlignMixed = false;
+            markDirty('align');
             alignGroup.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.align === value));
+            setMixedBadgeVisible(alignMixedBadge, false);
             applyPreview();
           });
           alignGroup.appendChild(b);
         });
         alignRow.appendChild(alignGroup);
+        alignRow.appendChild(alignMixedBadge);
 
         function refreshStyleButtons() {
-          boldBtn.classList.toggle('active', textBoldValue);
-          italicBtn.classList.toggle('active', textItalicValue);
-          underlineBtn.classList.toggle('active', textUnderlineValue);
+          boldBtn.classList.toggle('active', !textBoldMixed && textBoldValue);
+          italicBtn.classList.toggle('active', !textItalicMixed && textItalicValue);
+          underlineBtn.classList.toggle('active', !textUnderlineMixed && textUnderlineValue);
+          setMixedBadgeVisible(styleMixedBadge, textBoldMixed || textItalicMixed || textUnderlineMixed);
         }
         function refreshColorButtons() {
-          textColorBtn.querySelector('.text-swatch-chip-v95').style.background = textColorValue;
+          textColorBtn.classList.toggle('mixed', textColorMixed);
+          textColorBtn.querySelector('.text-swatch-chip-v95').style.background = textColorMixed ? '' : textColorValue;
           const bgColor = getTextBackgroundColor({ textBackgroundMode: backgroundModeValue, textBackgroundColor: backgroundColorValue }) || '#ffffff';
-          bgColorBtn.querySelector('.text-swatch-chip-v95').style.background = bgColor;
-          bgColorBtn.classList.toggle('active', backgroundModeValue !== 'none');
-          bgNoneBtn.classList.toggle('active', backgroundModeValue === 'none');
+          bgColorBtn.classList.toggle('mixed', backgroundColorMixed || backgroundModeMixed);
+          bgColorBtn.querySelector('.text-swatch-chip-v95').style.background = (backgroundColorMixed || backgroundModeMixed) ? '' : bgColor;
+          bgColorBtn.classList.toggle('active', !backgroundModeMixed && backgroundModeValue !== 'none');
+          bgNoneBtn.classList.toggle('active', !backgroundModeMixed && backgroundModeValue === 'none');
+          setMixedBadgeVisible(bgMixedBadge, backgroundModeMixed || backgroundColorMixed);
         }
 
         bgColorBtn.addEventListener('click', () => {
           showFloatingPalette(bgColorBtn, backgroundColorValue, c => {
             backgroundColorValue = c;
             backgroundModeValue = 'custom';
+            backgroundModeMixed = false;
+            backgroundColorMixed = false;
+            markDirty('backgroundMode');
+            markDirty('backgroundColor');
             refreshColorButtons();
           });
         });
         bgNoneBtn.addEventListener('click', () => {
           backgroundModeValue = 'none';
+          backgroundModeMixed = false;
+          markDirty('backgroundMode');
           closeFloatingPalette();
           refreshColorButtons();
           applyPreview();
@@ -8699,17 +8938,21 @@
         textColorBtn.addEventListener('click', () => {
           showFloatingPalette(textColorBtn, textColorValue, c => {
             textColorValue = c;
+            textColorMixed = false;
+            markDirty('color');
             refreshColorButtons();
           });
         });
-        boldBtn.addEventListener('click', () => { textBoldValue = !textBoldValue; refreshStyleButtons(); applyPreview(); });
-        italicBtn.addEventListener('click', () => { textItalicValue = !textItalicValue; refreshStyleButtons(); applyPreview(); });
-        underlineBtn.addEventListener('click', () => { textUnderlineValue = !textUnderlineValue; refreshStyleButtons(); applyPreview(); });
+        boldBtn.addEventListener('click', () => { textBoldValue = textBoldMixed ? true : !textBoldValue; textBoldMixed = false; markDirty('bold'); refreshStyleButtons(); applyPreview(); });
+        italicBtn.addEventListener('click', () => { textItalicValue = textItalicMixed ? true : !textItalicValue; textItalicMixed = false; markDirty('italic'); refreshStyleButtons(); applyPreview(); });
+        underlineBtn.addEventListener('click', () => { textUnderlineValue = textUnderlineMixed ? true : !textUnderlineValue; textUnderlineMixed = false; markDirty('underline'); refreshStyleButtons(); applyPreview(); });
+        setMixedBadgeVisible(fontTypeMixedBadge, fontTypeMixed);
+        setMixedBadgeVisible(alignMixedBadge, textAlignMixed);
         refreshColorButtons();
         refreshStyleButtons();
 
         const helper = document.createElement('div');
-        helper.textContent = 'Enter 换行；Ctrl / Command + Enter 确定；Esc 取消';
+        helper.textContent = batchMode ? '只会应用已调整的样式；取消会恢复预览前状态' : 'Enter 换行；Ctrl / Command + Enter 确定；Esc 取消';
         helper.style.cssText = 'font-size:12px;color:#64748b;margin-bottom:14px;';
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;';
@@ -8748,7 +8991,7 @@
           } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
-            finish(input.value);
+            finish(batchMode ? '' : input.value);
           }
         };
         document.addEventListener('keydown', modalKeyHandler, true);
@@ -8757,12 +9000,14 @@
         closeBtn.addEventListener('pointermove', e => e.stopPropagation());
         closeBtn.addEventListener('pointerup', e => e.stopPropagation());
         closeBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); finish(null); });
-        okBtn.addEventListener('click', () => finish(input.value));
-        input.addEventListener('input', applyPreview);
-        input.addEventListener('keydown', e => {
-          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); finish(input.value); }
-          if (e.key === 'Escape') { e.preventDefault(); finish(null); }
-        });
+        okBtn.addEventListener('click', () => finish(batchMode ? '' : input.value));
+        if (!batchMode) {
+          input.addEventListener('input', () => { markDirty('text'); applyPreview(); });
+          input.addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); finish(input.value); }
+            if (e.key === 'Escape') { e.preventDefault(); finish(null); }
+          });
+        }
 
         row.appendChild(cancelBtn);
         row.appendChild(okBtn);
@@ -8785,7 +9030,7 @@
         box.appendChild(titlebar);
         box.appendChild(attrSection);
         box.appendChild(contentLabel);
-        box.appendChild(input);
+        box.appendChild(batchMode ? contentNote : input);
         box.appendChild(footer);
         overlay.appendChild(box);
         document.body.appendChild(overlay);
@@ -8844,14 +9089,16 @@
           }
           draggingDialog = false;
         });
-        input.addEventListener('blur', () => {
-          scheduleViewportResetAfterKeyboard(false);
-          setTimeout(keepBoxInsideViewport, 120);
-        });
+        if (!batchMode) {
+          input.addEventListener('blur', () => {
+            scheduleViewportResetAfterKeyboard(false);
+            setTimeout(keepBoxInsideViewport, 120);
+          });
+        }
 
         applyPreview();
         setTimeout(() => {
-          if (shouldAutoFocusModalInput()) {
+          if (!batchMode && shouldAutoFocusModalInput()) {
             input.focus();
             const end = input.value.length;
             try { input.setSelectionRange(end, end); } catch (err) {}
