@@ -2011,17 +2011,6 @@
           </div>
           <div class="group-body">
           <div class="row">
-            <label>端点吸附</label>
-            <select id="endpointSnapMode" class="hidden-input">
-              <option value="on" selected>开启</option>
-              <option value="off">关闭</option>
-            </select>
-            <div class="segmented" data-segment-target="endpointSnapMode">
-              <button type="button" data-value="on" class="active">开</button>
-              <button type="button" data-value="off">关</button>
-            </div>
-          </div>
-          <div class="row">
             <label>智能辅助线</label>
             <select id="smartGuideMode" class="hidden-input">
               <option value="on">开启</option>
@@ -2030,6 +2019,17 @@
             <div class="segmented" data-segment-target="smartGuideMode">
               <button type="button" data-value="on">开</button>
               <button type="button" data-value="off" class="active">关</button>
+            </div>
+          </div>
+          <div class="row">
+            <label>端点吸附</label>
+            <select id="endpointSnapMode" class="hidden-input">
+              <option value="on" selected>开启</option>
+              <option value="off">关闭</option>
+            </select>
+            <div class="segmented" data-segment-target="endpointSnapMode">
+              <button type="button" data-value="on" class="active">开</button>
+              <button type="button" data-value="off">关</button>
             </div>
           </div>
           <div class="row">
@@ -2218,7 +2218,7 @@
             <div>绘制线、箭、墙、尺时，按 Shift 可锁定 0° / 45° / 90°</div>
             <div>拖动方 / 圆角点时，按 Shift 可保持比例</div>
             <div>绘制区域时，按 Enter 完成闭合；按 Esc 取消；Ctrl / Command + Z 或 Delete 可撤销上一个点</div>
-            <div>选中区域后，可用状态栏“＋节点 / －节点”增加或删除区域节点；PC 可双击边线新增节点，Alt / Option + 点击节点删除</div>
+            <div>双击区域边线：新增节点；Alt / Option + 点击区域节点：删除节点</div>
             <div>拖动节点或控制点时，按 Esc 可取消本次调整</div>
             <div>拖动对象时，Shift 可锁定水平 / 垂直；Alt / Option 可复制拖动</div>
             <div>Alt / Option + Shift 拖动：复制并水平 / 垂直约束移动</div>
@@ -2251,7 +2251,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v198';
+    const APP_VERSION = 'v202';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -2291,6 +2291,7 @@
       areaPoints: [],
       areaPreview: null,
       areaNodeEditMode: null,
+      areaNodeHighlight: null,
       dragging: false,
       erasing: false,
       boxSelecting: false,
@@ -2308,6 +2309,8 @@
       dragGuide: null,
       modalOpen: false,
       resizeHistorySaved: false,
+      arrowKeyMoveHistorySaved: false,
+      drawShiftKey: false,
       start: null,
       current: null,
       dragStartRaw: null,
@@ -2383,7 +2386,7 @@
     };
 
     const toolNames = {
-      select: '选择', wall: '墙体', line: '直线', area: '区域', arrow: '箭头线', rect: '矩形', ellipse: '椭圆', dimension: '标尺', text: '文字', door: '门', window: '窗', eraser: '笔刷'
+      select: '选择', wall: '墙体', line: '直线', area: '区域', arrow: '箭头线', rect: '矩形', ellipse: '椭圆', dimension: '标尺', text: '文字', door: '门', window: '窗', eraser: '笔刷', brush: '笔刷'
     };
 
     const toolLayer = {
@@ -3083,9 +3086,9 @@
       const old = typeof snapshotText === 'string' ? JSON.parse(snapshotText) : (snapshotText || {});
       state.objects = old.objects || [];
       state.groups = old.groups || {};
-      state.pageW = old.pageW || state.pageW;
-      state.pageH = old.pageH || state.pageH;
-      state.aspectRatio = old.aspectRatio || (state.pageW / Math.max(1, state.pageH));
+      state.pageW = old.pageW ?? state.pageW;
+      state.pageH = old.pageH ?? state.pageH;
+      state.aspectRatio = old.aspectRatio ?? (state.pageW / Math.max(1, state.pageH));
       if (Object.prototype.hasOwnProperty.call(old, 'backgroundImage')) {
         state.backgroundImage = normalizeBackgroundImage(old.backgroundImage || null);
         ensureBackgroundImageLoaded().catch(() => { state.backgroundImage = null; backgroundImgElement = null; draw(); });
@@ -3525,9 +3528,43 @@
       return pts.length >= 3 ? o : null;
     }
 
+    function setAreaNodeHighlight(highlight, options = {}) {
+      let next = null;
+      if (highlight && highlight.objectId && highlight.mode === 'add-hover' && highlight.point) {
+        next = {
+          objectId: highlight.objectId,
+          mode: 'add-hover',
+          point: { x: Number(highlight.point.x), y: Number(highlight.point.y) }
+        };
+      } else if (highlight && highlight.objectId && Number.isInteger(highlight.index)) {
+        next = { objectId: highlight.objectId, index: highlight.index, mode: highlight.mode || 'added' };
+      }
+      const prev = state.areaNodeHighlight;
+      const same = (!prev && !next) || (prev && next && prev.objectId === next.objectId && prev.index === next.index && prev.mode === next.mode && (!next.point || (prev.point && prev.point.x === next.point.x && prev.point.y === next.point.y)));
+      if (same) return false;
+      state.areaNodeHighlight = next;
+      if (options.draw) draw();
+      return true;
+    }
+
+    function clearAreaNodeHighlight(options = {}) {
+      return setAreaNodeHighlight(null, options);
+    }
+
+    function shouldShowAreaNodeHighlight(o, index) {
+      const h = state.areaNodeHighlight;
+      return !!(h && o && h.objectId === o.id && Number.isInteger(h.index) && h.index === index);
+    }
+
+    function getAreaNodeAddPreviewPoint(o) {
+      const h = state.areaNodeHighlight;
+      return h && o && h.objectId === o.id && h.mode === 'add-hover' && h.point ? h.point : null;
+    }
+
     function clearAreaNodeEditMode() {
       if (!state.areaNodeEditMode) return false;
       state.areaNodeEditMode = null;
+      clearAreaNodeHighlight();
       clearSnapIndicator();
       return true;
     }
@@ -3543,6 +3580,7 @@
         return false;
       }
       state.areaNodeEditMode = mode === 'add' || mode === 'delete' ? mode : null;
+      clearAreaNodeHighlight();
       clearSnapIndicator();
       draw();
       updateCursor();
@@ -5654,15 +5692,16 @@
       });
     }
 
-    function buildShapeFromPoints(type, start, end, preview = false) {
+    function buildShapeFromPoints(type, start, end, preview = false, event = null) {
       const s = currentStyle();
       let finalStart = { ...start };
       let finalEnd = { ...end };
+      const shiftKey = event ? !!event.shiftKey : !!state.drawShiftKey;
       if (type === 'wall') {
         finalStart = snapWallEndpoint(finalStart);
         finalEnd = snapWallEndpoint(finalEnd);
       }
-      if (window.event && window.event.shiftKey && ['line','arrow','wall','dimension','door','window'].includes(type)) {
+      if (shiftKey && ['line','arrow','wall','dimension','door','window'].includes(type)) {
         finalEnd = constrainToAngle(finalStart, finalEnd, 45);
       }
       if (type === 'wall' && !preview) {
@@ -5674,7 +5713,7 @@
         base.fillEnabled = false;
         base.fillOpacity = s.areaOpacity;
       }
-      if (type === 'ellipse' && window.event && window.event.shiftKey) {
+      if (type === 'ellipse' && shiftKey) {
         const dx = finalEnd.x - finalStart.x, dy = finalEnd.y - finalStart.y;
         const size = Math.max(Math.abs(dx), Math.abs(dy));
         base.x2 = finalStart.x + Math.sign(dx || 1) * size;
@@ -5872,14 +5911,30 @@
     function formatNumber(n){ const value=Number(n); if(!Number.isFinite(value)) return '0'; return value.toFixed(2).replace(/0+$/,'').replace(/\.$/,''); }
 
 
+    function getPointBounds(points) {
+      if (!Array.isArray(points) || !points.length) return null;
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const p of points) {
+        if (!p) continue;
+        const x = Number(p.x), y = Number(p.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+      if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
+      return { minX, maxX, minY, maxY };
+    }
+
     function getObjectBox(o){
       if(o.type==='wall'){
         const b=normalizeBox(o.x1,o.y1,o.x2,o.y2);
         const pad=(o.wallThickness||10)/2+8;
         return {x:b.x-pad,y:b.y-pad,w:b.w+pad*2,h:b.h+pad*2};
       }
-      if(o.type==='area') { const pts=Array.isArray(o.points)?o.points:[]; if(!pts.length)return {x:0,y:0,w:0,h:0}; const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y); const pad=Math.max(6,(o.lineWidth||2)+4); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys); return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
-      if(o.type==='brush'||o.type==='erase') { const pts=Array.isArray(o.points)?o.points:[]; if(!pts.length)return {x:0,y:0,w:0,h:0}; const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y); const pad=Math.max(6,(o.width||22)/2+4); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys); return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
+      if(o.type==='area') { const pts=Array.isArray(o.points)?o.points:[]; const bounds=getPointBounds(pts); if(!bounds)return {x:0,y:0,w:0,h:0}; const pad=Math.max(6,(o.lineWidth||2)+4); const {minX,maxX,minY,maxY}=bounds; return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
+      if(o.type==='brush'||o.type==='erase') { const pts=Array.isArray(o.points)?o.points:[]; const bounds=getPointBounds(pts); if(!bounds)return {x:0,y:0,w:0,h:0}; const pad=Math.max(6,(o.width||22)/2+4); const {minX,maxX,minY,maxY}=bounds; return {x:minX-pad,y:minY-pad,w:maxX-minX+pad*2,h:maxY-minY+pad*2}; }
       if(o.type==='text') {
         return getTextAlignmentBox(o);
       }
@@ -5902,9 +5957,9 @@
         });
         const pts = [localToWorld(0,0), localToWorld(len,0), localToWorld(hingeX, extend), localToWorld(hingeX, -len)];
         arcAngles.forEach(t => pts.push(localToWorld(hingeX + Math.cos(t) * len, Math.sin(t) * len)));
-        const xs = pts.map(p=>p.x), ys = pts.map(p=>p.y);
+        const bounds = getPointBounds(pts);
         const pad = Math.max(10, (o.lineWidth || 2) + 7, wallThickness / 2 + 4);
-        const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+        const { minX, maxX, minY, maxY } = bounds || { minX: 0, maxX: 0, minY: 0, maxY: 0 };
         return {x:minX-pad, y:minY-pad, w:maxX-minX+pad*2, h:maxY-minY+pad*2};
       }
       if(o.type==='window') {
@@ -6221,17 +6276,59 @@
       const pts = Array.isArray(o.points) ? o.points : [];
       if (pts.length < 3) return;
       const r = getEndpointHandleRadius();
+      const zoomSafe = Math.max(0.0001, state.zoom);
       c.save();
       c.setLineDash([]);
-      c.fillStyle = '#ffffff';
-      c.lineWidth = 2 / state.zoom;
       pts.forEach((pt, index) => {
-        c.strokeStyle = getHandleAccentColor(o, 'area', index);
+        const highlight = shouldShowAreaNodeHighlight(o, index) ? state.areaNodeHighlight : null;
+        const isDeleteHover = highlight && highlight.mode === 'delete-hover';
+        const rr = highlight ? r + (isDeleteHover ? 1.5 / zoomSafe : 0) : r;
+        const accent = getHandleAccentColor(o, 'area', index);
+        const fillColor = isDeleteHover ? UI_COLORS.dangerRed : (highlight ? accent : '#ffffff');
+        const strokeColor = isDeleteHover ? UI_COLORS.dangerRed : accent;
+        c.lineWidth = 2 / zoomSafe;
+        c.strokeStyle = strokeColor;
+        c.fillStyle = fillColor;
         c.beginPath();
-        c.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+        c.arc(pt.x, pt.y, rr, 0, Math.PI * 2);
         c.fill();
         c.stroke();
+        if (isDeleteHover) {
+          const minusHalf = rr * 0.42;
+          c.save();
+          c.strokeStyle = '#ffffff';
+          c.lineWidth = Math.max(1.6 / zoomSafe, 1.1);
+          c.lineCap = 'round';
+          c.beginPath();
+          c.moveTo(pt.x - minusHalf, pt.y);
+          c.lineTo(pt.x + minusHalf, pt.y);
+          c.stroke();
+          c.restore();
+        }
       });
+      const addPreviewPoint = getAreaNodeAddPreviewPoint(o);
+      if (addPreviewPoint) {
+        const rr = r + 1.5 / zoomSafe;
+        c.save();
+        c.strokeStyle = UI_COLORS.selectionBlue;
+        c.fillStyle = UI_COLORS.selectionBlue;
+        c.lineWidth = 2 / zoomSafe;
+        c.beginPath();
+        c.arc(addPreviewPoint.x, addPreviewPoint.y, rr, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+        const plusHalf = rr * 0.38;
+        c.strokeStyle = '#ffffff';
+        c.lineWidth = Math.max(1.6 / zoomSafe, 1.1);
+        c.lineCap = 'round';
+        c.beginPath();
+        c.moveTo(addPreviewPoint.x - plusHalf, addPreviewPoint.y);
+        c.lineTo(addPreviewPoint.x + plusHalf, addPreviewPoint.y);
+        c.moveTo(addPreviewPoint.x, addPreviewPoint.y - plusHalf);
+        c.lineTo(addPreviewPoint.x, addPreviewPoint.y + plusHalf);
+        c.stroke();
+        c.restore();
+      }
       c.restore();
     }
     function drawSelectionBox(c){ const b=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); c.save(); c.fillStyle='rgba(37,99,235,.08)'; c.strokeStyle=UI_COLORS.selectionBlue; c.setLineDash([5,4]); c.lineWidth=1.5/state.zoom; c.fillRect(b.x,b.y,b.w,b.h); c.strokeRect(b.x,b.y,b.w,b.h); c.restore(); }
@@ -6398,6 +6495,7 @@
       pts.splice(hit.insertIndex, 0, { x: hit.point.x, y: hit.point.y });
       state.selectedIds = [area.id];
       state.areaNodeEditMode = null;
+      setAreaNodeHighlight({ objectId: area.id, index: hit.insertIndex, mode: 'added' });
       clearSnapIndicator();
       clearSmartGuides();
       draw();
@@ -6421,6 +6519,7 @@
       pts.splice(index, 1);
       state.selectedIds = [area.id];
       state.areaNodeEditMode = null;
+      clearAreaNodeHighlight();
       clearSnapIndicator();
       clearSmartGuides();
       draw();
@@ -6441,6 +6540,7 @@
       if (state.areaNodeEditMode === 'delete') {
         if ((area.points || []).length <= 3) {
           state.areaNodeEditMode = null;
+          clearAreaNodeHighlight();
           showStatusMessage('区域至少需要 3 个节点');
           draw();
           return true;
@@ -6535,14 +6635,21 @@
         const areaNodeArea = getSingleAreaNodeEditableObject();
         if (areaNodeArea && state.areaNodeEditMode === 'add') {
           const edgeHit = findNearestAreaEdgeForNodeInsert(raw, areaNodeArea);
-          cursor = edgeHit && !isAreaInsertPointTooCloseToExisting(edgeHit.point, areaNodeArea) ? 'pointer' : 'default';
+          const canAddNode = !!(edgeHit && !isAreaInsertPointTooCloseToExisting(edgeHit.point, areaNodeArea));
+          setAreaNodeHighlight(canAddNode ? { objectId: areaNodeArea.id, mode: 'add-hover', point: edgeHit.point } : null, { draw: true });
+          cursor = canAddNode ? 'pointer' : 'default';
         } else if (areaNodeArea && state.areaNodeEditMode === 'delete') {
           const vertexHit = (areaNodeArea.points || []).length > 3 ? hitAreaVertexHandle(raw) : null;
-          cursor = vertexHit && vertexHit.object && vertexHit.object.id === areaNodeArea.id ? 'pointer' : 'default';
+          const canDelete = !!(vertexHit && vertexHit.object && vertexHit.object.id === areaNodeArea.id);
+          setAreaNodeHighlight(canDelete ? { objectId: areaNodeArea.id, index: vertexHit.index, mode: 'delete-hover' } : null, { draw: true });
+          cursor = canDelete ? 'pointer' : 'default';
         } else if (areaNodeArea && e.altKey && !isTouchLike(e)) {
           const vertexHit = (areaNodeArea.points || []).length > 3 ? hitAreaVertexHandle(raw) : null;
-          cursor = vertexHit && vertexHit.object && vertexHit.object.id === areaNodeArea.id ? 'pointer' : 'default';
+          const canDelete = !!(vertexHit && vertexHit.object && vertexHit.object.id === areaNodeArea.id);
+          setAreaNodeHighlight(canDelete ? { objectId: areaNodeArea.id, index: vertexHit.index, mode: 'delete-hover' } : null, { draw: true });
+          cursor = canDelete ? 'pointer' : 'default';
         } else {
+          if (state.areaNodeHighlight && (state.areaNodeHighlight.mode === 'delete-hover' || state.areaNodeHighlight.mode === 'add-hover')) clearAreaNodeHighlight({ draw: true });
           const lockBadgeHit = hitLockedSelectionBadge(raw, e);
           const prevLockBadgeHoverId = state.lockBadgeHoverId;
           state.lockBadgeHoverId = lockBadgeHit ? lockBadgeHit.id : null;
@@ -6963,6 +7070,8 @@
     }
 
     function startCanvasInteraction(e, p, raw) {
+      const preserveAreaNodeHighlight = state.tool === 'select' && (state.areaNodeEditMode || (e && e.altKey && !isTouchLike(e)));
+      if (!preserveAreaNodeHighlight) clearAreaNodeHighlight();
       if(state.tool==='area'){
         handleAreaPointerDown(e, p);
         updateCursor(e);
@@ -7058,7 +7167,7 @@
         }
         draw(); updateCursor(e); return;
       }
-      state.drawing=true; state.start=p; state.current=p; draw(); updateCursor(e);
+      state.drawing=true; state.start=p; state.current=p; state.drawShiftKey=!!e.shiftKey; draw(); updateCursor(e);
     }
 
     function handlePointerMove(e) {
@@ -7114,6 +7223,7 @@
       }
 
       let raw=rawScreenToWorld(e), p = state.tool === 'eraser' ? raw : screenToWorld(e);
+      state.drawShiftKey = !!e.shiftKey;
       if (state.lockBadgePressId !== null && state.lockBadgePointerId === e.pointerId) {
         const hit = hitLockedSelectionBadge(raw, e);
         const nextHoverId = hit && hit.id === state.lockBadgePressId ? hit.id : null;
@@ -7352,6 +7462,10 @@
         clearSmartGuides();
         needsDraw = true;
       }
+      if (state.areaNodeHighlight && state.areaNodeHighlight.mode === 'delete-hover') {
+        clearAreaNodeHighlight();
+        needsDraw = true;
+      }
       if (state.backgroundEditMode && !state.backgroundAdjusting) {
         updateCursor();
       }
@@ -7399,11 +7513,11 @@
       if(state.tool==='wall') p = snapWallEndpoint(p);
       const shouldCreate = Math.hypot(p.x-state.start.x,p.y-state.start.y)>3;
       if (shouldCreate) {
-        const obj = buildShapeFromPoints(state.tool,state.start,p,false);
+        const obj = buildShapeFromPoints(state.tool,state.start,p,false,e);
         clearSnapIndicator();
         addObject(obj);
       }
-      state.drawing=false; state.start=null; state.current=null; clearSnapIndicator(); clearSmartGuides(); draw(); updateCursor(e);
+      state.drawing=false; state.start=null; state.current=null; state.drawShiftKey=false; clearSnapIndicator(); clearSmartGuides(); draw(); updateCursor(e);
     }
 
     function editSelectedTextObject() {
@@ -7539,6 +7653,7 @@
       if (state.backgroundEditMode) exitBackgroundEditMode(false);
       if (tool !== state.tool) cancelAreaDraft(false);
       if (tool !== 'select') state.areaNodeEditMode = null;
+      if (tool !== 'select') clearAreaNodeHighlight();
       if (tool !== 'eraser') state.eraserPreview = null;
       clearSnapIndicator();
       clearSmartGuides();
@@ -7610,9 +7725,9 @@
     }
     els.status.addEventListener('pointerdown', handleStatusAction);
 
-    function deleteSelected(){ if(!state.selectedIds.length)return; const locked = state.objects.filter(o=>state.selectedIds.includes(o.id)&&isObjectLocked(o)); const deleteIds = new Set(state.selectedIds.filter(id=>!locked.some(o=>o.id===id))); if(!deleteIds.size){ showStatusMessage('已锁定对象不能删除'); return; } saveHistory(); state.objects=state.objects.filter(o=>!deleteIds.has(o.id)); state.selectedIds=state.selectedIds.filter(id=>!deleteIds.has(id)); draw(); updateObjectMetrics(true); markProjectDirty(); }
+    function deleteSelected(){ if(!state.selectedIds.length)return; clearAreaNodeHighlight(); const locked = state.objects.filter(o=>state.selectedIds.includes(o.id)&&isObjectLocked(o)); const deleteIds = new Set(state.selectedIds.filter(id=>!locked.some(o=>o.id===id))); if(!deleteIds.size){ showStatusMessage('已锁定对象不能删除'); return; } saveHistory(); state.objects=state.objects.filter(o=>!deleteIds.has(o.id)); state.selectedIds=state.selectedIds.filter(id=>!deleteIds.has(id)); draw(); updateObjectMetrics(true); markProjectDirty(); }
     function copySelected(){ state.clipboard=state.objects.filter(o=>state.selectedIds.includes(o.id)&&!isObjectLocked(o)).map(o=>clonePlain(o)); if(!state.clipboard.length && state.selectedIds.length) showStatusMessage('已锁定对象不能复制'); updateCommandButtonStates(); }
-    function pasteClipboard(){ if(!state.clipboard.length)return; saveHistory(); const newIds=[]; const groupMap={}; state.clipboard.forEach(src=>{ const o=clonePlain(src); const oldGroup=o.groupId; o.id=uid(); if(oldGroup){ if(!groupMap[oldGroup])groupMap[oldGroup]=uid(); o.groupId=groupMap[oldGroup]; } moveObject(o,20,20); state.objects.push(o); newIds.push(o.id); }); state.selectedIds=newIds; draw(); updateCommandButtonStates(); }
+    function pasteClipboard(){ if(!state.clipboard.length)return; clearAreaNodeHighlight(); saveHistory(); const newIds=[]; const groupMap={}; state.clipboard.forEach(src=>{ const o=clonePlain(src); const oldGroup=o.groupId; o.id=uid(); if(oldGroup){ if(!groupMap[oldGroup])groupMap[oldGroup]=uid(); o.groupId=groupMap[oldGroup]; } moveObject(o,20,20); state.objects.push(o); newIds.push(o.id); }); state.selectedIds=newIds; draw(); updateCommandButtonStates(); }
 
 
     function syncSegmentedControls(targetId) {
@@ -10498,6 +10613,7 @@
       }
       if (!handled && state.areaNodeEditMode) {
         state.areaNodeEditMode = null;
+        clearAreaNodeHighlight();
         handled = true;
       }
       if (!handled && touchInteraction.multiSelectMode) {
@@ -10594,8 +10710,29 @@
       if(e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase()==='l'){ e.preventDefault(); toggleSelectedLock(); return; }
       if(shouldDeleteObjectFromKey(e)){ e.preventDefault(); deleteSelected(); return; }
       const keys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
-      if(keys.includes(e.key)&&state.selectedIds.length){ e.preventDefault(); if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法移动'); return; } const step=e.shiftKey?10:1; let dx=0,dy=0; if(e.key==='ArrowLeft')dx=-step; if(e.key==='ArrowRight')dx=step; if(e.key==='ArrowUp')dy=-step; if(e.key==='ArrowDown')dy=step; saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))moveObject(o,dx,dy); }); draw(); markProjectDirty(); }
+      if(keys.includes(e.key)&&state.selectedIds.length){
+        e.preventDefault();
+        if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法移动'); return; }
+        const step=e.shiftKey?10:1;
+        let dx=0,dy=0;
+        if(e.key==='ArrowLeft')dx=-step;
+        if(e.key==='ArrowRight')dx=step;
+        if(e.key==='ArrowUp')dy=-step;
+        if(e.key==='ArrowDown')dy=step;
+        if(!state.arrowKeyMoveHistorySaved){
+          saveHistory();
+          state.arrowKeyMoveHistorySaved = true;
+        }
+        state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))moveObject(o,dx,dy); });
+        draw();
+        markProjectDirty();
+      }
     });
+
+    document.addEventListener('keyup', e => {
+      if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) state.arrowKeyMoveHistorySaved = false;
+    });
+    window.addEventListener('blur', () => { state.arrowKeyMoveHistorySaved = false; });
 
     if (els.strokeColor) {
       els.strokeColor.addEventListener('change', () => {
