@@ -2251,7 +2251,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v197';
+    const APP_VERSION = 'v198';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -3578,7 +3578,7 @@
           } else {
             const selectionText = activeArea ? '已选 1 个区域' : getSelectionStatusText();
             const areaNodeButtons = activeArea
-              ? `<button type="button" class="status-action-btn primary" data-status-action="add-area-node" title="点击后，在区域边线位置新增节点">＋节点</button><button type="button" class="status-action-btn" data-status-action="delete-area-node" ${(activeArea.points || []).length > 3 ? '' : 'disabled'} title="点击后，选择要删除的区域节点">－节点</button>`
+              ? `<button type="button" class="status-action-btn" data-status-action="add-area-node" title="点击后，在区域边线位置新增节点">＋节点</button><button type="button" class="status-action-btn" data-status-action="delete-area-node" ${(activeArea.points || []).length > 3 ? '' : 'disabled'} title="点击后，选择要删除的区域节点">－节点</button>`
               : '';
             els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">${selectionText}</span>${areaNodeButtons}`;
           }
