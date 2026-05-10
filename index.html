@@ -281,9 +281,58 @@
       color: white;
       box-shadow: 0 2px 8px rgba(37, 99, 235, .25);
     }
-    button.danger:hover { background: #fee2e2; border-color: #fca5a5; }
+    button:disabled,
+    button:disabled:hover,
+    button:disabled:focus-visible {
+      color: #94a3b8;
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+      box-shadow: none;
+      cursor: default;
+      opacity: 1;
+      transform: none;
+    }
+    button:disabled svg {
+      color: inherit;
+    }
+    input:disabled,
+    select:disabled,
+    textarea:disabled {
+      cursor: default;
+    }
+    .danger-action {
+      color: #0f172a;
+      background: #ffffff;
+      border-color: #d6dee9;
+    }
+    .danger-action:hover,
+    .danger-action:focus-visible {
+      background: #fef2f2;
+      border-color: #fca5a5;
+      color: #dc2626;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, .12);
+    }
+    .danger-action:disabled,
+    .danger-action:disabled:hover,
+    .danger-action:disabled:focus-visible {
+      color: #94a3b8;
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+      box-shadow: none;
+      cursor: default;
+    }
     #applyStyleBtn { font-weight: 800; background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
     #applyStyleBtn:hover { background: #dbeafe; border-color: #60a5fa; }
+    #applyStyleBtn:disabled,
+    #applyStyleBtn:disabled:hover,
+    #editTextBtn:disabled,
+    #editTextBtn:disabled:hover {
+      color: #94a3b8;
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+      box-shadow: none;
+      cursor: default;
+    }
     .tool-strip {
       display: flex;
       gap: 6px;
@@ -520,7 +569,7 @@
       color: #94a3b8;
       background: #f1f5f9;
       border-color: #e2e8f0;
-      cursor: not-allowed;
+      cursor: default;
       opacity: 1;
     }
     .metric-input.mixed-value {
@@ -711,7 +760,7 @@
       color: #94a3b8;
       background: #f1f5f9;
       border-color: #e2e8f0;
-      cursor: not-allowed;
+      cursor: default;
       opacity: 1;
     }
     .metric-group.text-preview-group {
@@ -968,6 +1017,20 @@
       white-space: nowrap;
       line-height: 1;
     }
+    .arrange-grid button.arrange-action-btn:disabled,
+    .arrange-grid button.arrange-action-btn:disabled:hover,
+    .arrange-grid button.arrange-action-btn:disabled:focus-visible {
+      color: #94a3b8;
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+      box-shadow: none;
+      cursor: default;
+      opacity: 1;
+      transform: none;
+    }
+    .arrange-grid button.arrange-action-btn:disabled svg {
+      color: #94a3b8;
+    }
     .status.status-warning {
       color: #9a3412;
       background: #fff7ed;
@@ -1010,12 +1073,26 @@
     .segmented button:disabled {
       color: #94a3b8;
       background: #f1f5f9;
-      cursor: not-allowed;
+      cursor: default;
     }
     .segmented button:disabled:hover { background: #f1f5f9; }
     .segmented-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .export-group .segmented { width: 100%; }
-    .export-group .segmented button { padding-left: 4px; padding-right: 4px; }
+    .segmented-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .export-group .row {
+      margin: 8px 0;
+    }
+    .export-group .row label {
+      width: 86px;
+      min-width: 86px;
+    }
+    .export-group .segmented {
+      width: 100%;
+      min-width: 0;
+    }
+    .export-group .segmented button {
+      padding-left: 4px;
+      padding-right: 4px;
+    }
     .aspect-lock-row .checkbox-label {
       min-width: 0;
       font-weight: 600;
@@ -1743,7 +1820,9 @@
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 12px;
-      padding: 12px;
+      padding: 10px 6px 12px;
+      margin-left: -6px;
+      margin-right: -6px;
     }
     .export-group .group-title {
       color: #0f172a;
@@ -1768,20 +1847,20 @@
         <div class="section-label">对象</div>
         <div class="tool-strip" id="toolStrip">
           <button data-tool="select" class="active tool-btn icon-tool" title="选择 / 移动">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l13 12.2-6.1 1.1 3 5.4-2.7 1.3-3-5.5L5 22V3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3 L7 18 L10.5 14.5 L13.5 21 L15.5 20 L12.5 13.5 L17.5 13.5 Z"/></svg>
             <span>选择</span>
           </button>
-          <button data-tool="line" class="tool-btn" title="直线"><span class="mini-icon line-icon"></span><span>线</span></button>
-          <button data-tool="arrow" class="tool-btn" title="箭头"><svg class="arrow-svg-v81" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><path d="M13 4h7v7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 7l3-3" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg><span>箭</span></button>
-          <button data-tool="rect" class="tool-btn" title="矩形"><span class="mini-icon rect-icon"></span><span>方</span></button>
-          <button data-tool="ellipse" class="tool-btn" title="椭圆"><span class="mini-icon ellipse-icon"></span><span>圆</span></button>
-          <button data-tool="area" class="tool-btn" title="区域"><span class="mini-icon area-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3L20 8.8 17.2 19H6.8L4 8.8z" fill="currentColor" opacity="0.18"/><path d="M12 3L20 8.8 17.2 19H6.8L4 8.8z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/></svg></span><span>区域</span></button>
+          <button data-tool="line" class="tool-btn" title="直线"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4.5" y1="19.5" x2="19.5" y2="4.5"/></svg><span>线</span></button>
+          <button data-tool="arrow" class="tool-btn" title="箭头"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4.5" y1="19.5" x2="19.5" y2="4.5"/><polyline points="13,4.5 19.5,4.5 19.5,11"/></svg><span>箭</span></button>
+          <button data-tool="rect" class="tool-btn" title="矩形"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="1.5"/></svg><span>方</span></button>
+          <button data-tool="ellipse" class="tool-btn" title="椭圆"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="8" ry="5.5"/></svg><span>圆</span></button>
+          <button data-tool="area" class="tool-btn" title="区域"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,3.5 20.1,9.4 17,18.9 7,18.9 3.9,9.4" fill="currentColor" fill-opacity=".15" stroke="none"/><polygon points="12,3.5 20.1,9.4 17,18.9 7,18.9 3.9,9.4"/></svg><span>区域</span></button>
           <button data-tool="wall" class="tool-btn" title="墙体"><span class="mini-icon wall-icon"></span><span>墙</span></button>
-          <button data-tool="door" class="tool-btn" title="门"><svg class="door-svg-large" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18V6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 18H18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 6A12 12 0 0 1 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>门</span></button>
-          <button data-tool="window" class="tool-btn" title="窗"><span class="mini-icon window-icon"></span><span>窗</span></button>
-          <button data-tool="dimension" class="tool-btn" title="标尺"><svg class="dimension-svg-wide" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 12v8M21 12v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7.5 16v3M12 16v4M16.5 16v3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>尺</span></button>
-          <button data-tool="text" class="tool-btn" title="文字"><span class="mini-icon text-icon">A</span><span>字</span></button>
-          <button data-tool="eraser" class="tool-btn" title="笔刷"><span class="mini-icon brush-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16.6C6.4 10.7 8.7 10.1 10.5 13.8C11.7 16.3 13.2 16 15.1 11.4C16.5 8 18.5 7.2 20.2 8.7" fill="none" stroke="currentColor" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>笔</span></button>
+          <button data-tool="door" class="tool-btn" title="门"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19 L6 6"/><path d="M6 19 L19 19"/><path d="M6 6 A13 13 0 0 1 19 19"/></svg><span>门</span></button>
+          <button data-tool="window" class="tool-btn" title="窗"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="9.5" x2="21" y2="9.5" stroke-width="2"/><line x1="3" y1="12" x2="21" y2="12" stroke-width="1.2"/><line x1="3" y1="14.5" x2="21" y2="14.5" stroke-width="2"/></svg><span>窗</span></button>
+          <button data-tool="dimension" class="tool-btn" title="标尺"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="8" x2="2" y2="16"/><line x1="22" y1="8" x2="22" y2="16"/><line x1="2" y1="12" x2="5" y2="10.5" stroke-width="1.4"/><line x1="2" y1="12" x2="5" y2="13.5" stroke-width="1.4"/><line x1="22" y1="12" x2="19" y2="10.5" stroke-width="1.4"/><line x1="22" y1="12" x2="19" y2="13.5" stroke-width="1.4"/></svg><span>尺</span></button>
+          <button data-tool="text" class="tool-btn" title="文字"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.4 1.4) scale(0.88)"><polyline points="5,20 12,4 19,20"/><line x1="8" y1="15" x2="16" y2="15"/></g></svg><span>字</span></button>
+          <button data-tool="eraser" class="tool-btn" title="笔刷"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18 C4 12 7 6 11 9 C15 12 14 18 18 16 C20 15 21 11 22 9"/></svg><span>笔</span></button>
         </div>
       </div>
 
@@ -1796,15 +1875,15 @@
       <div class="toolbar-section command-section">
         <div class="section-label">文件与编辑</div>
         <div class="tool-strip">
-          <button id="backgroundBtn" class="toolbar-btn" title="导入 / 管理底图"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-linejoin="round"/><circle cx="9" cy="10" r="1.6" fill="none" stroke="currentColor"/><path d="M5.5 17l4.5-4.6 3.1 3.1 2.2-2.4 3.2 3.9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg><span>底图</span></button>
-          <button id="saveJsonBtn" class="toolbar-btn" title="保存"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M8 4v6h8V4M8 20v-6h8v6" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg><span>保存</span></button>
-          <button id="openJsonBtn" class="toolbar-btn" title="打开"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.8 7.5h6l1.7 2H20v9.5H4z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M4 9.5l2-4h5l1.5 2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg><span>打开</span></button>
-          <button id="exportBtn" class="toolbar-btn primary-command" title="导出"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11" fill="none" stroke="currentColor" stroke-linecap="round"/><path d="M8 10l4 4 4-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" fill="none" stroke="currentColor" stroke-linecap="round"/></svg><span>导出</span></button>
-          <button id="undoBtn" class="toolbar-btn" title="撤销"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7H5v-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 7.5A8 8 0 1 1 8 18.5" fill="none" stroke="currentColor" stroke-linecap="round"/></svg><span>撤销</span></button>
-          <button id="redoBtn" class="toolbar-btn" title="重做"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7h4v-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 7.5A8 8 0 1 0 16 18.5" fill="none" stroke="currentColor" stroke-linecap="round"/></svg><span>重做</span></button>
-          <button id="copyBtn" class="toolbar-btn" title="复制"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="6" width="11" height="14" rx="2" fill="none" stroke="currentColor"/><path d="M5 16V4h10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg><span>复制</span></button>
-          <button id="pasteBtn" class="toolbar-btn" title="粘贴"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5h8v3H8z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M6 7H5v13h14V7h-1" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M9 12h6M9 16h4" fill="none" stroke="currentColor" stroke-linecap="round"/></svg><span>粘贴</span></button>
-          <button id="deleteBtn" class="toolbar-btn" title="删除"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>删除</span></button>
+          <button id="backgroundBtn" class="toolbar-btn" title="导入 / 管理底图"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="2.8" fill="currentColor" stroke="none"/><path d="M3 16.5 L9.5 13 L13 15.5 L16.5 13 L21 17.5"/></svg><span>底图</span></button>
+          <button id="saveJsonBtn" class="toolbar-btn" title="保存"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4 h12 l4 4 v12 H4 Z"/><path d="M8 4 v6 h8 V4"/><rect x="8.5" y="14" width="7" height="6" rx="0.5"/></svg><span>保存</span></button>
+          <button id="openJsonBtn" class="toolbar-btn" title="打开"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10.5 h20 v9.5 Q22 21.5 20 21.5 H4 Q2 21.5 2 20 Z"/><path d="M2 10.5 V9 Q2 7.5 3.5 7.5 H9.5 L11.5 10.5"/></svg><span>打开</span></button>
+          <button id="exportBtn" class="toolbar-btn" title="导出"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15 L12 4"/><path d="M9 7 L12 4 L15 7"/><path d="M5 15 v4 h14 v-4"/></svg><span>导出</span></button>
+          <button id="undoBtn" class="toolbar-btn" title="撤销"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15 L3 9 L9 3"/><path d="M3 9 h10 a5 5 0 0 1 0 10 h-3"/></svg><span>撤销</span></button>
+          <button id="redoBtn" class="toolbar-btn" title="重做"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 15 L21 9 L15 3"/><path d="M21 9 h-10 a5 5 0 0 0 0 10 h3"/></svg><span>重做</span></button>
+          <button id="copyBtn" class="toolbar-btn" title="复制"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="7" width="11" height="13" rx="1.5"/><path d="M6 17 V4 h10"/></svg><span>复制</span></button>
+          <button id="pasteBtn" class="toolbar-btn" title="粘贴"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 5 h7 v3 h-7 z"/><path d="M6.5 7 H5.5 v13 h13 V7 H17.5"/><path d="M9 13 h6 M9 16.5 h4" stroke-width="1.4"/></svg><span>粘贴</span></button>
+          <button id="deleteBtn" class="toolbar-btn danger-action" title="删除"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7 h15"/><path d="M9 7 V5 h6 v2"/><rect x="6" y="7" width="12" height="13" rx="1.5"/><path d="M10 11 v6 M14 11 v6" stroke-width="1.4"/></svg><span>删除</span></button>
         </div>
       </div>
     </header>
@@ -2085,11 +2164,13 @@
             <select id="exportFormat" class="hidden-input">
               <option value="png" selected>PNG</option>
               <option value="jpg">JPG</option>
+              <option value="svg">SVG</option>
               <option value="pdf">PDF</option>
             </select>
-            <div class="segmented segmented-3" data-segment-target="exportFormat">
+            <div class="segmented segmented-4" data-segment-target="exportFormat">
               <button type="button" data-value="png" class="active">PNG</button>
               <button type="button" data-value="jpg">JPG</button>
+              <button type="button" data-value="svg">SVG</button>
               <button type="button" data-value="pdf">PDF</button>
             </div>
           </div>
@@ -2110,18 +2191,18 @@
             <label>背景</label>
             <select id="exportBackground" class="hidden-input">
               <option value="white" selected>白底</option>
-              <option value="transparent">透明（仅PNG）</option>
+              <option value="transparent">透明</option>
             </select>
             <div class="segmented" data-segment-target="exportBackground">
               <button type="button" data-value="white" class="active">白底</button>
-              <button type="button" data-value="transparent" title="透明（仅PNG）">透明</button>
+              <button type="button" data-value="transparent" title="透明背景支持 PNG / SVG">透明</button>
             </div>
           </div>
           <div class="export-actions">
             <button id="exportSidebarBtn">导出</button>
           </div>
           <div style="height:8px"></div>
-          <button id="clearBtn" class="full danger">清空画布</button>
+          <button id="clearBtn" class="full danger-action">清空画布</button>
                   </div>
         </div>
 
@@ -2169,7 +2250,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v181';
+    const APP_VERSION = 'v196';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -2353,7 +2434,7 @@
         };
         localStorage.setItem(BRUSH_SETTINGS_STORAGE_KEY, JSON.stringify(payload));
       } catch (err) {
-        console.warn('笔刷设置保存失败', err);
+        console.warn('[PY平面图工具] 笔刷设置保存失败', err);
       }
     }
 
@@ -2368,7 +2449,7 @@
           return;
         }
       } catch (err) {
-        console.warn('笔刷设置读取失败', err);
+        console.warn('[PY平面图工具] 笔刷设置读取失败', err);
       }
       state.brushColor = (els.strokeColor && els.strokeColor.value) || DEFAULT_STROKE_COLOR;
     }
@@ -3039,6 +3120,45 @@
       const redoBtn = document.getElementById('redoBtn');
       if (undoBtn) undoBtn.disabled = !state.history.length;
       if (redoBtn) redoBtn.disabled = !state.redoHistory.length;
+      updateCommandButtonStates();
+    }
+
+    function updateCommandButtonStates() {
+      const selectedObjects = getSelectedObjects();
+      const hasSelection = selectedObjects.length > 0;
+      const selectedUnits = getSelectedUnits();
+      const movableUnitCount = selectedUnits.filter(unit => !unit.locked).length;
+      const hasUnlockedSelection = selectedObjects.some(o => o && !isObjectLocked(o));
+      const hasSelectedText = selectedObjects.some(o => o && o.type === 'text');
+      const hasSelectedGroup = selectedUnits.some(unit => unit.type === 'group');
+      const hasClipboard = Array.isArray(state.clipboard) && state.clipboard.length > 0;
+
+      const undoBtn = document.getElementById('undoBtn');
+      const redoBtn = document.getElementById('redoBtn');
+      const copyBtn = document.getElementById('copyBtn');
+      const pasteBtn = document.getElementById('pasteBtn');
+      const deleteBtn = document.getElementById('deleteBtn');
+      const applyStyleBtn = document.getElementById('applyStyleBtn');
+      const editTextBtn = document.getElementById('editTextBtn');
+      const alignButtons = ['alignLeftBtn','alignCenterBtn','alignRightBtn','alignTopBtn','alignMiddleBtn','alignBottomBtn'];
+      const distributeButtons = ['distributeHBtn','distributeVBtn'];
+      const groupBtn = document.getElementById('groupSidebarBtn');
+      const ungroupBtn = document.getElementById('ungroupSidebarBtn');
+
+      if (undoBtn) undoBtn.disabled = !state.history.length;
+      if (redoBtn) redoBtn.disabled = !state.redoHistory.length;
+      if (copyBtn) copyBtn.disabled = !hasSelection;
+      if (pasteBtn) pasteBtn.disabled = !hasClipboard;
+      if (deleteBtn) deleteBtn.disabled = !hasSelection;
+      if (applyStyleBtn) applyStyleBtn.disabled = !hasSelection;
+      if (editTextBtn) editTextBtn.disabled = !hasSelectedText;
+
+      const canAlign = selectedUnits.length >= 2 && movableUnitCount > 0;
+      const canDistribute = selectedUnits.length >= 3 && movableUnitCount > 0;
+      alignButtons.forEach(id => { const btn = document.getElementById(id); if (btn) btn.disabled = !canAlign; });
+      distributeButtons.forEach(id => { const btn = document.getElementById(id); if (btn) btn.disabled = !canDistribute; });
+      if (groupBtn) groupBtn.disabled = selectedUnits.length < 2 || !hasUnlockedSelection || hasLockedSelection();
+      if (ungroupBtn) ungroupBtn.disabled = !hasSelectedGroup || hasLockedSelection();
     }
 
     function saveHistory(includeBackground = false) {
@@ -3418,6 +3538,7 @@
       }
       if (document.activeElement !== els.zoomInput) els.zoomInput.value = `${Math.round(state.zoom * 100)}%`;
       updateObjectMetrics();
+      updateCommandButtonStates();
     }
 
     let transientStatusTimer = null;
@@ -5701,6 +5822,7 @@
 
     function formatNumber(n){ const value=Number(n); if(!Number.isFinite(value)) return '0'; return value.toFixed(2).replace(/0+$/,'').replace(/\.$/,''); }
 
+
     function getObjectBox(o){
       if(o.type==='wall'){
         const b=normalizeBox(o.x1,o.y1,o.x2,o.y2);
@@ -7274,8 +7396,8 @@
     els.status.addEventListener('pointerdown', handleStatusAction);
 
     function deleteSelected(){ if(!state.selectedIds.length)return; const locked = state.objects.filter(o=>state.selectedIds.includes(o.id)&&isObjectLocked(o)); const deleteIds = new Set(state.selectedIds.filter(id=>!locked.some(o=>o.id===id))); if(!deleteIds.size){ showStatusMessage('已锁定对象不能删除'); return; } saveHistory(); state.objects=state.objects.filter(o=>!deleteIds.has(o.id)); state.selectedIds=state.selectedIds.filter(id=>!deleteIds.has(id)); draw(); updateObjectMetrics(true); markProjectDirty(); }
-    function copySelected(){ state.clipboard=state.objects.filter(o=>state.selectedIds.includes(o.id)&&!isObjectLocked(o)).map(o=>clonePlain(o)); if(!state.clipboard.length && state.selectedIds.length) showStatusMessage('已锁定对象不能复制'); }
-    function pasteClipboard(){ if(!state.clipboard.length)return; saveHistory(); const newIds=[]; const groupMap={}; state.clipboard.forEach(src=>{ const o=clonePlain(src); const oldGroup=o.groupId; o.id=uid(); if(oldGroup){ if(!groupMap[oldGroup])groupMap[oldGroup]=uid(); o.groupId=groupMap[oldGroup]; } moveObject(o,20,20); state.objects.push(o); newIds.push(o.id); }); state.selectedIds=newIds; draw(); }
+    function copySelected(){ state.clipboard=state.objects.filter(o=>state.selectedIds.includes(o.id)&&!isObjectLocked(o)).map(o=>clonePlain(o)); if(!state.clipboard.length && state.selectedIds.length) showStatusMessage('已锁定对象不能复制'); updateCommandButtonStates(); }
+    function pasteClipboard(){ if(!state.clipboard.length)return; saveHistory(); const newIds=[]; const groupMap={}; state.clipboard.forEach(src=>{ const o=clonePlain(src); const oldGroup=o.groupId; o.id=uid(); if(oldGroup){ if(!groupMap[oldGroup])groupMap[oldGroup]=uid(); o.groupId=groupMap[oldGroup]; } moveObject(o,20,20); state.objects.push(o); newIds.push(o.id); }); state.selectedIds=newIds; draw(); updateCommandButtonStates(); }
 
 
     function syncSegmentedControls(targetId) {
@@ -7295,26 +7417,26 @@
     function updateExportOptions(shouldSync = true) {
       if (!els.exportFormat || !els.exportBackground) return;
       const format = els.exportFormat.value;
-      const transparentAllowed = format === 'png';
-      const pdfVectorMode = format === 'pdf';
+      const vectorMode = format === 'pdf' || format === 'svg';
+      const transparentAllowed = format === 'png' || format === 'svg';
       if (!transparentAllowed && els.exportBackground.value === 'transparent') {
         els.exportBackground.value = 'white';
       }
       document.querySelectorAll('[data-segment-target="exportBackground"] button[data-value="transparent"]').forEach(btn => {
         btn.disabled = !transparentAllowed;
-        btn.title = transparentAllowed ? '导出透明背景 PNG' : '透明背景仅支持 PNG';
+        btn.title = transparentAllowed ? '透明背景支持 PNG / SVG' : '透明背景仅支持 PNG / SVG';
       });
       document.querySelectorAll('[data-segment-target="exportScale"] button[data-value]').forEach(btn => {
-        btn.disabled = pdfVectorMode;
-        if (pdfVectorMode) {
-          btn.title = 'PDF为矢量导出，不使用倍率';
+        btn.disabled = vectorMode;
+        if (vectorMode) {
+          btn.title = 'SVG / PDF 为矢量导出，不使用倍率';
         } else if (btn.dataset.value === '3') {
           btn.title = '3x（打印）';
         } else {
           btn.title = '';
         }
       });
-      if (els.exportScale) els.exportScale.disabled = pdfVectorMode;
+      if (els.exportScale) els.exportScale.disabled = vectorMode;
       if (shouldSync) {
         syncSegmentedControls('exportBackground');
         syncSegmentedControls('exportScale');
@@ -7401,8 +7523,8 @@
       draw();
     }
 
-    function groupSelected(){ if(state.selectedIds.length<2)return; if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法组合'); return; } saveHistory(); const gid=uid(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))o.groupId=gid; }); draw(); }
-    function ungroupSelected(){ if(!state.selectedIds.length)return; if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法取消组合'); return; } saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))delete o.groupId; }); draw(); }
+    function groupSelected(){ const units = getSelectedUnits(); if(units.length<2)return; if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法组合'); return; } saveHistory(); const gid=uid(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))o.groupId=gid; }); draw(); }
+    function ungroupSelected(){ const units = getSelectedUnits(); if(!units.some(unit => unit.type === 'group'))return; if(hasLockedSelection()){ showStatusMessage('包含锁定对象，无法取消组合'); return; } saveHistory(); state.objects.forEach(o=>{ if(state.selectedIds.includes(o.id))delete o.groupId; }); draw(); }
 
     function alignSelected(mode){
       const units = getSelectedUnits();
@@ -7580,7 +7702,7 @@
     document.getElementById('clearBtn').onclick=async()=>{
       const choice = await showChoiceDialog('清空画布', '确定清空当前平面图？此操作会同时清除本地草稿。', [
         { label: '取消', value: 'cancel' },
-        { label: '清空画布', value: 'clear', primary: true }
+        { label: '清空画布', value: 'clear', danger: true }
       ]);
       if(choice === 'clear'){
         saveHistory();
@@ -8048,13 +8170,22 @@
       }
     }
 
+    async function downloadSvg(svgMarkup, suffix = ''){
+      try{
+        const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
+        downloadBlob(blob, getExportFileName('svg', suffix));
+      }catch(err){
+        await showMessageDialog('SVG 导出失败', 'SVG 文件生成失败，请检查是否有异常对象，或改用 PNG / PDF 导出。');
+      }
+    }
+
     function getExportScaleValue(){
       return Math.max(1, getInputNumber(els.exportScale, 1) || 1);
     }
 
     function getExportBackgroundMode(){
       const format = els.exportFormat.value;
-      if (format !== 'png') return 'white';
+      if (format !== 'png' && format !== 'svg') return 'white';
       return els.exportBackground?.value || 'white';
     }
 
@@ -8076,6 +8207,11 @@
         const paper = getPdfPaperInfo();
         const svgMarkup = buildExportSvg('white');
         await openPdfPrintWindowFromSvg(svgMarkup, paper, getExportFileName('pdf'));
+        return;
+      }
+      if(format === 'svg') {
+        const svgMarkup = buildExportSvg(backgroundMode);
+        await downloadSvg(svgMarkup, backgroundMode === 'transparent' ? '_transparent' : '');
         return;
       }
       const out = makeExportCanvas(scale, backgroundMode);
@@ -8516,7 +8652,9 @@
           btn.type = 'button';
           btn.textContent = choice.label;
           btn.style.cssText = 'min-height:34px;border:1px solid #cbd5e1;background:#f8fafc;border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13px;';
-          if (choice.primary) btn.style.cssText += 'background:#1d4ed8;border-color:#1d4ed8;color:#fff;font-weight:700;';
+          if (choice.className) btn.className = choice.className;
+          if (choice.danger) btn.classList.add('danger-action');
+          else if (choice.primary) btn.style.cssText += 'background:#1d4ed8;border-color:#1d4ed8;color:#fff;font-weight:700;';
           btn.addEventListener('click', () => { endModalLock(); overlay.remove(); resolve(choice.value); });
           row.appendChild(btn);
         });
@@ -8727,7 +8865,7 @@
         function setApplyButtonEnabled(enabled) {
           okBtn.disabled = !enabled;
           okBtn.style.opacity = enabled ? '1' : '.45';
-          okBtn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+          okBtn.style.cursor = enabled ? 'pointer' : 'default';
         }
 
         function updatePreview() {
@@ -9738,6 +9876,7 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.textContent = text;
+        if (options.className) btn.className = options.className;
         if (options.title) btn.title = options.title;
         btn.disabled = !!options.disabled;
         btn.addEventListener('click', e => {
@@ -9756,12 +9895,13 @@
         onClick: () => { closeBackgroundPopover(); els.backgroundImageInput.click(); }
       });
       addButton(bgRow, '清除底图', {
+        className: 'danger-action',
         disabled: !hasBg,
         onClick: async () => {
           if (!state.backgroundImage) return;
           const choice = await showChoiceDialog('清除底图', '确定清除当前底图？绘制对象不会被删除。', [
             { label: '取消', value: 'cancel' },
-            { label: '清除底图', value: 'clear', primary: true }
+            { label: '清除底图', value: 'clear', danger: true }
           ]);
           if (choice !== 'clear') return;
           saveHistory(true);
@@ -9983,7 +10123,7 @@
             data: buildProjectData()
           });
         } catch (err) {
-          console.warn('本地草稿保存失败', err);
+          console.warn('[PY平面图工具] 本地草稿保存失败', err);
         }
       }, LOCAL_DRAFT_SAVE_DELAY);
     }
@@ -10025,7 +10165,7 @@
           }
         }
       } catch (err) {
-        console.warn('本地草稿恢复检查失败', err);
+        console.warn('[PY平面图工具] 本地草稿恢复检查失败', err);
       } finally {
         localDraftAutosaveReady = true;
         if (hasUnsavedProjectChanges) scheduleLocalDraftSave();
