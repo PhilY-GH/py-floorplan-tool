@@ -1228,15 +1228,18 @@
       padding: 2px 5px;
       margin: -2px -3px;
       border-radius: 7px;
-      cursor: pointer;
+      cursor: default;
       pointer-events: auto;
       transition: background .15s ease, color .15s ease;
     }
-    .status-select-count:hover {
+    .status-select-count.is-interactive {
+      cursor: pointer;
+    }
+    .status-select-count.is-interactive:hover {
       background: rgba(37,99,235,.10);
       color: #1d4ed8;
     }
-    .status.multi-select .status-select-count {
+    .status.multi-select .status-select-count.is-interactive {
       background: #eff6ff;
       color: #1d4ed8;
       font-weight: 800;
@@ -1258,6 +1261,16 @@
       font-weight: 700;
       cursor: pointer;
       vertical-align: middle;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .status-action-btn svg {
+      width: 14px;
+      height: 14px;
+      display: block;
+      flex: 0 0 auto;
     }
     .status-action-btn.primary {
       background: #eff6ff;
@@ -2251,7 +2264,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v202';
+    const APP_VERSION = 'v207';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -2561,6 +2574,51 @@
       wrap.scrollLeft = targetCanvasX - (centerX - wrapRect.left);
       wrap.scrollTop = targetCanvasY - (centerY - wrapRect.top);
       draw();
+      markViewStateChanged();
+    }
+
+    function getCanvasViewScroll() {
+      const wrap = document.querySelector('.canvas-wrap');
+      return {
+        left: wrap ? Number(wrap.scrollLeft) || 0 : 0,
+        top: wrap ? Number(wrap.scrollTop) || 0 : 0
+      };
+    }
+
+    function normalizeLoadedViewNumber(value, fallback) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function getLoadedViewState(view) {
+      const source = view && typeof view === 'object' ? view : {};
+      return {
+        zoom: Math.max(0.25, Math.min(6, normalizeLoadedViewNumber(source.zoom, state.zoom))),
+        panX: normalizeLoadedViewNumber(source.panX, state.panX),
+        panY: normalizeLoadedViewNumber(source.panY, state.panY),
+        scrollLeft: Math.max(0, normalizeLoadedViewNumber(source.scrollLeft, 0)),
+        scrollTop: Math.max(0, normalizeLoadedViewNumber(source.scrollTop, 0)),
+        hasSavedScroll: Number.isFinite(Number(source.scrollLeft)) || Number.isFinite(Number(source.scrollTop))
+      };
+    }
+
+    function restoreCanvasViewScroll(viewState) {
+      if (!viewState || !viewState.hasSavedScroll) return;
+      const wrap = document.querySelector('.canvas-wrap');
+      if (!wrap) return;
+      const apply = () => {
+        wrap.scrollLeft = Math.max(0, viewState.scrollLeft || 0);
+        wrap.scrollTop = Math.max(0, viewState.scrollTop || 0);
+        updateCanvasFloatBars();
+      };
+      apply();
+      requestAnimationFrame(apply);
+    }
+
+    function markViewStateChanged() {
+      if (localDraftAutosavePaused) return;
+      hasUnsavedProjectChanges = true;
+      scheduleLocalDraftSave();
     }
 
     let stableAppViewportHeight = 0;
@@ -3587,12 +3645,41 @@
       return true;
     }
 
+    function getStatusSelectShortcutButton() {
+      // V207：未完成绘制/笔刷操作期间不显示“选择”快捷按钮，避免误点导致当前绘制被取消。
+      const drawingInProgress = !!(state.drawing || state.areaDrawing || state.erasing);
+      if (state.tool === 'select' || state.backgroundEditMode || drawingInProgress) return '';
+      return '<button type="button" class="status-action-btn" data-status-action="switch-to-select" title="切换到选择工具"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3 L7 18 L10.5 14.5 L13.5 21 L15.5 20 L12.5 13.5 L17.5 13.5 Z"/></svg><span>选择</span></button>';
+    }
+
+    function switchToSelectToolFromStatus() {
+      if (state.backgroundEditMode) exitBackgroundEditMode(false);
+      if (state.drawing) {
+        state.drawing = false;
+        state.start = null;
+        state.current = null;
+      }
+      if (state.areaDrawing) cancelAreaDraft(false);
+      if (state.erasing) {
+        const last = state.objects[state.objects.length - 1];
+        if (last && (last.type === 'brush' || last.type === 'erase')) state.objects.pop();
+        state.erasing = false;
+        state.current = null;
+        state.eraserPreview = null;
+      }
+      state.areaNodeEditMode = null;
+      clearAreaNodeHighlight();
+      clearSnapIndicator();
+      clearSmartGuides();
+      setTool('select');
+    }
+
     function updateStatus() {
       // V163：临时状态提示显示期间，不允许 draw() / updateStatus() 立刻覆盖提示内容。
       // 但缩放输入框和属性栏仍继续刷新，避免界面状态停住。
       const transientStatusActive = transientStatusTimer !== null;
       if (!transientStatusActive) {
-        els.status.classList.toggle('multi-select', !!touchInteraction.multiSelectMode && !state.backgroundEditMode);
+        els.status.classList.toggle('multi-select', !!touchInteraction.multiSelectMode && state.tool === 'select' && state.selectedIds.length > 0 && !state.backgroundEditMode);
         els.status.classList.toggle('background-edit-status', !!state.backgroundEditMode);
         els.status.classList.remove('status-warning');
         if (state.backgroundEditMode) {
@@ -3603,7 +3690,7 @@
           const pointCount = (state.areaPoints || []).length;
           const canComplete = pointCount >= 3;
           els.status.classList.remove('multi-select');
-          els.status.innerHTML = `<span class="status-tool">当前工具：区域</span><span>｜</span><span class="status-area-info">已绘 ${pointCount} 个点</span><button type="button" class="status-action-btn" data-status-action="undo-area-point" ${pointCount ? '' : 'disabled'} title="撤销上一个区域点">撤销</button><button type="button" class="status-action-btn primary" data-status-action="complete-area" ${canComplete ? '' : 'disabled'}>完成</button><button type="button" class="status-action-btn" data-status-action="cancel-area">取消</button>`;
+          els.status.innerHTML = `<span class="status-tool">当前工具：区域</span><span>｜</span><span class="status-area-info">已绘 ${pointCount} 个点</span><button type="button" class="status-action-btn" data-status-action="undo-area-point" ${pointCount ? '' : 'disabled'} title="撤销上一个区域点">撤销</button><button type="button" class="status-action-btn primary" data-status-action="complete-area" ${canComplete ? '' : 'disabled'}>完成</button><button type="button" class="status-action-btn" data-status-action="cancel-area">取消</button>${getStatusSelectShortcutButton()}`;
         } else {
           const activeArea = getSingleAreaNodeEditableObject();
           if (state.areaNodeEditMode && !activeArea) state.areaNodeEditMode = null;
@@ -3615,10 +3702,13 @@
             els.status.innerHTML = `<span class="status-tool">删除节点</span><span>｜</span><span class="status-area-info">请选择要删除的节点</span><button type="button" class="status-action-btn" data-status-action="cancel-area-node-edit">取消</button>`;
           } else {
             const selectionText = activeArea ? '已选 1 个区域' : getSelectionStatusText();
+            const canToggleMultiSelect = state.tool === 'select' && state.selectedIds.length > 0 && !state.backgroundEditMode;
+            const selectionCountClass = canToggleMultiSelect ? 'status-select-count is-interactive' : 'status-select-count';
+            const selectionCountAttrs = canToggleMultiSelect ? ' data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式"' : '';
             const areaNodeButtons = activeArea
               ? `<button type="button" class="status-action-btn" data-status-action="add-area-node" title="点击后，在区域边线位置新增节点">＋节点</button><button type="button" class="status-action-btn" data-status-action="delete-area-node" ${(activeArea.points || []).length > 3 ? '' : 'disabled'} title="点击后，选择要删除的区域节点">－节点</button>`
               : '';
-            els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="status-select-count" data-status-action="toggle-multiselect" title="点击开启 / 关闭多选模式">${selectionText}</span>${areaNodeButtons}`;
+            els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span>｜</span><span class="${selectionCountClass}"${selectionCountAttrs}>${selectionText}</span>${getStatusSelectShortcutButton()}${areaNodeButtons}`;
           }
         }
       }
@@ -7692,6 +7782,10 @@
         }
         return;
       }
+      if (action === 'switch-to-select') {
+        if (!target.disabled) switchToSelectToolFromStatus();
+        return;
+      }
       if (action === 'add-area-node') {
         if (!target.disabled) setAreaNodeEditMode('add');
         return;
@@ -7707,7 +7801,7 @@
         return;
       }
       if (action === 'toggle-multiselect') {
-        if (state.tool !== 'select' || state.backgroundEditMode) return;
+        if (state.tool !== 'select' || state.backgroundEditMode || !state.selectedIds.length) return;
         touchInteraction.multiSelectMode = !touchInteraction.multiSelectMode;
         state.areaNodeEditMode = null;
         draw();
@@ -8193,7 +8287,7 @@
 
     document.getElementById('zoomIn').onclick=()=>setZoom(state.zoom*1.10);
     document.getElementById('zoomOut').onclick=()=>setZoom(state.zoom/1.10);
-    document.getElementById('zoomReset').onclick=()=>{ state.zoom=1; state.panX=20; state.panY=20; resizeCanvas(); updateCursor(); };
+    document.getElementById('zoomReset').onclick=()=>{ state.zoom=1; state.panX=20; state.panY=20; resizeCanvas(); updateCursor(); markViewStateChanged(); };
 
     function adjustEraserWidthBySteps(direction, stepSize, stepCount = 1) {
       const def = sidebarUnitizedInputDefs.find(d => d.id === 'eraserWidth') || { min: 4, max: 120, fallback: 22 };
@@ -8258,7 +8352,10 @@
     let wheelZoomResetTimer = null;
     const canvasWrapElement = document.querySelector('.canvas-wrap');
     if (canvasWrapElement) {
-      canvasWrapElement.addEventListener('scroll', scheduleCanvasFloatBarUpdate, { passive: true });
+      canvasWrapElement.addEventListener('scroll', () => {
+        scheduleCanvasFloatBarUpdate();
+        if (hasUnsavedProjectChanges) scheduleLocalDraftSave();
+      }, { passive: true });
       if ('ResizeObserver' in window) {
         const canvasFloatResizeObserver = new ResizeObserver(scheduleCanvasFloatBarSettledUpdates);
         canvasFloatResizeObserver.observe(canvasWrapElement);
@@ -8603,7 +8700,12 @@
           snapMode: els.snapMode.value,
           gridSize: getInputNumber(els.gridSize, 20),
           unitName: els.unitName.value,
-          scaleFactor: getInputNumber(els.scaleFactor, 0.05)
+          scaleFactor: getInputNumber(els.scaleFactor, 0.05),
+          zoom: state.zoom,
+          panX: state.panX,
+          panY: state.panY,
+          scrollLeft: getCanvasViewScroll().left,
+          scrollTop: getCanvasViewScroll().top
         },
         export: {
           format: els.exportFormat.value,
@@ -8679,6 +8781,7 @@
       const page = data.page || data;
       const defaults = data.defaults || {};
       const view = data.view || data;
+      const loadedViewState = getLoadedViewState(view);
       const exportSettings = data.export || {};
       state.projectColors = normalizeColorList(data.projectColors || data.projectColorsV121 || [], MAX_PROJECT_COLORS);
 
@@ -8690,6 +8793,9 @@
       state.groups = data.groups || {};
       state.backgroundImage = normalizeBackgroundImage(data.backgroundImage || null);
       state.visibleLayers = view.visibleLayers || data.visibleLayers || state.visibleLayers;
+      state.zoom = loadedViewState.zoom;
+      state.panX = loadedViewState.panX;
+      state.panY = loadedViewState.panY;
       state.selectedIds = [];
 
       els.pageWidth.value = state.pageW;
@@ -8741,6 +8847,7 @@
         btn.classList.toggle('active', state.visibleLayers[layer] !== false);
       });
       resizeCanvas();
+      restoreCanvasViewScroll(loadedViewState);
       draw();
       localDraftAutosavePaused = previousDraftPause;
       if (options.markDirty) markProjectDirty();
