@@ -2280,7 +2280,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v224';
+    const APP_VERSION = 'v225';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -4088,7 +4088,12 @@
       return (items || []).map(item => withObjectRotationTransform(o, item, baseBox));
     }
 
-    function clearRotationMode() {
+    function clearRotationMode(options = {}) {
+      const shouldFinalizeArea = options.finalizeArea !== false;
+      const activeRotationObjectId = state.rotatingObjectId;
+      if (shouldFinalizeArea && activeRotationObjectId) {
+        finalizeAreaRotationIfNeeded(activeRotationObjectId);
+      }
       state.rotationMode = false;
       state.rotatingObjectId = null;
       state.rotatingObject = false;
@@ -8159,7 +8164,8 @@
         const finishedRotationObjectId = state.rotatingObjectId;
         state.rotatingObject=false;
         state.rotationHistorySaved=false;
-        finalizeAreaRotationIfNeeded(finishedRotationObjectId);
+        // V225：区域旋转拖动结束时仍保留临时 rotation 状态，让选框和角度显示连续；
+        // 只有退出旋转模式时才把旋转应用到区域 points，恢复节点编辑能力。
         state.rotatingObjectId = state.rotationMode ? finishedRotationObjectId : null;
         clearSnapIndicator();
         clearMoveEndpointSnap();
