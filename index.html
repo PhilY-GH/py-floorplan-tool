@@ -2280,7 +2280,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v229';
+    const APP_VERSION = 'v230';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -6849,7 +6849,7 @@
       }
       if (!locked && state.selectedIds.length === 1 && !state.rotationMode) {
         if (isEditableLineObject(o)) drawEndpointHandles(c, o);
-        else if (isResizableBoxObject(o) && !getObjectRotationDegrees(o)) drawBoxResizeHandles(c, o);
+        else if (isResizableBoxObject(o)) drawBoxResizeHandles(c, o);
         else if (o.type === 'area' && !getObjectRotationDegrees(o)) drawAreaVertexHandles(c, o);
       }
     }
@@ -6886,7 +6886,9 @@
       const b = getBoxBounds(o);
       const cx = (b.left + b.right) / 2;
       const cy = (b.top + b.bottom) / 2;
-      return [
+      const deg = getObjectRotationDegrees(o);
+      const center = { x: cx, y: cy };
+      const handles = [
         { handle: 'nw', x: b.left, y: b.top, cursor: 'nwse-resize' },
         { handle: 'n', x: cx, y: b.top, cursor: 'ns-resize' },
         { handle: 'ne', x: b.right, y: b.top, cursor: 'nesw-resize' },
@@ -6896,6 +6898,9 @@
         { handle: 'sw', x: b.left, y: b.bottom, cursor: 'nesw-resize' },
         { handle: 'w', x: b.left, y: cy, cursor: 'ew-resize' }
       ];
+      // V230：矩形 / 椭圆旋转后，缩放控制点也跟随视觉选框旋转；内部仍保留对象自身宽高 + rotation。
+      if (!deg) return handles;
+      return handles.map(h => ({ ...h, ...rotatePointAround({ x: h.x, y: h.y }, center, -deg) }));
     }
 
     function drawBoxResizeHandles(c, o) {
@@ -7216,7 +7221,7 @@
     function hitBoxResizeHandle(p) {
       if (state.selectedIds.length !== 1) return null;
       const o = state.objects.find(x => x.id === state.selectedIds[0]);
-      if (!isResizableBoxObject(o) || isObjectLocked(o) || getObjectRotationDegrees(o)) return null;
+      if (!isResizableBoxObject(o) || isObjectLocked(o)) return null;
       const tolerance = getHandleHitTolerance();
       let best = null;
       let bestDist = Infinity;
@@ -7332,12 +7337,66 @@
       else { o.x2 = p.x; o.y2 = p.y; }
     }
 
+    function rotateVector(v, degrees) {
+      const rad = degrees * Math.PI / 180;
+      const cos = Math.cos(rad), sin = Math.sin(rad);
+      return { x: v.x * cos - v.y * sin, y: v.x * sin + v.y * cos };
+    }
+
+    function updateRotatedBoxResizeFromPointer(e, o, handle, original) {
+      const deg = getObjectRotationDegrees(original || o);
+      if (!deg) return false;
+      const b = getBoxBounds(original || o);
+      const oldW = Math.max(1, b.right - b.left);
+      const oldH = Math.max(1, b.bottom - b.top);
+      const oldCenter = { x: (b.left + b.right) / 2, y: (b.top + b.bottom) / 2 };
+      const signX = handle.includes('w') ? -1 : (handle.includes('e') ? 1 : 0);
+      const signY = handle.includes('n') ? -1 : (handle.includes('s') ? 1 : 0);
+      if (!signX && !signY) return false;
+
+      const fixedLocal = {
+        x: signX < 0 ? b.right : (signX > 0 ? b.left : oldCenter.x),
+        y: signY < 0 ? b.bottom : (signY > 0 ? b.top : oldCenter.y)
+      };
+      const fixedWorld = rotatePointAround(fixedLocal, oldCenter, -deg);
+      const pointerWorld = screenToWorldWithSnapOptions(e, { excludeObjectId: o.id });
+      const localDelta = rotateVector({ x: pointerWorld.x - fixedWorld.x, y: pointerWorld.y - fixedWorld.y }, deg);
+
+      let nextW = signX ? Math.max(1, Math.abs(localDelta.x)) : oldW;
+      let nextH = signY ? Math.max(1, Math.abs(localDelta.y)) : oldH;
+      if (signX && signY && e.shiftKey) {
+        const aspect = Math.max(0.0001, oldW / Math.max(0.0001, oldH));
+        if (nextW / Math.max(0.0001, nextH) > aspect) nextW = nextH * aspect;
+        else nextH = nextW / aspect;
+      }
+
+      const centerOffsetLocal = {
+        x: signX ? signX * nextW / 2 : 0,
+        y: signY ? signY * nextH / 2 : 0
+      };
+      const centerOffsetWorld = rotateVector(centerOffsetLocal, -deg);
+      const nextCenter = {
+        x: fixedWorld.x + centerOffsetWorld.x,
+        y: fixedWorld.y + centerOffsetWorld.y
+      };
+
+      o.x1 = nextCenter.x - nextW / 2;
+      o.x2 = nextCenter.x + nextW / 2;
+      o.y1 = nextCenter.y - nextH / 2;
+      o.y2 = nextCenter.y + nextH / 2;
+      return true;
+    }
+
     function updateBoxResizeFromPointer(e) {
       const o = state.objects.find(x => x.id === state.resizingObjectId);
       if (!o || !isResizableBoxObject(o)) return;
       const handle = state.resizeBoxHandle;
       if (!handle) return;
       const original = state.dragOriginals && state.dragOriginals.get(o.id) ? state.dragOriginals.get(o.id) : o;
+      if (getObjectRotationDegrees(original)) {
+        updateRotatedBoxResizeFromPointer(e, o, handle, original);
+        return;
+      }
       const b = getBoxBounds(original);
       let left = b.left, right = b.right, top = b.top, bottom = b.bottom;
       let p = screenToWorldWithSnapOptions(e, { excludeObjectId: o.id });
