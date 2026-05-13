@@ -2280,7 +2280,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v227';
+    const APP_VERSION = 'v229';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -7761,14 +7761,8 @@
           updateCursor(e);
           return;
         }
-        // V211：旋转模式是针对当前对象的临时模式。点击非旋转把手的画布位置时，
-        // 先退出旋转模式，再按普通选择逻辑处理对象切换、拖动或空白取消选择。
-        // 这样旋转模式不会跨对象保留，也不会让用户感觉被“锁住”。
-        if (state.rotationMode) {
-          // V227：点击画布退出旋转模式时，区域对象先保留临时 rotation。
-          // 如果用户点空白取消选择，等选框已经消失后再把 rotation 烘焙进 points，避免 iPad 上闪一下 0° 选框。
-          clearRotationMode({ suppressHandleAnimation: true, deferFinalizeArea: true });
-        }
+        // V229：旋转模式下点击/拖动当前对象本体，应继续保持旋转模式。
+        // 只有点空白、点其他对象、Esc 或状态栏退出，才真正退出旋转模式并定型区域。
         if (state.areaNodeEditMode) {
           handleAreaNodeEditPointerDown(e, raw);
           updateCursor(e);
@@ -7785,6 +7779,10 @@
         }
         const resizeHit = hitResizeHandle(raw);
         if (canStartResizeHandleWithPointer(e, resizeHit)) {
+          if (state.rotationMode && state.rotatingObjectId && resizeHit.object && resizeHit.object.id !== state.rotatingObjectId) {
+            clearRotationMode({ suppressHandleAnimation: true, deferFinalizeArea: true });
+            finalizePendingAreaRotation();
+          }
           state.resizingEndpoint = resizeHit.kind === 'line';
           state.resizingBox = resizeHit.kind === 'box';
           state.resizingAreaVertex = resizeHit.kind === 'areaVertex';
@@ -7800,6 +7798,11 @@
         }
         const found=hitTest(raw);
         if(found){
+          const activeRotationObjectId = state.rotationMode ? state.rotatingObjectId : null;
+          const hitActiveRotationObject = !!(activeRotationObjectId && found.id === activeRotationObjectId);
+          if (state.rotationMode && !hitActiveRotationObject) {
+            clearRotationMode({ suppressHandleAnimation: true, deferFinalizeArea: true });
+          }
           let ids=expandSelectionWithGroup(found.id);
           if(touchInteraction.multiSelectMode){
             const set=new Set(state.selectedIds);
@@ -7813,6 +7816,7 @@
             state.selectedIds=[...set];
           }
           else if(!state.selectedIds.includes(found.id)) state.selectedIds=ids;
+          if (!hitActiveRotationObject) finalizePendingAreaRotation();
           beginTouchLongPress(isTouchLike(e) ? found : null);
           if(state.selectedIds.length && !hasLockedSelection()){
             state.dragging=true;
@@ -7823,7 +7827,6 @@
             state.dragStartRaw=raw;
             state.dragOriginals=captureSelectedOriginals();
           }
-          finalizePendingAreaRotation({ force: true });
         } else {
           if (touchInteraction.multiSelectMode) {
             clearTouchLongPress();
@@ -7837,6 +7840,7 @@
             touchInteraction.emptyPanCandidate = true;
             touchInteraction.panStarted = false;
           } else {
+            if (state.rotationMode) clearRotationMode({ suppressHandleAnimation: true, deferFinalizeArea: true });
             state.selectedIds=[];
             finalizePendingAreaRotation();
             state.boxSelecting=true;
@@ -8060,6 +8064,7 @@
         }
         if (touchInteraction.emptyPanCandidate) {
           if (!touchInteraction.panStarted) {
+            if (state.rotationMode) clearRotationMode({ suppressHandleAnimation: true, deferFinalizeArea: true });
             state.selectedIds = [];
             touchInteraction.multiSelectMode = false;
             finalizePendingAreaRotation();
