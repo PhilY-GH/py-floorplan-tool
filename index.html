@@ -2280,7 +2280,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v213';
+    const APP_VERSION = 'v223';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -2820,10 +2820,24 @@
       ];
     }
 
+    function getRotatedBoxNinePoints(o, box) {
+      const pts = getBoxNinePointsFromBounds(box);
+      const deg = getObjectRotationDegrees(o);
+      if (!deg) return pts;
+      const center = getBoxCenter({ x: box.x ?? box.left, y: box.y ?? box.top, w: box.w ?? ((box.right ?? 0) - (box.left ?? 0)), h: box.h ?? ((box.bottom ?? 0) - (box.top ?? 0)) });
+      return pts.map(pt => ({ ...pt, ...rotatePointAround(pt, center, -deg) }));
+    }
+
+    function rotateObjectReferencePoint(o, point, box) {
+      const deg = getObjectRotationDegrees(o);
+      if (!deg) return point;
+      return { ...point, ...rotatePointAround(point, getBoxCenter(box), -deg) };
+    }
+
     function getTextBoxAlignmentPoints(o) {
       if (!o || o.type !== 'text') return [];
       const b = getTextAlignmentBox(o);
-      return getBoxNinePointsFromBounds({ left: b.x, top: b.y, right: b.x + b.w, bottom: b.y + b.h })
+      return getRotatedBoxNinePoints(o, { x: b.x, y: b.y, w: b.w, h: b.h })
         .map(pt => ({ ...pt, objectId: o.id, kind: 'text-box' }));
     }
 
@@ -2846,35 +2860,36 @@
         return points;
       }
       if (o.type === 'area') {
-        (Array.isArray(o.points) ? o.points : []).forEach((pt, index) => addAlignmentPoint(points, pt.x, pt.y, o.id, 'vertex', index));
+        const pts = Array.isArray(o.points) ? o.points : [];
+        const deg = getObjectRotationDegrees(o);
+        const base = deg ? getObjectBaseBox(o) : null;
+        const center = base ? getBoxCenter(base) : null;
+        pts.forEach((pt, index) => {
+          const p = deg && center ? rotatePointAround(pt, center, -deg) : pt;
+          addAlignmentPoint(points, p.x, p.y, o.id, 'vertex', index);
+        });
         return points;
       }
       if (o.type === 'rect') {
-        const b = getBoxBounds(o);
-        const cx = (b.left + b.right) / 2;
-        const cy = (b.top + b.bottom) / 2;
-        // V144：矩形从四角扩展为 9 点，和文字框的参考逻辑保持一致。
-        addAlignmentPoint(points, b.left, b.top, o.id, 'corner', 'nw');
-        addAlignmentPoint(points, cx, b.top, o.id, 'corner', 'n');
-        addAlignmentPoint(points, b.right, b.top, o.id, 'corner', 'ne');
-        addAlignmentPoint(points, b.right, cy, o.id, 'corner', 'e');
-        addAlignmentPoint(points, b.right, b.bottom, o.id, 'corner', 'se');
-        addAlignmentPoint(points, cx, b.bottom, o.id, 'corner', 's');
-        addAlignmentPoint(points, b.left, b.bottom, o.id, 'corner', 'sw');
-        addAlignmentPoint(points, b.left, cy, o.id, 'corner', 'w');
-        addAlignmentPoint(points, cx, cy, o.id, 'center', 'c');
+        const b = getObjectBaseBox(o);
+        // V217：旋转后的矩形参考点必须跟随旋转后的视觉位置，避免移动时触发未旋转旧位置的端点吸附提示。
+        getRotatedBoxNinePoints(o, b).forEach(pt => addAlignmentPoint(points, pt.x, pt.y, o.id, pt.key === 'c' ? 'center' : 'corner', pt.key));
         return points;
       }
       if (o.type === 'ellipse') {
-        const b = getBoxBounds(o);
-        const cx = (b.left + b.right) / 2;
-        const cy = (b.top + b.bottom) / 2;
-        addAlignmentPoint(points, cx, b.top, o.id, 'ellipse-control', 'n');
-        addAlignmentPoint(points, b.right, cy, o.id, 'ellipse-control', 'e');
-        addAlignmentPoint(points, cx, b.bottom, o.id, 'ellipse-control', 's');
-        addAlignmentPoint(points, b.left, cy, o.id, 'ellipse-control', 'w');
-        // V144：椭圆补充中心点；外接矩形四角暂不作为参考点，避免和椭圆视觉边界产生误解。
-        addAlignmentPoint(points, cx, cy, o.id, 'center', 'c');
+        const b = getObjectBaseBox(o);
+        const cx = b.x + b.w / 2;
+        const cy = b.y + b.h / 2;
+        [
+          { x: cx, y: b.y, kind: 'ellipse-control', key: 'n' },
+          { x: b.x + b.w, y: cy, kind: 'ellipse-control', key: 'e' },
+          { x: cx, y: b.y + b.h, kind: 'ellipse-control', key: 's' },
+          { x: b.x, y: cy, kind: 'ellipse-control', key: 'w' },
+          { x: cx, y: cy, kind: 'center', key: 'c' }
+        ].forEach(pt => {
+          const p = rotateObjectReferencePoint(o, pt, b);
+          addAlignmentPoint(points, p.x, p.y, o.id, pt.kind, pt.key);
+        });
         return points;
       }
       if (o.type === 'text') {
@@ -3406,8 +3421,13 @@
       };
     }
 
-    function measureTextBlock(text, fontSize, bold = false, italic = false, fontType = 'default') {
+    function measureTextBlock(text, fontSize, bold = false, italic = false, fontType = 'default', textDirection = 'horizontal') {
       const size = Math.max(8, fontSize || 20);
+      const direction = normalizeTextDirection(textDirection);
+      if (direction === 'vertical') {
+        const layout = getVerticalTextLayout(text, size, bold, italic, fontType);
+        return { width: Math.max(24, layout.width), height: layout.height, lineHeight: layout.lineHeight, lines: layout.columns, ascent: layout.ascent, descent: layout.descent, baselineOffset: layout.ascent, textDirection: direction, verticalLayout: layout };
+      }
       const lines = getTextLines(text);
       ctx.save();
       ctx.font = getTextFontString(size, bold, italic, fontType);
@@ -3418,7 +3438,7 @@
       const descent = Math.max(size * 0.18, ...lineMetrics.map(m => m.descent));
       const lineHeight = Math.max(getTextLineHeight(size), ascent + descent);
       const height = lineHeight * Math.max(0, lines.length - 1) + ascent + descent;
-      return { width, height, lineHeight, lines, ascent, descent, baselineOffset: ascent };
+      return { width, height, lineHeight, lines, ascent, descent, baselineOffset: ascent, textDirection: direction };
     }
 
     function normalizeTextAlign(value) {
@@ -3431,6 +3451,75 @@
 
     function normalizeFontType(value) {
       return value === 'monospace' ? 'monospace' : 'default';
+    }
+
+    function normalizeTextDirection(value) {
+      return value === 'vertical' ? 'vertical' : 'horizontal';
+    }
+
+    function isVerticalBlankChar(ch) {
+      return ch === ' ' || ch === '\t' || ch === '\u00a0';
+    }
+
+    function getVerticalBlankAdvance(ch, fontSize) {
+      const size = Math.max(8, fontSize || 20);
+      if (ch === '\t') return size * 1.0;
+      return size * 0.48;
+    }
+
+    function getVerticalTextColumns(value) {
+      const text = normalizeTextContent(value, '文字');
+      const rawLines = String(text).split('\n');
+      const columns = rawLines.map(line => {
+        // V220：竖排必须保留用户原文中的空格；空格作为不可见占位参与布局，不能被删除。
+        // 换行仍表示换列，第一行在最右侧，后续行依次向左。
+        const chars = Array.from(String(line ?? ''));
+        return chars.length ? chars : [' '];
+      });
+      return columns.length ? columns : [['文字']];
+    }
+
+    function getVerticalTextChars(value) {
+      return getVerticalTextColumns(value).flat();
+    }
+
+    function getVerticalTextLayout(text, fontSize, bold = false, italic = false, fontType = 'default') {
+      const size = Math.max(8, fontSize || 20);
+      const columns = getVerticalTextColumns(text);
+      ctx.save();
+      ctx.font = getTextFontString(size, bold, italic, fontType);
+      const visibleMetricsFallback = { width: size * 0.5, ascent: size * 0.72, descent: size * 0.18 };
+      const columnMetrics = columns.map(chars => {
+        const metrics = chars.map(ch => isVerticalBlankChar(ch) ? visibleMetricsFallback : getSingleLineTextMetrics(ch || ' ', size));
+        return {
+          chars,
+          metrics,
+          width: Math.max(1, ...metrics.filter((m, i) => !isVerticalBlankChar(chars[i])).map(m => m.width), size * 0.45),
+          ascent: Math.max(size * 0.72, ...metrics.filter((m, i) => !isVerticalBlankChar(chars[i])).map(m => m.ascent), size * 0.72),
+          descent: Math.max(size * 0.18, ...metrics.filter((m, i) => !isVerticalBlankChar(chars[i])).map(m => m.descent), size * 0.18)
+        };
+      });
+      ctx.restore();
+      const ascent = Math.max(size * 0.72, ...columnMetrics.map(m => m.ascent));
+      const descent = Math.max(size * 0.18, ...columnMetrics.map(m => m.descent));
+      // V220：竖排字符步距按字号控制；空格保留为较短的不可见占位，避免删除内容或异常撑高选框。
+      const charAdvance = Math.max(size * 1.02, size + Math.max(1, size * 0.04));
+      const columnLayouts = columnMetrics.map(cm => {
+        const positions = [];
+        let offset = 0;
+        cm.chars.forEach((ch, index) => {
+          positions[index] = offset;
+          if (index < cm.chars.length - 1) {
+            offset += isVerticalBlankChar(ch) ? getVerticalBlankAdvance(ch, size) : charAdvance;
+          }
+        });
+        return { positions, height: offset + ascent + descent };
+      });
+      const maxColumnWidth = Math.max(size * 0.72, ...columnMetrics.map(m => m.width));
+      const columnAdvance = Math.max(size * 1.22, maxColumnWidth + Math.max(3, size * 0.20));
+      const width = columns.length <= 1 ? maxColumnWidth : (columns.length - 1) * columnAdvance + maxColumnWidth;
+      const height = Math.max(ascent + descent, ...columnLayouts.map(l => l.height));
+      return { columns, columnMetrics, columnLayouts, width, height, lineHeight: charAdvance, columnAdvance, maxColumnWidth, ascent, descent };
     }
 
     function getFontFamilyByType(fontType) {
@@ -3453,6 +3542,18 @@
       if (align === 'center') return 'center';
       if (align === 'right') return 'right';
       return 'left';
+    }
+
+    function getVerticalTextColumnOffset(layout, columnIndex, alignValue) {
+      const align = normalizeTextAlign(alignValue);
+      const columnLayout = layout && layout.columnLayouts ? layout.columnLayouts[columnIndex] : null;
+      const containerHeight = Math.max(0, Number(layout && layout.height) || 0);
+      const columnHeight = Math.max(0, Number(columnLayout && columnLayout.height) || 0);
+      const free = Math.max(0, containerHeight - columnHeight);
+      // V221：竖排文字沿用原“左/中/右”对齐按钮：左=顶部，居中=垂直居中，右=底部。
+      if (align === 'center') return free / 2;
+      if (align === 'right') return free;
+      return 0;
     }
 
     function svgTextAnchorFromBlockAlign(value) {
@@ -3504,7 +3605,7 @@
 
     function getTextBackgroundBox(o) {
       const fontSize = o.fontSize || 20;
-      const m = measureTextBlock(o.text || '文字', fontSize, !!o.textBold, !!o.textItalic, o.fontType);
+      const m = measureTextBlock(o.text || '文字', fontSize, !!o.textBold, !!o.textItalic, o.fontType, o.textDirection);
       const pad = getTextBackgroundPadding(fontSize);
       return {
         x: o.x - pad.x,
@@ -3515,7 +3616,12 @@
     }
 
     function getTextAnchorPoint(o) {
-      const m = measureTextBlock(o.text || '文字', o.fontSize || 20, !!o.textBold, !!o.textItalic, o.fontType);
+      const m = measureTextBlock(o.text || '文字', o.fontSize || 20, !!o.textBold, !!o.textItalic, o.fontType, o.textDirection);
+      const direction = normalizeTextDirection(o.textDirection);
+      if (direction === 'vertical') {
+        const layout = m.verticalLayout || getVerticalTextLayout(o.text || '文字', o.fontSize || 20, !!o.textBold, !!o.textItalic, o.fontType);
+        return { x: o.x + m.width - layout.maxColumnWidth / 2, y: o.y, width: m.width, height: m.height, align: 'center' };
+      }
       const align = normalizeTextAlign(o.textAlign || 'left');
       let x = o.x;
       if (align === 'center') x = o.x + m.width / 2;
@@ -3887,6 +3993,49 @@
       return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
     }
 
+    function getRectEllipseOwnBox(o) {
+      if (!o || !['rect', 'ellipse'].includes(o.type)) return { x: 0, y: 0, w: 0, h: 0 };
+      return normalizeBox(o.x1, o.y1, o.x2, o.y2);
+    }
+
+    function setRectEllipseOwnSize(o, nextWidth = null, nextHeight = null, preserveCenter = true) {
+      if (!o || !['rect', 'ellipse'].includes(o.type)) return false;
+      const oldBox = getRectEllipseOwnBox(o);
+      const oldCenter = getBoxCenter(oldBox);
+      const oldW = Math.max(1, oldBox.w || Math.abs((o.x2 || 0) - (o.x1 || 0)) || 1);
+      const oldH = Math.max(1, oldBox.h || Math.abs((o.y2 || 0) - (o.y1 || 0)) || 1);
+      const w = Number.isFinite(Number(nextWidth)) && Number(nextWidth) > 0 ? Number(nextWidth) : oldW;
+      const h = Number.isFinite(Number(nextHeight)) && Number(nextHeight) > 0 ? Number(nextHeight) : oldH;
+      const signX = Math.sign((o.x2 - o.x1) || 1) || 1;
+      const signY = Math.sign((o.y2 - o.y1) || 1) || 1;
+      if (preserveCenter) {
+        o.x1 = oldCenter.x - signX * w / 2;
+        o.x2 = oldCenter.x + signX * w / 2;
+        o.y1 = oldCenter.y - signY * h / 2;
+        o.y2 = oldCenter.y + signY * h / 2;
+      } else {
+        o.x2 = o.x1 + signX * w;
+        o.y2 = o.y1 + signY * h;
+      }
+      return true;
+    }
+
+    function withTextVisualCenterPreserved(o, mutator) {
+      if (!o || o.type !== 'text' || typeof mutator !== 'function') return mutator ? mutator() : undefined;
+      const beforeBox = getObjectBaseBox(o);
+      const before = getBoxCenter(beforeBox);
+      const result = mutator();
+      const afterBox = getObjectBaseBox(o);
+      const after = getBoxCenter(afterBox);
+      const dx = before.x - after.x;
+      const dy = before.y - after.y;
+      if (Number.isFinite(dx) && Number.isFinite(dy) && (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001)) {
+        o.x += dx;
+        o.y += dy;
+      }
+      return result;
+    }
+
     function rotatePointAround(p, center, degrees) {
       const rad = degrees * Math.PI / 180;
       const cos = Math.cos(rad), sin = Math.sin(rad);
@@ -4036,7 +4185,7 @@
       if (key === 'length') return formatNumber(getObjectPixelLength(o) * getScaleFactorValue());
       if (key === 'angle') return formatNumber(getObjectAngleDegrees(o));
       if (key === 'width' || key === 'height') {
-        const b = getObjectBox(o);
+        const b = ['rect','ellipse'].includes(o.type) ? getRectEllipseOwnBox(o) : getObjectBox(o);
         return formatNumber(key === 'width' ? Math.abs(b.w) : Math.abs(b.h));
       }
       if (key === 'locked') return isObjectLocked(o) ? 'true' : 'false';
@@ -4105,17 +4254,23 @@
       const onlyDirty = !!options.onlyDirty;
       const skipText = !!options.skipText;
       const shouldApply = key => !onlyDirty || !!dirty[key];
-      if (!skipText && shouldApply('text')) o.text = normalizeTextContent(result.text, '文字');
-      if (shouldApply('align')) o.textAlign = normalizeTextAlign(result.align);
-      if (shouldApply('color')) o.color = normalizeHexColor(result.color, o.color || '#111827');
-      if (shouldApply('backgroundMode')) o.textBackgroundMode = normalizeTextBackgroundMode(result.backgroundMode);
-      if (shouldApply('backgroundColor')) o.textBackgroundColor = normalizeHexColor(result.backgroundColor, '#ffffff');
-      if (shouldApply('backgroundOpacity')) o.textBackgroundOpacity = normalizeTextBackgroundOpacity(result.backgroundOpacity);
-      if (shouldApply('bold')) o.textBold = normalizeTextStyleFlag(result.bold);
-      if (shouldApply('italic')) o.textItalic = normalizeTextStyleFlag(result.italic);
-      if (shouldApply('underline')) o.textUnderline = normalizeTextStyleFlag(result.underline);
-      if (shouldApply('fontSize')) o.fontSize = Math.max(1, Number(result.fontSize) || o.fontSize || 20);
-      if (shouldApply('fontType')) o.fontType = normalizeFontType(result.fontType);
+      const changesTextGeometry = (!skipText && shouldApply('text')) || shouldApply('bold') || shouldApply('italic') || shouldApply('underline') || shouldApply('fontSize') || shouldApply('fontType') || shouldApply('textDirection');
+      const applyValues = () => {
+        if (!skipText && shouldApply('text')) o.text = normalizeTextContent(result.text, '文字');
+        if (shouldApply('align')) o.textAlign = normalizeTextAlign(result.align);
+        if (shouldApply('color')) o.color = normalizeHexColor(result.color, o.color || '#111827');
+        if (shouldApply('backgroundMode')) o.textBackgroundMode = normalizeTextBackgroundMode(result.backgroundMode);
+        if (shouldApply('backgroundColor')) o.textBackgroundColor = normalizeHexColor(result.backgroundColor, '#ffffff');
+        if (shouldApply('backgroundOpacity')) o.textBackgroundOpacity = normalizeTextBackgroundOpacity(result.backgroundOpacity);
+        if (shouldApply('bold')) o.textBold = normalizeTextStyleFlag(result.bold);
+        if (shouldApply('italic')) o.textItalic = normalizeTextStyleFlag(result.italic);
+        if (shouldApply('underline')) o.textUnderline = normalizeTextStyleFlag(result.underline);
+        if (shouldApply('fontSize')) o.fontSize = Math.max(1, Number(result.fontSize) || o.fontSize || 20);
+        if (shouldApply('fontType')) o.fontType = normalizeFontType(result.fontType);
+        if (shouldApply('textDirection')) o.textDirection = normalizeTextDirection(result.textDirection);
+      };
+      if (changesTextGeometry) withTextVisualCenterPreserved(o, applyValues);
+      else applyValues();
       return true;
     }
 
@@ -4240,9 +4395,11 @@
         o.doorSwing = raw === 'left' ? 'left' : 'right';
         o.swing = o.doorSwing;
       } else if (key === 'fontSize') {
-        o.fontSize = Math.max(8, n);
+        if (o.type === 'text') withTextVisualCenterPreserved(o, () => { o.fontSize = Math.max(8, n); });
+        else o.fontSize = Math.max(8, n);
       } else if (key === 'fontType') {
-        o.fontType = normalizeFontType(raw);
+        if (o.type === 'text') withTextVisualCenterPreserved(o, () => { o.fontType = normalizeFontType(raw); });
+        else o.fontType = normalizeFontType(raw);
       } else if (key === 'arrowMode') {
         o.arrowMode = raw;
       } else if (key === 'arrowSize') {
@@ -5038,8 +5195,10 @@
         if (isRotatableObject(o)) o.rotation = normalizeRotationDegrees(n);
       } else if (key === 'width' || key === 'height') {
         if (['rect','ellipse'].includes(o.type) && n > 0) {
-          if (key === 'width') o.x2 = o.x1 + Math.sign((o.x2 - o.x1) || 1) * n;
-          if (key === 'height') o.y2 = o.y1 + Math.sign((o.y2 - o.y1) || 1) * n;
+          const own = getRectEllipseOwnBox(o);
+          const nextW = key === 'width' ? n : own.w;
+          const nextH = key === 'height' ? n : own.h;
+          setRectEllipseOwnSize(o, nextW, nextH, true);
         }
       } else if (key === 'text') {
         o.text = normalizeTextContent(raw, '文字');
@@ -5416,8 +5575,9 @@
           const bgBox = getTextBackgroundBox(o);
           textItems.push(renderRect(bgBox.x, bgBox.y, bgBox.w, bgBox.h, bgColor, null, 0, { fillOpacity: getTextBackgroundOpacity(o) }));
         }
-        const textMetrics = measureTextBlock(o.text || '文字', fontSize, !!o.textBold, !!o.textItalic, o.fontType);
-        textItems.push(renderText(o.text || '文字', anchor.x, anchor.y, color, fontSize, { textAlign: canvasTextAlignFromBlockAlign(o.textAlign), textBaseline: 'alphabetic', lineHeight: textMetrics.lineHeight, textAscent: textMetrics.ascent, textDescent: textMetrics.descent, fontWeight: o.textBold ? '700' : '400', fontStyle: o.textItalic ? 'italic' : 'normal', textUnderline: !!o.textUnderline, fontType: normalizeFontType(o.fontType) }));
+        const textMetrics = measureTextBlock(o.text || '文字', fontSize, !!o.textBold, !!o.textItalic, o.fontType, o.textDirection);
+        const textDirection = normalizeTextDirection(o.textDirection);
+        textItems.push(renderText(o.text || '文字', anchor.x, anchor.y, color, fontSize, { textAlign: textDirection === 'vertical' ? 'center' : canvasTextAlignFromBlockAlign(o.textAlign), verticalAlign: normalizeTextAlign(o.textAlign || 'left'), textBaseline: 'alphabetic', lineHeight: textMetrics.lineHeight, textAscent: textMetrics.ascent, textDescent: textMetrics.descent, fontWeight: o.textBold ? '700' : '400', fontStyle: o.textItalic ? 'italic' : 'normal', textUnderline: !!o.textUnderline, fontType: normalizeFontType(o.fontType), textDirection }));
         items = applyObjectRotationToItems(o, textItems, getObjectBaseBox(o));
       }
       else if (o.type === 'door') items = buildDoorRenderItems(o);
@@ -5542,13 +5702,48 @@
       } else if (item.kind === 'text') {
         c.fillStyle = item.fill || '#111827';
         c.font = getTextFontString(item.fontSize || 20, item.fontWeight === '700', item.fontStyle === 'italic', item.fontType || 'default');
-        c.textAlign = item.textAlign || 'start';
+        const textDirection = normalizeTextDirection(item.textDirection);
+        c.textAlign = textDirection === 'vertical' ? 'center' : (item.textAlign || 'start');
         const baseline = item.textBaseline || 'top';
-        const lines = getTextLines(item.text || '');
         const lineHeight = item.lineHeight || getTextLineHeight(item.fontSize || 20);
         const metricAscent = Number(item.textAscent);
         const metricBaseline = baseline === 'alphabetic' && Number.isFinite(metricAscent);
         let y = item.y || 0;
+        if (textDirection === 'vertical') {
+          const layout = getVerticalTextLayout(item.text || '', item.fontSize || 20, item.fontWeight === '700', item.fontStyle === 'italic', item.fontType || 'default');
+          const ascent = metricBaseline ? metricAscent : layout.ascent;
+          const verticalAlign = normalizeTextAlign(item.verticalAlign || 'left');
+          c.textBaseline = 'alphabetic';
+          layout.columns.forEach((column, columnIndex) => {
+            const x = (item.x || 0) - columnIndex * layout.columnAdvance;
+            const columnLayout = layout.columnLayouts && layout.columnLayouts[columnIndex];
+            const columnOffset = getVerticalTextColumnOffset(layout, columnIndex, verticalAlign);
+            column.forEach((char, rowIndex) => {
+              const lineText = char || ' ';
+              const lineY = y + columnOffset + ascent + ((columnLayout && columnLayout.positions[rowIndex]) || 0);
+              if (!isVerticalBlankChar(lineText)) {
+                c.fillText(lineText, x, lineY);
+                if (item.textUnderline) {
+                  const metrics = c.measureText(lineText);
+                  const startX = x - metrics.width / 2;
+                  const underlineY = lineY + Math.max(1.5, (item.fontSize || 20) * 0.08);
+                  c.save();
+                  c.strokeStyle = item.fill || '#111827';
+                  c.lineWidth = Math.max(1, (item.fontSize || 20) / 16);
+                  c.beginPath();
+                  c.moveTo(startX, underlineY);
+                  c.lineTo(startX + metrics.width, underlineY);
+                  c.stroke();
+                  c.restore();
+                }
+              }
+            });
+          });
+          if (transformed) c.restore();
+          c.setLineDash([]);
+          return;
+        }
+        const lines = getTextLines(item.text || '');
         if (metricBaseline) {
           c.textBaseline = 'alphabetic';
         } else {
@@ -5645,12 +5840,33 @@
         return `<path d="${d}" ${strokeBase} fill="none"${transform} />`;
       }
       if (item.kind === 'text') {
-        const lines = getTextLines(item.text || '');
+        const textDirection = normalizeTextDirection(item.textDirection);
         const lineHeight = item.lineHeight || getTextLineHeight(item.fontSize || 20);
         let y = Number(item.y || 0);
         const baseline = item.textBaseline || 'top';
         const metricAscent = Number(item.textAscent);
         const metricBaseline = baseline === 'alphabetic' && Number.isFinite(metricAscent);
+        const fontWeight = item.fontWeight === '700' ? ' font-weight="700"' : '';
+        const fontStyle = item.fontStyle === 'italic' ? ' font-style="italic"' : '';
+        const decoration = item.textUnderline ? ' text-decoration="underline"' : '';
+        if (textDirection === 'vertical') {
+          const layout = getVerticalTextLayout(item.text || '', item.fontSize || 20, item.fontWeight === '700', item.fontStyle === 'italic', item.fontType || 'default');
+          const ascent = metricBaseline ? metricAscent : layout.ascent;
+          const verticalAlign = normalizeTextAlign(item.verticalAlign || 'left');
+          const textNodes = layout.columns.map((column, columnIndex) => {
+            const x = (item.x || 0) - columnIndex * layout.columnAdvance;
+            const columnLayout = layout.columnLayouts && layout.columnLayouts[columnIndex];
+            const columnOffset = getVerticalTextColumnOffset(layout, columnIndex, verticalAlign);
+            const tspans = column.map((char, rowIndex) => {
+              const lineY = y + columnOffset + ascent + ((columnLayout && columnLayout.positions[rowIndex]) || 0);
+              if (isVerticalBlankChar(char || ' ')) return `<tspan x="${svgNum(x)}" y="${svgNum(lineY)}" xml:space="preserve"> </tspan>`;
+              return `<tspan x="${svgNum(x)}" y="${svgNum(lineY)}">${escapeSvg(char || ' ')}</tspan>`;
+            }).join('');
+            return `<text fill="${escapeSvg(item.fill || '#111827')}" font-size="${svgNum(item.fontSize || 20)}" font-family="${escapeSvg(getFontFamilyByType(item.fontType || 'default'))}"${fontWeight}${fontStyle}${decoration} text-anchor="middle" dominant-baseline="alphabetic">${tspans}</text>`;
+          }).join('');
+          return transform ? `<g${transform}>${textNodes}</g>` : textNodes;
+        }
+        const lines = getTextLines(item.text || '');
         if (!metricBaseline) {
           if (baseline === 'middle') y -= ((lines.length - 1) * lineHeight) / 2;
           else if (baseline === 'bottom') y -= (lines.length - 1) * lineHeight;
@@ -5658,11 +5874,9 @@
         const tspans = metricBaseline
           ? lines.map((line, index) => `<tspan x="${svgNum(item.x || 0)}" y="${svgNum(y + metricAscent + index * lineHeight)}">${escapeSvg(line || ' ')}</tspan>`).join('')
           : lines.map((line, index) => `<tspan x="${svgNum(item.x || 0)}" dy="${index === 0 ? 0 : svgNum(lineHeight)}">${escapeSvg(line || ' ')}</tspan>`).join('');
-        const fontWeight = item.fontWeight === '700' ? ' font-weight="700"' : '';
-        const fontStyle = item.fontStyle === 'italic' ? ' font-style="italic"' : '';
-        const decoration = item.textUnderline ? ' text-decoration="underline"' : '';
         const dominantBaseline = metricBaseline ? 'alphabetic' : svgTextBaseline(baseline);
-        return `<text x="${svgNum(item.x || 0)}" y="${svgNum(metricBaseline ? y + metricAscent : y)}" fill="${escapeSvg(item.fill || '#111827')}" font-size="${svgNum(item.fontSize || 20)}" font-family="${escapeSvg(getFontFamilyByType(item.fontType || 'default'))}"${fontWeight}${fontStyle}${decoration} text-anchor="${svgTextAnchor(item.textAlign)}" dominant-baseline="${dominantBaseline}"${transform}>${tspans}</text>`;
+        const anchorValue = svgTextAnchor(item.textAlign);
+        return `<text x="${svgNum(item.x || 0)}" y="${svgNum(metricBaseline ? y + metricAscent : y)}" fill="${escapeSvg(item.fill || '#111827')}" font-size="${svgNum(item.fontSize || 20)}" font-family="${escapeSvg(getFontFamilyByType(item.fontType || 'default'))}"${fontWeight}${fontStyle}${decoration} text-anchor="${anchorValue}" dominant-baseline="${dominantBaseline}"${transform}>${tspans}</text>`;
       }
       return '';
     }
@@ -6191,7 +6405,8 @@
     }
 
     function getObjectBox(o){
-      if (o && isRotatableObject({ ...o, locked: false }) && getObjectRotationDegrees(o)) return getRotatedBoxAabb(getObjectBaseBox(o), getObjectRotationDegrees(o));
+      if(!o || typeof o !== 'object') return {x:0,y:0,w:0,h:0};
+      if (isRotatableObject({ ...o, locked: false }) && getObjectRotationDegrees(o)) return getRotatedBoxAabb(getObjectBaseBox(o), getObjectRotationDegrees(o));
       if(o.type==='wall'){
         const b=normalizeBox(o.x1,o.y1,o.x2,o.y2);
         const pad=(o.wallThickness||10)/2+8;
@@ -6232,8 +6447,13 @@
         const pad = Math.max(10, (o.lineWidth || 2) + 7, wallThickness / 2 + 4);
         return {x:b.x-pad, y:b.y-pad, w:b.w+pad*2, h:b.h+pad*2};
       }
-      const x=Math.min(o.x1,o.x2), y=Math.min(o.y1,o.y2), w=Math.abs(o.x2-o.x1), h=Math.abs(o.y2-o.y1);
-      return {x,y,w,h};
+      const x1 = Number(o.x1), y1 = Number(o.y1), x2 = Number(o.x2), y2 = Number(o.y2);
+      if(Number.isFinite(x1) && Number.isFinite(y1) && Number.isFinite(x2) && Number.isFinite(y2)){
+        const x=Math.min(x1,x2), y=Math.min(y1,y2), w=Math.abs(x2-x1), h=Math.abs(y2-y1);
+        return {x,y,w,h};
+      }
+      console.warn('[PY平面图工具] 无法计算对象边界，已使用安全空边界。', o && o.type, o && o.id);
+      return {x:Number(o.x)||0,y:Number(o.y)||0,w:0,h:0};
     }
     function normalizeBox(x1,y1,x2,y2){ return {x:Math.min(x1,x2),y:Math.min(y1,y2),w:Math.abs(x2-x1),h:Math.abs(y2-y1)}; }
 
@@ -7457,7 +7677,7 @@
         return;
       }
       if(state.tool==='text'){
-        addObject({type:'text',x:p.x,y:p.y,text:normalizeTextContent(els.textInput.value, '文字'),textAlign:'left',textBackgroundMode:'none',textBackgroundColor:'#ffffff',textBackgroundOpacity:1,textBold:false,textItalic:false,textUnderline:false,fontType:normalizeFontType(els.textFontType ? els.textFontType.value : 'default'),layer:'text'});
+        addObject({type:'text',x:p.x,y:p.y,text:normalizeTextContent(els.textInput.value, '文字'),textAlign:'left',textBackgroundMode:'none',textBackgroundColor:'#ffffff',textBackgroundOpacity:1,textBold:false,textItalic:false,textUnderline:false,fontType:normalizeFontType(els.textFontType ? els.textFontType.value : 'default'),textDirection:'horizontal',layer:'text'});
         updateCursor(e);
         return;
       }
@@ -7986,7 +8206,7 @@
         draw();
         updateObjectMetrics(true);
       };
-      const result = await showMultilineTextDialog('编辑文字', '', o.text || '', '文字标签', o.textAlign || 'left', o.color || '#111827', o.textBackgroundMode || 'none', o.textBackgroundColor || '#ffffff', { previewTarget: o, originalSnapshot: original, onPreview: previewUpdate, onRestore: restoreOriginal, initialBold: o.textBold, initialItalic: o.textItalic, initialUnderline: o.textUnderline, initialFontSize: o.fontSize || 20, initialFontType: o.fontType || 'default', initialBackgroundOpacity: getTextBackgroundOpacity(o) });
+      const result = await showMultilineTextDialog('编辑文字', '', o.text || '', '文字标签', o.textAlign || 'left', o.color || '#111827', o.textBackgroundMode || 'none', o.textBackgroundColor || '#ffffff', { previewTarget: o, originalSnapshot: original, onPreview: previewUpdate, onRestore: restoreOriginal, initialBold: o.textBold, initialItalic: o.textItalic, initialUnderline: o.textUnderline, initialFontSize: o.fontSize || 20, initialFontType: o.fontType || 'default', initialTextDirection: o.textDirection || 'horizontal', initialBackgroundOpacity: getTextBackgroundOpacity(o) });
       if(result === null) return;
       restoreOriginal(original);
       saveHistory();
@@ -8029,6 +8249,7 @@
       const commonUnderline = getCommonTextDialogValue(targets, o => !!o.textUnderline, value => !!value);
       const commonFontSize = getCommonTextDialogValue(targets, o => Number(o.fontSize || 20), value => Number(value) || 20);
       const commonFontType = getCommonTextDialogValue(targets, o => o.fontType || 'default', normalizeFontType);
+      const commonTextDirection = getCommonTextDialogValue(targets, o => o.textDirection || 'horizontal', normalizeTextDirection);
       const mixedFields = {
         align: isMixedPropertyValue(commonAlign),
         color: isMixedPropertyValue(commonColor),
@@ -8039,7 +8260,8 @@
         italic: isMixedPropertyValue(commonItalic),
         underline: isMixedPropertyValue(commonUnderline),
         fontSize: isMixedPropertyValue(commonFontSize),
-        fontType: isMixedPropertyValue(commonFontType)
+        fontType: isMixedPropertyValue(commonFontType),
+        textDirection: isMixedPropertyValue(commonTextDirection)
       };
       const result = await showMultilineTextDialog(
         '批量编辑文字样式',
@@ -8063,6 +8285,7 @@
           initialUnderline: mixedFields.underline ? !!first.textUnderline : commonUnderline,
           initialFontSize: mixedFields.fontSize ? (first.fontSize || 20) : commonFontSize,
           initialFontType: mixedFields.fontType ? (first.fontType || 'default') : commonFontType,
+          initialTextDirection: mixedFields.textDirection ? (first.textDirection || 'horizontal') : commonTextDirection,
           initialBackgroundOpacity: mixedFields.backgroundOpacity ? getTextBackgroundOpacity(first) : commonBgOpacity
         }
       );
@@ -8333,7 +8556,9 @@
       const cx = (left + right) / 2;
       const cy = (top + bottom) / 2;
 
-      saveHistory();
+      const historyBefore = state.history.slice();
+      const redoBefore = state.redoHistory.slice();
+      if(!saveHistory()) return;
       let moved = false;
       movable.forEach(item => {
         const b = item.b;
@@ -8353,7 +8578,8 @@
       });
 
       if(!moved){
-        state.history.pop();
+        state.history = historyBefore;
+        state.redoHistory = redoBefore;
         updateHistoryButtons();
         showStatusMessage('对象已处于当前对齐位置', 1400);
         return;
@@ -8435,7 +8661,9 @@
 
       const overallStart = Math.min(...entries.map(getStart));
       const overallEnd = Math.max(...entries.map(getEnd));
-      saveHistory();
+      const historyBefore = state.history.slice();
+      const redoBefore = state.redoHistory.slice();
+      if(!saveHistory()) return;
       let moved = false;
 
       if(entries.some(item => item.locked)){
@@ -8457,7 +8685,7 @@
         moved = layoutSegment(entries, overallStart, overallEnd, false, false);
       }
 
-      if(!moved){ state.history.pop(); updateHistoryButtons(); showStatusMessage('对象已处于当前分布位置', 1400); return; }
+      if(!moved){ state.history = historyBefore; state.redoHistory = redoBefore; updateHistoryButtons(); showStatusMessage('对象已处于当前分布位置', 1400); return; }
       if(entries.some(item => item.locked)) showStatusMessage('仅移动了非锁定对象');
       draw();
       markProjectDirty();
@@ -8941,8 +9169,10 @@
 
       setTimeout(()=>{
         link.click();
-        setTimeout(()=>link.remove(), 120000);
-        setTimeout(()=>URL.revokeObjectURL(url), 180000);
+        // 下载触发后即可移除隐藏链接，避免频繁导出时 DOM 中长期堆积 <a> 元素。
+        setTimeout(()=>link.remove(), 1500);
+        // Object URL 仍保守保留一段时间，避免部分浏览器/大文件下载尚未接管时过早释放。
+        setTimeout(()=>URL.revokeObjectURL(url), 60000);
       }, 0);
     }
 
@@ -9882,6 +10112,7 @@
         let textUnderlineMixed = !!mixedFields.underline;
         let fontSizeMixed = !!mixedFields.fontSize;
         let fontTypeMixed = !!mixedFields.fontType;
+        let textDirectionMixed = !!mixedFields.textDirection;
 
         let textAlignValue = normalizeTextAlign(initialAlign);
         let textColorValue = normalizeHexColor(initialColor, '#111827');
@@ -9893,6 +10124,7 @@
         let textUnderlineValue = normalizeTextStyleFlag(options.initialUnderline);
         let fontSizeValue = Math.max(1, Number(options.initialFontSize || 20) || 20);
         let fontTypeValue = normalizeFontType(options.initialFontType);
+        let textDirectionValue = normalizeTextDirection(options.initialTextDirection);
 
         const input = document.createElement('textarea');
         input.value = String(initialValue || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -9932,6 +10164,7 @@
             underline: textUnderlineValue,
             fontSize: fontSizeValue,
             fontType: fontTypeValue,
+            textDirection: textDirectionValue,
             dirtyFields: { ...dirtyFields }
           };
         }
@@ -10143,6 +10376,29 @@
         alignRow.appendChild(alignGroup);
         alignRow.appendChild(alignMixedBadge);
 
+        const directionRow = makeRow('文字方向');
+        const directionGroup = document.createElement('div');
+        directionGroup.className = 'text-align-segment text-fonttype-segment-v102';
+        const directionMixedBadge = makeMixedBadge();
+        [['horizontal','横排'],['vertical','竖排']].forEach(([value, label]) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = label;
+          b.dataset.textDirection = value;
+          b.className = (!textDirectionMixed && value === textDirectionValue) ? 'active' : '';
+          b.addEventListener('click', () => {
+            textDirectionValue = value;
+            textDirectionMixed = false;
+            markDirty('textDirection');
+            directionGroup.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.textDirection === value));
+            setMixedBadgeVisible(directionMixedBadge, false);
+            applyPreview();
+          });
+          directionGroup.appendChild(b);
+        });
+        directionRow.appendChild(directionGroup);
+        directionRow.appendChild(directionMixedBadge);
+
         function refreshStyleButtons() {
           boldBtn.classList.toggle('active', !textBoldMixed && textBoldValue);
           italicBtn.classList.toggle('active', !textItalicMixed && textItalicValue);
@@ -10192,6 +10448,7 @@
         underlineBtn.addEventListener('click', () => { textUnderlineValue = textUnderlineMixed ? true : !textUnderlineValue; textUnderlineMixed = false; markDirty('underline'); refreshStyleButtons(); applyPreview(); });
         setMixedBadgeVisible(fontTypeMixedBadge, fontTypeMixed);
         setMixedBadgeVisible(alignMixedBadge, textAlignMixed);
+        setMixedBadgeVisible(directionMixedBadge, textDirectionMixed);
         refreshColorButtons();
         refreshStyleButtons();
 
@@ -10264,6 +10521,7 @@
         attrSection.appendChild(styleRow);
         attrSection.appendChild(fontTypeRow);
         attrSection.appendChild(alignRow);
+        attrSection.appendChild(directionRow);
         const contentLabel = document.createElement('div');
         contentLabel.className = 'text-dialog-content-label-v97';
         contentLabel.textContent = '内容';
@@ -10556,9 +10814,13 @@
         await ensureBackgroundImageLoaded();
         if (!backgroundImgElement) throw new Error('底图未加载');
         const src = backgroundImgElement;
+        const oldNaturalWidth = Math.max(1, src.naturalWidth || src.width || 1);
+        const oldNaturalHeight = Math.max(1, src.naturalHeight || src.height || 1);
+        const newNaturalWidth = oldNaturalHeight;
+        const newNaturalHeight = oldNaturalWidth;
         const out = document.createElement('canvas');
-        out.width = Math.max(1, src.naturalHeight || src.height || 1);
-        out.height = Math.max(1, src.naturalWidth || src.width || 1);
+        out.width = newNaturalWidth;
+        out.height = newNaturalHeight;
         const c = out.getContext('2d');
         if (direction === 'right') {
           c.translate(out.width, 0);
@@ -10569,10 +10831,13 @@
         }
         c.drawImage(src, 0, 0);
         const dataUrl = out.toDataURL('image/png');
-        const centerX = (Number(bg.x) || 0) + (Number(bg.width) || out.height) / 2;
-        const centerY = (Number(bg.y) || 0) + (Number(bg.height) || out.width) / 2;
-        const nextWidth = Math.max(1, Number(bg.height) || out.width);
-        const nextHeight = Math.max(1, Number(bg.width) || out.height);
+        // 90° 旋转后，显示宽高应互换；先用旋转前显示尺寸计算中心点，再围绕该中心保持位置。
+        const oldDisplayWidth = Math.max(1, Number(bg.width) || oldNaturalWidth);
+        const oldDisplayHeight = Math.max(1, Number(bg.height) || oldNaturalHeight);
+        const centerX = (Number(bg.x) || 0) + oldDisplayWidth / 2;
+        const centerY = (Number(bg.y) || 0) + oldDisplayHeight / 2;
+        const nextWidth = oldDisplayHeight;
+        const nextHeight = oldDisplayWidth;
         const opacity = getBackgroundOpacity();
         state.backgroundImage = {
           dataUrl,
