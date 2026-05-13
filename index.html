@@ -2280,7 +2280,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v226';
+    const APP_VERSION = 'v227';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -2323,6 +2323,7 @@
       areaNodeHighlight: null,
       rotationMode: false,
       rotatingObjectId: null,
+      pendingAreaRotationFinalizeId: null,
       rotatingObject: false,
       rotationHistorySaved: false,
       rotationHandleHover: false,
@@ -4092,7 +4093,12 @@
       const shouldFinalizeArea = options.finalizeArea !== false;
       const activeRotationObjectId = state.rotatingObjectId;
       if (shouldFinalizeArea && activeRotationObjectId) {
-        finalizeAreaRotationIfNeeded(activeRotationObjectId);
+        if (options.deferFinalizeArea) {
+          state.pendingAreaRotationFinalizeId = activeRotationObjectId;
+        } else {
+          finalizeAreaRotationIfNeeded(activeRotationObjectId);
+          if (state.pendingAreaRotationFinalizeId === activeRotationObjectId) state.pendingAreaRotationFinalizeId = null;
+        }
       }
       state.rotationMode = false;
       state.rotatingObjectId = null;
@@ -4108,6 +4114,14 @@
       } else {
         setRotationHandleHover(false);
       }
+    }
+
+    function finalizePendingAreaRotation(options = {}) {
+      const id = state.pendingAreaRotationFinalizeId;
+      if (!id) return false;
+      if (!options.force && (state.selectedIds || []).includes(id)) return false;
+      state.pendingAreaRotationFinalizeId = null;
+      return finalizeAreaRotationIfNeeded(id);
     }
 
     function setRotationHandleHover(hover) {
@@ -7751,9 +7765,9 @@
         // 先退出旋转模式，再按普通选择逻辑处理对象切换、拖动或空白取消选择。
         // 这样旋转模式不会跨对象保留，也不会让用户感觉被“锁住”。
         if (state.rotationMode) {
-          // V226：点击画布退出旋转模式时，不触发旋转手柄收起动画的中间重绘。
-          // 区域对象会在这里完成 points 烘焙；如果点在空白处，后续会直接取消选择，避免先闪一下 0° 选框再消失。
-          clearRotationMode({ suppressHandleAnimation: true });
+          // V227：点击画布退出旋转模式时，区域对象先保留临时 rotation。
+          // 如果用户点空白取消选择，等选框已经消失后再把 rotation 烘焙进 points，避免 iPad 上闪一下 0° 选框。
+          clearRotationMode({ suppressHandleAnimation: true, deferFinalizeArea: true });
         }
         if (state.areaNodeEditMode) {
           handleAreaNodeEditPointerDown(e, raw);
@@ -7809,6 +7823,7 @@
             state.dragStartRaw=raw;
             state.dragOriginals=captureSelectedOriginals();
           }
+          finalizePendingAreaRotation({ force: true });
         } else {
           if (touchInteraction.multiSelectMode) {
             clearTouchLongPress();
@@ -7823,6 +7838,7 @@
             touchInteraction.panStarted = false;
           } else {
             state.selectedIds=[];
+            finalizePendingAreaRotation();
             state.boxSelecting=true;
             state.selectionBox={x1:raw.x,y1:raw.y,x2:raw.x,y2:raw.y};
           }
@@ -8046,6 +8062,7 @@
           if (!touchInteraction.panStarted) {
             state.selectedIds = [];
             touchInteraction.multiSelectMode = false;
+            finalizePendingAreaRotation();
             draw();
           }
           touchInteraction.emptyPanCandidate = false;
