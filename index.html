@@ -2280,7 +2280,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v223';
+    const APP_VERSION = 'v224';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -6743,6 +6743,33 @@
       o.rotation = normalizeRotationDegrees(deg);
     }
 
+    function applyAreaRotationToPoints(o) {
+      if (!o || o.type !== 'area') return false;
+      const deg = getObjectRotationDegrees(o);
+      const pts = Array.isArray(o.points) ? o.points : [];
+      if (!deg || pts.length < 3) {
+        if (o.rotation) o.rotation = 0;
+        return false;
+      }
+      const base = getObjectBaseBox(o);
+      const center = getBoxCenter(base);
+      o.points = pts.map(pt => rotatePointAround(pt, center, -deg));
+      o.rotation = 0;
+      return true;
+    }
+
+    function finalizeAreaRotationIfNeeded(objectId) {
+      const o = state.objects.find(x => x && x.id === objectId);
+      if (!o || o.type !== 'area') return false;
+      const applied = applyAreaRotationToPoints(o);
+      if (applied) {
+        clearAreaNodeHighlight();
+        clearSnapIndicator();
+        clearSmartGuides();
+      }
+      return applied;
+    }
+
     function drawSelection(c,o){
       const b=getObjectBox(o);
       const locked = isObjectLocked(o);
@@ -8129,9 +8156,11 @@
 
     function finishPointer(e){
       if(state.rotatingObject){
+        const finishedRotationObjectId = state.rotatingObjectId;
         state.rotatingObject=false;
         state.rotationHistorySaved=false;
-        state.rotatingObjectId = state.rotationMode ? state.rotatingObjectId : null;
+        finalizeAreaRotationIfNeeded(finishedRotationObjectId);
+        state.rotatingObjectId = state.rotationMode ? finishedRotationObjectId : null;
         clearSnapIndicator();
         clearMoveEndpointSnap();
         clearSmartGuides();
