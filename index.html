@@ -2351,7 +2351,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v250';
+    const APP_VERSION = 'v251';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -9153,9 +9153,13 @@
       const label = bgInput
         ? `缩放 ${formatBackgroundScalePercent(getBackgroundScalePercent())}%`
         : `缩放 ${formatAreaScalePercent(getAreaScalePercent())}%`;
+      const editValue = bgInput
+        ? formatBackgroundScalePercent(getBackgroundScalePercent())
+        : formatAreaScalePercent(getAreaScalePercent());
       if (bgInput) input.dataset.bgScaleOriginal = label;
       if (areaInput) input.dataset.areaScaleOriginal = label;
-      input.value = label;
+      // V251：缩放输入框显示状态带“缩放”和百分号；编辑状态只保留纯数字，体验与顶部带单位输入框一致。
+      input.value = editValue;
       setTimeout(() => { try { input.select(); } catch (err) {} }, 0);
     });
     els.status.addEventListener('keydown', e => {
