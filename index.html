@@ -1304,6 +1304,14 @@
       border-color: #bfdbfe;
       color: #1d4ed8;
     }
+    .status.status-action-cooling .status-action-btn,
+    .status.status-action-cooling .status-select-count.is-interactive {
+      pointer-events: none;
+    }
+    .status.status-hover-suppressed .status-select-count.is-interactive:hover {
+      background: transparent;
+      color: inherit;
+    }
     .status-action-btn:disabled {
       opacity: .45;
       cursor: default;
@@ -2315,7 +2323,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v240';
+    const APP_VERSION = 'v242';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -8636,25 +8644,57 @@
     }
     document.querySelectorAll('[data-tool]').forEach(btn=>btn.addEventListener('click',()=>setTool(btn.dataset.tool)));
     let statusHoverSuppressTimer = null;
-    function suppressStatusHover(duration = 260) {
+    let statusInteractionLocked = false;
+    let statusInteractionUnlockTimer = null;
+    function suppressStatusHover(duration = 180) {
       if (!els.status) return;
       if (statusHoverSuppressTimer) clearTimeout(statusHoverSuppressTimer);
       els.status.classList.add('status-hover-suppressed');
       statusHoverSuppressTimer = setTimeout(() => {
         statusHoverSuppressTimer = null;
-        if (els.status) els.status.classList.remove('status-hover-suppressed');
+        if (els.status && !statusInteractionLocked) els.status.classList.remove('status-hover-suppressed');
       }, duration);
     }
+
+    function lockStatusInteractionUntilPointerEnds() {
+      if (!els.status) return;
+      statusInteractionLocked = true;
+      if (statusInteractionUnlockTimer) {
+        clearTimeout(statusInteractionUnlockTimer);
+        statusInteractionUnlockTimer = null;
+      }
+      els.status.classList.add('status-action-cooling', 'status-hover-suppressed');
+    }
+
+    function unlockStatusInteractionAfterPointerEnds() {
+      if (!statusInteractionLocked) return;
+      if (statusInteractionUnlockTimer) clearTimeout(statusInteractionUnlockTimer);
+      // V242：状态栏操作会立即重绘，但新按钮必须等本次 pointer 序列结束后才恢复交互。
+      // 这里保留一帧级别的保险延迟，只用于等 Safari / iPadOS 清理本次 pointer/click 状态，不再用固定冷却时间作为主要判断。
+      statusInteractionUnlockTimer = setTimeout(() => {
+        statusInteractionUnlockTimer = null;
+        statusInteractionLocked = false;
+        if (els.status) els.status.classList.remove('status-action-cooling', 'status-hover-suppressed');
+      }, 60);
+    }
+
+    function isStatusInteractionLocked() {
+      return !!statusInteractionLocked;
+    }
+
+    window.addEventListener('pointerup', unlockStatusInteractionAfterPointerEnds, true);
+    window.addEventListener('pointercancel', unlockStatusInteractionAfterPointerEnds, true);
 
     function handleStatusAction(e) {
       const target = e.target.closest('[data-status-action]');
       if (!target) return;
-      const action = target.dataset.statusAction;
       e.preventDefault();
       e.stopPropagation();
-      // V240：状态栏按钮切换后，iPad / Apple Pencil / 鼠标可能把新按钮误判为 hover。
-      // 短暂抑制 hover 视觉，避免“完成/退出”后新按钮瞬间变蓝，看起来像误触。
-      suppressStatusHover();
+      if (isStatusInteractionLocked()) return;
+      const action = target.dataset.statusAction;
+      // V242：状态栏重绘后，新按钮不接受当前这一次尚未结束的手指 / Pencil / 鼠标 pointer 序列。
+      // 这比固定毫秒冷却更准确，避免完成 / 退出后残留触控落到新按钮。
+      lockStatusInteractionUntilPointerEnds();
       if (action === 'undo-area-point') {
         if (!target.disabled && state.tool === 'area' && state.areaDrawing) {
           undoLastAreaPoint(true);
