@@ -2341,7 +2341,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v247';
+    const APP_VERSION = 'v248';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -2385,6 +2385,7 @@
       areaScaleMode: false,
       resizingAreaScale: false,
       resizeAreaScaleHandle: null,
+      areaScaleBaseline: null,
       rotationMode: false,
       rotatingObjectId: null,
       pendingAreaRotationFinalizeId: null,
@@ -3839,8 +3840,57 @@
       state.areaScaleMode = false;
       state.resizingAreaScale = false;
       state.resizeAreaScaleHandle = null;
+      state.areaScaleBaseline = null;
       if (wasActive) clearAreaNodeHighlight();
       return wasActive;
+    }
+
+    function captureAreaScaleBaseline(area) {
+      if (!area || area.type !== 'area' || !Array.isArray(area.points)) return null;
+      const bounds = getAreaScaleBounds(area);
+      return {
+        objectId: area.id,
+        points: area.points.map(pt => ({ x: Number(pt.x) || 0, y: Number(pt.y) || 0 })),
+        bounds
+      };
+    }
+
+    function ensureAreaScaleBaseline(area = getSingleAreaScalableObject()) {
+      if (!area) return null;
+      if (!state.areaScaleBaseline || state.areaScaleBaseline.objectId !== area.id || !Array.isArray(state.areaScaleBaseline.points)) {
+        state.areaScaleBaseline = captureAreaScaleBaseline(area);
+      }
+      return state.areaScaleBaseline;
+    }
+
+    function getAreaScalePercent(area = getSingleAreaScalableObject()) {
+      const baseline = ensureAreaScaleBaseline(area);
+      if (!area || !baseline || !baseline.bounds) return 100;
+      const current = getAreaScaleBounds(area);
+      if (!current || current.w <= 0 || current.h <= 0 || baseline.bounds.w <= 0 || baseline.bounds.h <= 0) return 100;
+      const baseDiag = Math.hypot(baseline.bounds.w, baseline.bounds.h);
+      const currentDiag = Math.hypot(current.w, current.h);
+      if (!Number.isFinite(baseDiag) || baseDiag <= 0 || !Number.isFinite(currentDiag)) return 100;
+      return Math.max(0.1, currentDiag / baseDiag * 100);
+    }
+
+    function formatAreaScalePercent(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '100';
+      const rounded = Math.round(n * 10) / 10;
+      return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.0$/, '');
+    }
+
+    function resetAreaScaleToBaseline() {
+      const area = getSingleAreaScalableObject();
+      const baseline = ensureAreaScaleBaseline(area);
+      if (!area || !baseline || baseline.objectId !== area.id || !Array.isArray(baseline.points)) return false;
+      saveHistory();
+      area.points = baseline.points.map(pt => ({ x: pt.x, y: pt.y }));
+      draw();
+      updateCursor();
+      markProjectDirty();
+      return true;
     }
 
     function setAreaScaleMode(enabled) {
@@ -3849,9 +3899,12 @@
       state.areaScaleMode = !!enabled;
       if (state.areaScaleMode) {
         state.areaNodeEditMode = null;
+        state.areaScaleBaseline = captureAreaScaleBaseline(area);
         clearAreaNodeHighlight();
         clearSnapIndicator();
         clearSmartGuides();
+      } else {
+        state.areaScaleBaseline = null;
       }
       draw();
       updateCursor();
@@ -3986,7 +4039,8 @@
             els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">区域旋转</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="exit-rotation-mode">退出</button>`;
           } else if (activeScalableArea && state.areaScaleMode) {
             els.status.classList.remove('multi-select');
-            els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">区域缩放</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="exit-area-scale-mode">退出</button>`;
+            const areaScale = formatAreaScalePercent(getAreaScalePercent(activeScalableArea));
+            els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">区域缩放</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="reset-area-scale" title="恢复到进入缩放模式时的区域大小和位置">重置</button><span class="status-bg-scale-info" title="相对本次进入缩放模式时的比例">缩放 ${areaScale}%</span><button type="button" class="status-action-btn" data-status-action="exit-area-scale-mode">退出</button>`;
           } else if (activeArea && state.areaNodeEditMode === 'add') {
             els.status.classList.remove('multi-select');
             els.status.innerHTML = `<span class="status-tool">增加节点</span><span class="status-action-separator"></span><span class="status-area-info">请选择区域边线位置</span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="cancel-area-node-edit">取消</button>`;
@@ -8966,6 +9020,10 @@
       }
       if (action === 'enter-area-scale-mode') {
         if (!target.disabled) setAreaScaleMode(true);
+        return;
+      }
+      if (action === 'reset-area-scale') {
+        if (!target.disabled && state.areaScaleMode) resetAreaScaleToBaseline();
         return;
       }
       if (action === 'exit-area-scale-mode') {
