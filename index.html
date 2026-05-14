@@ -1348,7 +1348,8 @@
       font-size: var(--float-font-size);
       border-radius: var(--float-control-radius);
     }
-    .status-bg-scale-info {
+    .status-bg-scale-info,
+    .status-bg-scale-input {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -1363,7 +1364,24 @@
       border: 1px solid rgba(203,213,225,.72);
       border-radius: var(--float-control-radius);
       background: rgba(255,255,255,.48);
+      box-sizing: border-box;
+    }
+    .status-bg-scale-info {
       pointer-events: none;
+    }
+    .status-bg-scale-input {
+      width: 92px;
+      max-width: 92px;
+      text-align: center;
+      outline: none;
+      font-family: inherit;
+      pointer-events: auto;
+    }
+    .status-bg-scale-input:focus {
+      border-color: #93c5fd;
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 0 0 2px rgba(147,197,253,.24);
+      color: #0f172a;
     }
     .text-dialog-toolbar {
       display: flex;
@@ -2323,7 +2341,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v246';
+    const APP_VERSION = 'v247';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -3946,8 +3964,11 @@
         els.status.classList.remove('status-warning');
       if (state.backgroundEditMode) {
           els.status.classList.remove('multi-select');
-          const bgScale = getBackgroundScalePercent();
-          els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">底图手动调整</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="restore-background-original" title="恢复底图原始尺寸，保持当前位置中心不变">原始</button><span class="status-bg-scale-info" title="相对底图原始尺寸的比例">缩放 ${bgScale}%</span><button type="button" class="status-action-btn" data-status-action="exit-background-edit">退出</button>`;
+          const activeBgScaleInput = document.activeElement && document.activeElement.id === 'backgroundScaleInput';
+          if (!activeBgScaleInput) {
+            const bgScale = formatBackgroundScalePercent(getBackgroundScalePercent());
+            els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">底图手动调整</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="restore-background-original" title="恢复底图原始尺寸，保持当前位置中心不变">原始</button><input id="backgroundScaleInput" class="status-bg-scale-input" type="text" inputmode="decimal" value="${bgScale}%" data-bg-scale-original="${bgScale}%" aria-label="底图缩放百分比" title="输入底图缩放百分比，范围 1%–2000%。Enter 确认，Esc 取消" /><button type="button" class="status-action-btn" data-status-action="exit-background-edit">退出</button>`;
+          }
         } else if (state.tool === 'area' && state.areaDrawing) {
           const pointCount = (state.areaPoints || []).length;
           const canComplete = pointCount >= 3;
@@ -6103,7 +6124,69 @@
       const width = Math.max(1, Number(bg.width) || naturalWidth);
       const height = Math.max(1, Number(bg.height) || naturalHeight);
       const ratio = Math.sqrt((width * height) / (naturalWidth * naturalHeight));
-      return Math.max(1, Math.round(ratio * 100));
+      return Math.max(1, ratio * 100);
+    }
+
+    function formatBackgroundScalePercent(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '100';
+      const clamped = Math.max(1, Math.min(2000, n));
+      const rounded = Math.round(clamped * 10) / 10;
+      return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.0$/, '');
+    }
+
+    function parseBackgroundScalePercent(value) {
+      const text = String(value ?? '').trim();
+      if (!text) return null;
+      const normalized = text.endsWith('%') ? text.slice(0, -1).trim() : text;
+      if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
+      const n = Number(normalized);
+      if (!Number.isFinite(n) || n <= 0) return null;
+      return Math.max(1, Math.min(2000, n));
+    }
+
+    function setBackgroundScalePercent(percent, options = {}) {
+      const bg = state.backgroundImage;
+      const n = Number(percent);
+      if (!bg || !Number.isFinite(n)) return false;
+      const scale = Math.max(1, Math.min(2000, n)) / 100;
+      const naturalWidth = Math.max(1, Number(bg.naturalWidth) || Number(bg.width) || 1);
+      const naturalHeight = Math.max(1, Number(bg.naturalHeight) || Number(bg.height) || 1);
+      const currentWidth = Math.max(1, Number(bg.width) || naturalWidth);
+      const currentHeight = Math.max(1, Number(bg.height) || naturalHeight);
+      const centerX = (Number(bg.x) || 0) + currentWidth / 2;
+      const centerY = (Number(bg.y) || 0) + currentHeight / 2;
+      const nextWidth = Math.max(1, naturalWidth * scale);
+      const nextHeight = Math.max(1, naturalHeight * scale);
+      if (Math.abs(nextWidth - currentWidth) < 0.001 && Math.abs(nextHeight - currentHeight) < 0.001) return false;
+      if (!options.skipHistory) saveHistory(true);
+      bg.width = nextWidth;
+      bg.height = nextHeight;
+      bg.x = centerX - nextWidth / 2;
+      bg.y = centerY - nextHeight / 2;
+      draw();
+      updateCursor();
+      markProjectDirty();
+      return true;
+    }
+
+    function commitBackgroundScaleInput(input) {
+      if (!input || !state.backgroundImage) return false;
+      const parsed = parseBackgroundScalePercent(input.value);
+      if (parsed === null) {
+        input.value = input.dataset.bgScaleOriginal || `${formatBackgroundScalePercent(getBackgroundScalePercent())}%`;
+        return false;
+      }
+      setBackgroundScalePercent(parsed);
+      const label = `${formatBackgroundScalePercent(getBackgroundScalePercent())}%`;
+      input.value = label;
+      input.dataset.bgScaleOriginal = label;
+      return true;
+    }
+
+    function cancelBackgroundScaleInput(input) {
+      if (!input) return;
+      input.value = input.dataset.bgScaleOriginal || `${formatBackgroundScalePercent(getBackgroundScalePercent())}%`;
     }
 
     function restoreBackgroundOriginalSizeKeepCenter() {
@@ -6288,9 +6371,9 @@
         const cvx = raw.x - fixed.x;
         const cvy = raw.y - fixed.y;
         const denom = Math.max(1, ovx * ovx + ovy * ovy);
-        const scale = Math.max(0.02, Math.min(20, (cvx * ovx + cvy * ovy) / denom));
-        const nw = Math.max(10, ow * scale);
-        const nh = Math.max(10, oh * scale);
+        const scale = Math.max(0.01, Math.min(20, (cvx * ovx + cvy * ovy) / denom));
+        const nw = Math.max(1, ow * scale);
+        const nh = Math.max(1, oh * scale);
         bg.width = nw;
         bg.height = nh;
         if (handle === 'nw') { bg.x = fixed.x - nw; bg.y = fixed.y - nh; }
@@ -8941,6 +9024,32 @@
       }
     }
     els.status.addEventListener('pointerdown', handleStatusAction);
+    els.status.addEventListener('focusin', e => {
+      const input = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
+      if (!input) return;
+      const label = `${formatBackgroundScalePercent(getBackgroundScalePercent())}%`;
+      input.dataset.bgScaleOriginal = label;
+      input.value = label;
+      setTimeout(() => { try { input.select(); } catch (err) {} }, 0);
+    });
+    els.status.addEventListener('keydown', e => {
+      const input = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
+      if (!input) return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commitBackgroundScaleInput(input);
+        input.blur();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelBackgroundScaleInput(input);
+        input.blur();
+      }
+    });
+    els.status.addEventListener('blur', e => {
+      const input = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
+      if (!input) return;
+      commitBackgroundScaleInput(input);
+    }, true);
 
     function deleteSelected(){ if(!state.selectedIds.length)return; clearAreaNodeHighlight(); const locked = state.objects.filter(o=>state.selectedIds.includes(o.id)&&isObjectLocked(o)); const deleteIds = new Set(state.selectedIds.filter(id=>!locked.some(o=>o.id===id))); if(!deleteIds.size){ showStatusMessage('已锁定对象不能删除'); return; } saveHistory(); state.objects=state.objects.filter(o=>!deleteIds.has(o.id)); state.selectedIds=state.selectedIds.filter(id=>!deleteIds.has(id)); draw(); updateObjectMetrics(true); markProjectDirty(); }
     function copySelected(){ state.clipboard=state.objects.filter(o=>state.selectedIds.includes(o.id)&&!isObjectLocked(o)).map(o=>clonePlain(o)); if(!state.clipboard.length && state.selectedIds.length) showStatusMessage('已锁定对象不能复制'); updateCommandButtonStates(); }
