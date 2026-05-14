@@ -1369,6 +1369,16 @@
     .status-bg-scale-info {
       pointer-events: none;
     }
+    .status-scale-label {
+      display: inline-flex;
+      align-items: center;
+      height: var(--float-control-height);
+      color: #475569;
+      font-size: var(--float-font-size);
+      font-weight: 400;
+      line-height: 1;
+      white-space: nowrap;
+    }
     .status-bg-scale-input {
       width: 92px;
       max-width: 92px;
@@ -2341,7 +2351,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v248';
+    const APP_VERSION = 'v249';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -3885,12 +3895,61 @@
       const area = getSingleAreaScalableObject();
       const baseline = ensureAreaScaleBaseline(area);
       if (!area || !baseline || baseline.objectId !== area.id || !Array.isArray(baseline.points)) return false;
-      saveHistory();
+      const alreadyAtBaseline = area.points.length === baseline.points.length && area.points.every((pt, index) => {
+        const base = baseline.points[index];
+        return base && Math.abs((Number(pt.x) || 0) - base.x) < 0.001 && Math.abs((Number(pt.y) || 0) - base.y) < 0.001;
+      });
+      if (!alreadyAtBaseline) saveHistory();
       area.points = baseline.points.map(pt => ({ x: pt.x, y: pt.y }));
+      draw();
+      updateCursor();
+      if (!alreadyAtBaseline) markProjectDirty();
+      return true;
+    }
+
+    function parseAreaScalePercent(value) {
+      return parseBackgroundScalePercent(value);
+    }
+
+    function setAreaScalePercent(percent, options = {}) {
+      const area = getSingleAreaScalableObject();
+      const baseline = ensureAreaScaleBaseline(area);
+      const n = Number(percent);
+      if (!area || !baseline || baseline.objectId !== area.id || !Array.isArray(baseline.points) || !baseline.bounds || !Number.isFinite(n)) return false;
+      const clamped = Math.max(1, Math.min(2000, n));
+      const current = getAreaScalePercent(area);
+      if (Number.isFinite(current) && Math.abs(current - clamped) < 0.001) return false;
+      if (!options.skipHistory) saveHistory();
+      const scale = clamped / 100;
+      const anchor = { x: baseline.bounds.left, y: baseline.bounds.top };
+      area.points = baseline.points.map(pt => ({
+        x: anchor.x + (pt.x - anchor.x) * scale,
+        y: anchor.y + (pt.y - anchor.y) * scale
+      }));
       draw();
       updateCursor();
       markProjectDirty();
       return true;
+    }
+
+    function commitAreaScaleInput(input) {
+      const area = getSingleAreaScalableObject();
+      if (!input || !area || !state.areaScaleMode) return false;
+      const parsed = parseAreaScalePercent(input.value);
+      if (parsed === null) {
+        input.value = input.dataset.areaScaleOriginal || `${formatAreaScalePercent(getAreaScalePercent(area))}%`;
+        return false;
+      }
+      setAreaScalePercent(parsed);
+      const label = `${formatAreaScalePercent(getAreaScalePercent(area))}%`;
+      input.value = label;
+      input.dataset.areaScaleOriginal = label;
+      return true;
+    }
+
+    function cancelAreaScaleInput(input) {
+      if (!input) return;
+      input.value = input.dataset.areaScaleOriginal || `${formatAreaScalePercent(getAreaScalePercent())}%`;
     }
 
     function setAreaScaleMode(enabled) {
@@ -4020,7 +4079,7 @@
           const activeBgScaleInput = document.activeElement && document.activeElement.id === 'backgroundScaleInput';
           if (!activeBgScaleInput) {
             const bgScale = formatBackgroundScalePercent(getBackgroundScalePercent());
-            els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">底图手动调整</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="restore-background-original" title="恢复底图原始尺寸，保持当前位置中心不变">原始</button><input id="backgroundScaleInput" class="status-bg-scale-input" type="text" inputmode="decimal" value="${bgScale}%" data-bg-scale-original="${bgScale}%" aria-label="底图缩放百分比" title="输入底图缩放百分比，范围 1%–2000%。Enter 确认，Esc 取消" /><button type="button" class="status-action-btn" data-status-action="exit-background-edit">退出</button>`;
+            els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">底图手动调整</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="restore-background-original" title="恢复底图原始尺寸，保持当前位置中心不变">原始</button><span class="status-scale-label">缩放</span><input id="backgroundScaleInput" class="status-bg-scale-input" type="text" inputmode="decimal" value="${bgScale}%" data-bg-scale-original="${bgScale}%" aria-label="底图缩放百分比" title="输入底图缩放百分比，范围 1%–2000%。Enter 确认，Esc 取消" /><button type="button" class="status-action-btn" data-status-action="exit-background-edit">退出</button>`;
           }
         } else if (state.tool === 'area' && state.areaDrawing) {
           const pointCount = (state.areaPoints || []).length;
@@ -4039,8 +4098,11 @@
             els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">区域旋转</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="exit-rotation-mode">退出</button>`;
           } else if (activeScalableArea && state.areaScaleMode) {
             els.status.classList.remove('multi-select');
-            const areaScale = formatAreaScalePercent(getAreaScalePercent(activeScalableArea));
-            els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">区域缩放</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="reset-area-scale" title="恢复到进入缩放模式时的区域大小和位置">重置</button><span class="status-bg-scale-info" title="相对本次进入缩放模式时的比例">缩放 ${areaScale}%</span><button type="button" class="status-action-btn" data-status-action="exit-area-scale-mode">退出</button>`;
+            const activeAreaScaleInput = document.activeElement && document.activeElement.id === 'areaScaleInput';
+            if (!activeAreaScaleInput) {
+              const areaScale = formatAreaScalePercent(getAreaScalePercent(activeScalableArea));
+              els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">区域缩放</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="reset-area-scale" title="恢复到进入缩放模式时的区域大小和位置">重置</button><span class="status-scale-label">缩放</span><input id="areaScaleInput" class="status-bg-scale-input" type="text" inputmode="decimal" value="${areaScale}%" data-area-scale-original="${areaScale}%" aria-label="区域缩放百分比" title="输入区域缩放百分比，范围 1%–2000%。相对本次进入缩放模式时的大小；Enter 确认，Esc 取消" /><button type="button" class="status-action-btn" data-status-action="exit-area-scale-mode">退出</button>`;
+            }
           } else if (activeArea && state.areaNodeEditMode === 'add') {
             els.status.classList.remove('multi-select');
             els.status.innerHTML = `<span class="status-tool">增加节点</span><span class="status-action-separator"></span><span class="status-area-info">请选择区域边线位置</span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="cancel-area-node-edit">取消</button>`;
@@ -9083,30 +9145,40 @@
     }
     els.status.addEventListener('pointerdown', handleStatusAction);
     els.status.addEventListener('focusin', e => {
-      const input = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
+      const bgInput = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
+      const areaInput = e.target && e.target.id === 'areaScaleInput' ? e.target : null;
+      const input = bgInput || areaInput;
       if (!input) return;
-      const label = `${formatBackgroundScalePercent(getBackgroundScalePercent())}%`;
-      input.dataset.bgScaleOriginal = label;
+      const label = bgInput
+        ? `${formatBackgroundScalePercent(getBackgroundScalePercent())}%`
+        : `${formatAreaScalePercent(getAreaScalePercent())}%`;
+      if (bgInput) input.dataset.bgScaleOriginal = label;
+      if (areaInput) input.dataset.areaScaleOriginal = label;
       input.value = label;
       setTimeout(() => { try { input.select(); } catch (err) {} }, 0);
     });
     els.status.addEventListener('keydown', e => {
-      const input = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
+      const bgInput = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
+      const areaInput = e.target && e.target.id === 'areaScaleInput' ? e.target : null;
+      const input = bgInput || areaInput;
       if (!input) return;
       if (e.key === 'Enter') {
         e.preventDefault();
-        commitBackgroundScaleInput(input);
+        if (bgInput) commitBackgroundScaleInput(input);
+        else commitAreaScaleInput(input);
         input.blur();
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        cancelBackgroundScaleInput(input);
+        if (bgInput) cancelBackgroundScaleInput(input);
+        else cancelAreaScaleInput(input);
         input.blur();
       }
     });
     els.status.addEventListener('blur', e => {
-      const input = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
-      if (!input) return;
-      commitBackgroundScaleInput(input);
+      const bgInput = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
+      const areaInput = e.target && e.target.id === 'areaScaleInput' ? e.target : null;
+      if (bgInput) commitBackgroundScaleInput(bgInput);
+      if (areaInput) commitAreaScaleInput(areaInput);
     }, true);
 
     function deleteSelected(){ if(!state.selectedIds.length)return; clearAreaNodeHighlight(); const locked = state.objects.filter(o=>state.selectedIds.includes(o.id)&&isObjectLocked(o)); const deleteIds = new Set(state.selectedIds.filter(id=>!locked.some(o=>o.id===id))); if(!deleteIds.size){ showStatusMessage('已锁定对象不能删除'); return; } saveHistory(); state.objects=state.objects.filter(o=>!deleteIds.has(o.id)); state.selectedIds=state.selectedIds.filter(id=>!deleteIds.has(id)); draw(); updateObjectMetrics(true); markProjectDirty(); }
