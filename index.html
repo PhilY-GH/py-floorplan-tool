@@ -1255,9 +1255,19 @@
       color: #1d4ed8;
       font-weight: 800;
     }
+    .status-tool,
     .status-area-info {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--float-control-height);
       color: #475569;
+      font-size: var(--float-font-size);
+      font-weight: 400;
+      line-height: 1;
       white-space: nowrap;
+    }
+    .status-tool {
+      color: #0f172a;
     }
     .status-action-btn {
       min-height: var(--float-control-height);
@@ -2352,8 +2362,10 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v252';
+    const APP_VERSION = 'v256';
     const HISTORY_LIMIT = 100;
+    const SCALE_PERCENT_MIN = 1;
+    const SCALE_PERCENT_MAX = 2000;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
       snapOrange: '#f97316',
@@ -3882,7 +3894,7 @@
       const baseDiag = Math.hypot(baseline.bounds.w, baseline.bounds.h);
       const currentDiag = Math.hypot(current.w, current.h);
       if (!Number.isFinite(baseDiag) || baseDiag <= 0 || !Number.isFinite(currentDiag)) return 100;
-      return Math.max(0.1, currentDiag / baseDiag * 100);
+      return Math.max(SCALE_PERCENT_MIN, currentDiag / baseDiag * 100);
     }
 
     function formatAreaScalePercent(value) {
@@ -3917,7 +3929,7 @@
       const baseline = ensureAreaScaleBaseline(area);
       const n = Number(percent);
       if (!area || !baseline || baseline.objectId !== area.id || !Array.isArray(baseline.points) || !baseline.bounds || !Number.isFinite(n)) return false;
-      const clamped = Math.max(1, Math.min(2000, n));
+      const clamped = Math.max(SCALE_PERCENT_MIN, Math.min(SCALE_PERCENT_MAX, n));
       const current = getAreaScalePercent(area);
       if (Number.isFinite(current) && Math.abs(current - clamped) < 0.001) return false;
       if (!options.skipHistory) saveHistory();
@@ -6247,7 +6259,7 @@
     function formatBackgroundScalePercent(value) {
       const n = Number(value);
       if (!Number.isFinite(n)) return '100';
-      const clamped = Math.max(1, Math.min(2000, n));
+      const clamped = Math.max(SCALE_PERCENT_MIN, Math.min(SCALE_PERCENT_MAX, n));
       const rounded = Math.round(clamped * 10) / 10;
       return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.0$/, '');
     }
@@ -6260,14 +6272,14 @@
       if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
       const n = Number(normalized);
       if (!Number.isFinite(n) || n <= 0) return null;
-      return Math.max(1, Math.min(2000, n));
+      return Math.max(SCALE_PERCENT_MIN, Math.min(SCALE_PERCENT_MAX, n));
     }
 
     function setBackgroundScalePercent(percent, options = {}) {
       const bg = state.backgroundImage;
       const n = Number(percent);
       if (!bg || !Number.isFinite(n)) return false;
-      const scale = Math.max(1, Math.min(2000, n)) / 100;
+      const scale = Math.max(SCALE_PERCENT_MIN, Math.min(SCALE_PERCENT_MAX, n)) / 100;
       const naturalWidth = Math.max(1, Number(bg.naturalWidth) || Number(bg.width) || 1);
       const naturalHeight = Math.max(1, Number(bg.naturalHeight) || Number(bg.height) || 1);
       const currentWidth = Math.max(1, Number(bg.width) || naturalWidth);
@@ -6489,7 +6501,12 @@
         const cvx = raw.x - fixed.x;
         const cvy = raw.y - fixed.y;
         const denom = Math.max(1, ovx * ovx + ovy * ovy);
-        const scale = Math.max(0.01, Math.min(20, (cvx * ovx + cvy * ovy) / denom));
+        let scale = (cvx * ovx + cvy * ovy) / denom;
+        const originalScaleRatio = Math.max(SCALE_PERCENT_MIN / 100, getBackgroundScalePercent(original) / 100);
+        const minRelativeScale = (SCALE_PERCENT_MIN / 100) / originalScaleRatio;
+        const maxRelativeScale = (SCALE_PERCENT_MAX / 100) / originalScaleRatio;
+        // 手动拖拽和百分比输入共用 1%–2000% 的绝对缩放限制，避免连续拖拽突破输入框规则。
+        scale = Math.max(minRelativeScale, Math.min(maxRelativeScale, scale));
         const nw = Math.max(1, ow * scale);
         const nh = Math.max(1, oh * scale);
         bg.width = nw;
@@ -7429,8 +7446,25 @@
       return { left: bounds.minX, top: bounds.minY, right: bounds.maxX, bottom: bounds.maxY, w: bounds.maxX - bounds.minX, h: bounds.maxY - bounds.minY };
     }
 
-    function getAreaScaleHandles(o) {
+    function getAreaScaleFrameBounds(o) {
       const b = getAreaScaleBounds(o);
+      if (!b) return null;
+      const objectBox = getObjectBox(o);
+      // 区域选中框实际绘制在 getObjectBox() 外再扩 6px；缩放控制点应落在这个可见选框角点上。
+      // 但缩放数学仍以区域真实 points 边界为基准，避免因为选框 padding 导致一拖动就跳动。
+      return {
+        left: objectBox.x - 6,
+        top: objectBox.y - 6,
+        right: objectBox.x + objectBox.w + 6,
+        bottom: objectBox.y + objectBox.h + 6,
+        w: objectBox.w + 12,
+        h: objectBox.h + 12,
+        pointBounds: b
+      };
+    }
+
+    function getAreaScaleHandles(o) {
+      const b = getAreaScaleFrameBounds(o);
       if (!b || b.w <= 0 || b.h <= 0) return [];
       return [
         { handle: 'nw', x: b.left, y: b.top, cursor: 'nwse-resize' },
@@ -7488,19 +7522,47 @@
         x: handle.includes('w') ? b.left : b.right,
         y: handle.includes('n') ? b.top : b.bottom
       };
-      const p = screenToWorldWithSnapOptions(e, { excludeObjectId: o.id, disableSmartGuide: true });
-      const baseDistance = Math.max(0.0001, Math.hypot(draggedOriginal.x - fixed.x, draggedOriginal.y - fixed.y));
-      let scale = Math.hypot(p.x - fixed.x, p.y - fixed.y) / baseDistance;
-      scale = Math.max(0.02, Math.min(80, scale));
-      const signX = handle.includes('e') ? 1 : -1;
-      const signY = handle.includes('s') ? 1 : -1;
+      // V256：区域缩放时，指针只是控制缩放比例，不代表缩放控制点要吸附到某个端点。
+      // 因此这里必须使用原始指针坐标，避免经过其他对象端点时误触发橙色吸附圈/橙色选框。
+      const rawP = rawScreenToWorld(e);
+      const originalFrame = getAreaScaleFrameBounds(original);
+      const handleOffset = originalFrame ? {
+        x: handle.includes('e') ? originalFrame.right - b.right : originalFrame.left - b.left,
+        y: handle.includes('s') ? originalFrame.bottom - b.bottom : originalFrame.top - b.top
+      } : { x: 0, y: 0 };
+      const p = { x: rawP.x - handleOffset.x, y: rawP.y - handleOffset.y };
+      const diagonalVector = {
+        x: draggedOriginal.x - fixed.x,
+        y: draggedOriginal.y - fixed.y
+      };
+      const diagonalLengthSq = diagonalVector.x * diagonalVector.x + diagonalVector.y * diagonalVector.y;
+      if (diagonalLengthSq <= 0.0001) return;
+      // V255：区域等比缩放使用沿固定角点→拖动角点对角线方向的投影比例。
+      // 旧逻辑使用到固定点的距离，鼠标穿过固定对角点后距离会重新变大，导致区域反向放大。
+      // 投影比例为负或接近 0 时会被最小缩放限制夹住，因此不会翻转到对侧。
+      let scale = ((p.x - fixed.x) * diagonalVector.x + (p.y - fixed.y) * diagonalVector.y) / diagonalLengthSq;
+      const baseline = ensureAreaScaleBaseline(o);
+      if (baseline && baseline.objectId === o.id && baseline.bounds) {
+        const baselineDiag = Math.hypot(baseline.bounds.w, baseline.bounds.h);
+        const originalDiag = Math.hypot(b.w, b.h);
+        if (Number.isFinite(baselineDiag) && baselineDiag > 0 && Number.isFinite(originalDiag) && originalDiag > 0) {
+          const originalToBaselineRatio = originalDiag / baselineDiag;
+          const minRelativeScale = (SCALE_PERCENT_MIN / 100) / originalToBaselineRatio;
+          const maxRelativeScale = (SCALE_PERCENT_MAX / 100) / originalToBaselineRatio;
+          // 区域拖拽缩放也以“进入缩放模式时”为 100%，和输入框 1%–2000% 规则保持一致。
+          scale = Math.max(minRelativeScale, Math.min(maxRelativeScale, scale));
+        }
+      } else {
+        scale = Math.max(SCALE_PERCENT_MIN / 100, Math.min(SCALE_PERCENT_MAX / 100, scale));
+      }
       o.points = pts.map(pt => ({
         x: fixed.x + (pt.x - fixed.x) * scale,
         y: fixed.y + (pt.y - fixed.y) * scale
       }));
       const nextBounds = getAreaScaleBounds(o);
       if (nextBounds && (nextBounds.w < 1 || nextBounds.h < 1)) {
-        o.points = pts.map(pt => ({ x: fixed.x + (pt.x - fixed.x) * 0.02, y: fixed.y + (pt.y - fixed.y) * 0.02 }));
+        const fallbackScale = SCALE_PERCENT_MIN / 100;
+        o.points = pts.map(pt => ({ x: fixed.x + (pt.x - fixed.x) * fallbackScale, y: fixed.y + (pt.y - fixed.y) * fallbackScale }));
       }
     }
 
@@ -8359,6 +8421,10 @@
             state.resizingObjectId = scaleHit.object.id;
             state.resizeAreaScaleHandle = scaleHit.handle || null;
             state.dragOriginals = captureSelectedOriginals();
+            // V256：进入区域缩放拖动时清除之前可能残留的吸附反馈，后续缩放过程也不触发吸附。
+            clearSnapIndicator();
+            clearMoveEndpointSnap();
+            clearSmartGuides();
             draw();
             updateCursor(e);
             return;
@@ -8518,6 +8584,16 @@
         clearSmartGuides();
         if(!state.rotationHistorySaved){ saveHistory(); state.rotationHistorySaved = true; }
         updateObjectRotationFromPointer(e);
+        draw(); updateCursor(e); return;
+      }
+      // V256：区域缩放拖动与旋转拖动一致，不参与端点吸附 / 智能辅助线反馈。
+      // 如果先调用 screenToWorld(e)，会在指针经过其他端点时误产生橙色吸附提示。
+      if(state.resizingAreaScale){
+        clearSnapIndicator();
+        clearMoveEndpointSnap();
+        clearSmartGuides();
+        if(!state.resizeHistorySaved){ saveHistory(); state.resizeHistorySaved = true; }
+        updateAreaScaleFromPointer(e);
         draw(); updateCursor(e); return;
       }
       let p = state.tool === 'eraser' ? raw : screenToWorld(e);
