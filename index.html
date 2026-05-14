@@ -2362,7 +2362,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v256';
+    const APP_VERSION = 'v259';
     const HISTORY_LIMIT = 100;
     const SCALE_PERCENT_MIN = 1;
     const SCALE_PERCENT_MAX = 2000;
@@ -2409,6 +2409,7 @@
       resizingAreaScale: false,
       resizeAreaScaleHandle: null,
       areaScaleBaseline: null,
+      areaRotationBaseline: null,
       rotationMode: false,
       rotatingObjectId: null,
       pendingAreaRotationFinalizeId: null,
@@ -3898,10 +3899,7 @@
     }
 
     function formatAreaScalePercent(value) {
-      const n = Number(value);
-      if (!Number.isFinite(n)) return '100';
-      const rounded = Math.round(n * 10) / 10;
-      return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.0$/, '');
+      return formatScalePercentDisplay(value);
     }
 
     function resetAreaScaleToBaseline() {
@@ -4108,7 +4106,17 @@
           if (state.rotationMode && !activeRotatable) clearRotationMode();
           if (activeRotatable && state.rotationMode) {
             els.status.classList.remove('multi-select');
-            els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">区域旋转</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="exit-rotation-mode">退出</button>`;
+            const activeAreaRotationInput = document.activeElement && document.activeElement.id === 'areaRotationInput';
+            const modeName = activeRotatable.type === 'area' ? '区域旋转' : `${getObjectTypeLabel(activeRotatable)}旋转`;
+            if (activeRotatable.type === 'area') {
+              ensureAreaRotationBaseline(activeRotatable);
+              if (!activeAreaRotationInput) {
+                const areaRotation = formatAreaRotationDegrees(getObjectRotationDegrees(activeRotatable));
+                els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">${modeName}</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="reset-area-rotation" title="恢复到进入旋转模式时的角度">重置</button><input id="areaRotationInput" class="status-bg-scale-input" type="text" inputmode="decimal" value="角度 ${areaRotation}°" data-area-rotation-original="角度 ${areaRotation}°" aria-label="区域旋转角度" title="输入区域旋转角度；Enter 确认，Esc 取消。退出旋转模式后会定型为普通区域" /><button type="button" class="status-action-btn" data-status-action="exit-rotation-mode">退出</button>`;
+              }
+            } else {
+              els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">${modeName}</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="exit-rotation-mode">退出</button>`;
+            }
           } else if (activeScalableArea && state.areaScaleMode) {
             els.status.classList.remove('multi-select');
             const activeAreaScaleInput = document.activeElement && document.activeElement.id === 'areaScaleInput';
@@ -4371,6 +4379,97 @@
       return (items || []).map(item => withObjectRotationTransform(o, item, baseBox));
     }
 
+    function formatRotationPercentLikeNumber(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '0';
+      // V258：区域旋转模式的角度显示精度与顶部属性栏角度统一，最多保留 2 位小数并去掉无意义 0。
+      const rounded = Math.round(n * 100) / 100;
+      return rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+    }
+
+    function formatAreaRotationDegrees(value) {
+      return formatRotationPercentLikeNumber(normalizeRotationDegrees(value));
+    }
+
+    function parseAreaRotationDegrees(value) {
+      const cleaned = String(value ?? '')
+        .trim()
+        .replace(/^角度\s*/i, '')
+        .replace(/°/g, '')
+        .trim();
+      if (!cleaned) return null;
+      if (!/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(cleaned)) return null;
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? normalizeRotationDegrees(n) : null;
+    }
+
+    function captureAreaRotationBaseline(area) {
+      if (!area || area.type !== 'area') return null;
+      return {
+        objectId: area.id,
+        rotation: getObjectRotationDegrees(area)
+      };
+    }
+
+    function ensureAreaRotationBaseline(area = getSingleRotatableObject()) {
+      if (!area || area.type !== 'area') return null;
+      if (!state.areaRotationBaseline || state.areaRotationBaseline.objectId !== area.id) {
+        state.areaRotationBaseline = captureAreaRotationBaseline(area);
+      }
+      return state.areaRotationBaseline;
+    }
+
+    function resetAreaRotationToBaseline() {
+      const area = getSingleRotatableObject();
+      if (!area || area.type !== 'area' || !state.rotationMode) return false;
+      const baseline = ensureAreaRotationBaseline(area) || { rotation: 0 };
+      const next = normalizeRotationDegrees(baseline.rotation || 0);
+      const current = getObjectRotationDegrees(area);
+      if (Math.abs(current - next) < 0.001) return false;
+      saveHistory();
+      area.rotation = next;
+      draw();
+      updateCursor();
+      markProjectDirty();
+      return true;
+    }
+
+    function setAreaRotationDegrees(degrees, options = {}) {
+      const area = getSingleRotatableObject();
+      const n = Number(degrees);
+      if (!area || area.type !== 'area' || !state.rotationMode || !Number.isFinite(n)) return false;
+      ensureAreaRotationBaseline(area);
+      const next = normalizeRotationDegrees(n);
+      const current = getObjectRotationDegrees(area);
+      if (Math.abs(current - next) < 0.001) return false;
+      if (!options.skipHistory) saveHistory();
+      area.rotation = next;
+      draw();
+      updateCursor();
+      markProjectDirty();
+      return true;
+    }
+
+    function commitAreaRotationInput(input) {
+      const area = getSingleRotatableObject();
+      if (!input || !area || area.type !== 'area' || !state.rotationMode) return false;
+      const parsed = parseAreaRotationDegrees(input.value);
+      if (parsed === null) {
+        input.value = input.dataset.areaRotationOriginal || `角度 ${formatAreaRotationDegrees(getObjectRotationDegrees(area))}°`;
+        return false;
+      }
+      setAreaRotationDegrees(parsed);
+      const label = `角度 ${formatAreaRotationDegrees(getObjectRotationDegrees(area))}°`;
+      input.value = label;
+      input.dataset.areaRotationOriginal = label;
+      return true;
+    }
+
+    function cancelAreaRotationInput(input) {
+      if (!input) return;
+      input.value = input.dataset.areaRotationOriginal || `角度 ${formatAreaRotationDegrees(getObjectRotationDegrees(getSingleRotatableObject()))}°`;
+    }
+
     function clearRotationMode(options = {}) {
       const shouldFinalizeArea = options.finalizeArea !== false;
       const activeRotationObjectId = state.rotatingObjectId;
@@ -4383,6 +4482,7 @@
         }
       }
       state.rotationMode = false;
+      state.areaRotationBaseline = null;
       state.rotatingObjectId = null;
       state.rotatingObject = false;
       state.rotationHistorySaved = false;
@@ -4451,7 +4551,9 @@
         defs.push({ key:'width', label:'宽', type:'number', unit:'px' });
         defs.push({ key:'height', label:'高', type:'number', unit:'px' });
       }
-      if (isRotatableObject(o)) defs.push({ key:'rotation', label:'角度', type:'number', unit:'°', cls:'angle-input' });
+      // V257：区域对象的正式模型以 points 为准，旋转只在旋转模式内临时存在；
+      // 顶部属性栏不再给区域显示长期 rotation 角度，避免绕过烘焙流程。
+      if (isRotatableObject(o) && o.type !== 'area') defs.push({ key:'rotation', label:'角度', type:'number', unit:'°', cls:'angle-input' });
       if (o.type === 'text') {
         defs.push({ key:'textPreview', label:'内容', type:'readonlyText' });
       }
@@ -6257,11 +6359,7 @@
     }
 
     function formatBackgroundScalePercent(value) {
-      const n = Number(value);
-      if (!Number.isFinite(n)) return '100';
-      const clamped = Math.max(SCALE_PERCENT_MIN, Math.min(SCALE_PERCENT_MAX, n));
-      const rounded = Math.round(clamped * 10) / 10;
-      return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.0$/, '');
+      return formatScalePercentDisplay(value);
     }
 
     function parseBackgroundScalePercent(value) {
@@ -6769,7 +6867,24 @@
       return applySmartGuideLineDirectionAssist(state.start, rawPoint, snappedPoint, state.tool);
     }
 
-    function formatNumber(n){ const value=Number(n); if(!Number.isFinite(value)) return '0'; return value.toFixed(2).replace(/0+$/,'').replace(/\.$/,''); }
+    // V259：用户可见的几何 / 变换类数值统一使用同一套显示规则：
+    // 最多 2 位小数，并去掉无意义末尾 0。
+    function formatDecimalDisplay(value, maxDecimals = 2) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '0';
+      const factor = Math.pow(10, Math.max(0, maxDecimals));
+      const rounded = Math.round(n * factor) / factor;
+      return rounded.toFixed(Math.max(0, maxDecimals)).replace(/0+$/,'').replace(/\.$/,'');
+    }
+
+    function formatScalePercentDisplay(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '100';
+      const clamped = Math.max(SCALE_PERCENT_MIN, Math.min(SCALE_PERCENT_MAX, n));
+      return formatDecimalDisplay(clamped, 2);
+    }
+
+    function formatNumber(n){ return formatDecimalDisplay(n, 2); }
 
     function isLengthTooltipEnabled() {
       return !els.lengthTooltipMode || els.lengthTooltipMode.value !== 'off';
@@ -9190,11 +9305,16 @@
           clearSmartGuides();
           state.rotationMode = true;
           state.rotatingObjectId = rotatable.id;
+          state.areaRotationBaseline = rotatable.type === 'area' ? captureAreaRotationBaseline(rotatable) : null;
           state.rotatingObject = false;
           state.rotationHistorySaved = false;
           draw();
           updateCursor();
         }
+        return;
+      }
+      if (action === 'reset-area-rotation') {
+        if (!target.disabled && state.rotationMode) resetAreaRotationToBaseline();
         return;
       }
       if (action === 'exit-rotation-mode') {
@@ -9225,42 +9345,53 @@
     els.status.addEventListener('focusin', e => {
       const bgInput = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
       const areaInput = e.target && e.target.id === 'areaScaleInput' ? e.target : null;
-      const input = bgInput || areaInput;
+      const areaRotationInput = e.target && e.target.id === 'areaRotationInput' ? e.target : null;
+      const input = bgInput || areaInput || areaRotationInput;
       if (!input) return;
       const label = bgInput
         ? `缩放 ${formatBackgroundScalePercent(getBackgroundScalePercent())}%`
-        : `缩放 ${formatAreaScalePercent(getAreaScalePercent())}%`;
+        : areaInput
+          ? `缩放 ${formatAreaScalePercent(getAreaScalePercent())}%`
+          : `角度 ${formatAreaRotationDegrees(getObjectRotationDegrees(getSingleRotatableObject()))}°`;
       const editValue = bgInput
         ? formatBackgroundScalePercent(getBackgroundScalePercent())
-        : formatAreaScalePercent(getAreaScalePercent());
+        : areaInput
+          ? formatAreaScalePercent(getAreaScalePercent())
+          : formatAreaRotationDegrees(getObjectRotationDegrees(getSingleRotatableObject()));
       if (bgInput) input.dataset.bgScaleOriginal = label;
       if (areaInput) input.dataset.areaScaleOriginal = label;
-      // V251：缩放输入框显示状态带“缩放”和百分号；编辑状态只保留纯数字，体验与顶部带单位输入框一致。
+      if (areaRotationInput) input.dataset.areaRotationOriginal = label;
+      // V251/V257：缩放/角度输入框显示状态带标签和单位；编辑状态只保留纯数字，体验与顶部带单位输入框一致。
       input.value = editValue;
       setTimeout(() => { try { input.select(); } catch (err) {} }, 0);
     });
     els.status.addEventListener('keydown', e => {
       const bgInput = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
       const areaInput = e.target && e.target.id === 'areaScaleInput' ? e.target : null;
-      const input = bgInput || areaInput;
+      const areaRotationInput = e.target && e.target.id === 'areaRotationInput' ? e.target : null;
+      const input = bgInput || areaInput || areaRotationInput;
       if (!input) return;
       if (e.key === 'Enter') {
         e.preventDefault();
         if (bgInput) commitBackgroundScaleInput(input);
-        else commitAreaScaleInput(input);
+        else if (areaInput) commitAreaScaleInput(input);
+        else commitAreaRotationInput(input);
         input.blur();
       } else if (e.key === 'Escape') {
         e.preventDefault();
         if (bgInput) cancelBackgroundScaleInput(input);
-        else cancelAreaScaleInput(input);
+        else if (areaInput) cancelAreaScaleInput(input);
+        else cancelAreaRotationInput(input);
         input.blur();
       }
     });
     els.status.addEventListener('blur', e => {
       const bgInput = e.target && e.target.id === 'backgroundScaleInput' ? e.target : null;
       const areaInput = e.target && e.target.id === 'areaScaleInput' ? e.target : null;
+      const areaRotationInput = e.target && e.target.id === 'areaRotationInput' ? e.target : null;
       if (bgInput) commitBackgroundScaleInput(bgInput);
       if (areaInput) commitAreaScaleInput(areaInput);
+      if (areaRotationInput) commitAreaRotationInput(areaRotationInput);
     }, true);
 
     function deleteSelected(){ if(!state.selectedIds.length)return; clearAreaNodeHighlight(); const locked = state.objects.filter(o=>state.selectedIds.includes(o.id)&&isObjectLocked(o)); const deleteIds = new Set(state.selectedIds.filter(id=>!locked.some(o=>o.id===id))); if(!deleteIds.size){ showStatusMessage('已锁定对象不能删除'); return; } saveHistory(); state.objects=state.objects.filter(o=>!deleteIds.has(o.id)); state.selectedIds=state.selectedIds.filter(id=>!deleteIds.has(id)); draw(); updateObjectMetrics(true); markProjectDirty(); }
