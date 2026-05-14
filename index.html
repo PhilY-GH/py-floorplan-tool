@@ -1380,8 +1380,8 @@
       white-space: nowrap;
     }
     .status-bg-scale-input {
-      width: 92px;
-      max-width: 92px;
+      width: 118px;
+      max-width: 118px;
       text-align: center;
       outline: none;
       font-family: inherit;
@@ -2351,7 +2351,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v249';
+    const APP_VERSION = 'v250';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -3937,11 +3937,11 @@
       if (!input || !area || !state.areaScaleMode) return false;
       const parsed = parseAreaScalePercent(input.value);
       if (parsed === null) {
-        input.value = input.dataset.areaScaleOriginal || `${formatAreaScalePercent(getAreaScalePercent(area))}%`;
+        input.value = input.dataset.areaScaleOriginal || `缩放 ${formatAreaScalePercent(getAreaScalePercent(area))}%`;
         return false;
       }
       setAreaScalePercent(parsed);
-      const label = `${formatAreaScalePercent(getAreaScalePercent(area))}%`;
+      const label = `缩放 ${formatAreaScalePercent(getAreaScalePercent(area))}%`;
       input.value = label;
       input.dataset.areaScaleOriginal = label;
       return true;
@@ -3949,7 +3949,7 @@
 
     function cancelAreaScaleInput(input) {
       if (!input) return;
-      input.value = input.dataset.areaScaleOriginal || `${formatAreaScalePercent(getAreaScalePercent())}%`;
+      input.value = input.dataset.areaScaleOriginal || `缩放 ${formatAreaScalePercent(getAreaScalePercent())}%`;
     }
 
     function setAreaScaleMode(enabled) {
@@ -4079,7 +4079,7 @@
           const activeBgScaleInput = document.activeElement && document.activeElement.id === 'backgroundScaleInput';
           if (!activeBgScaleInput) {
             const bgScale = formatBackgroundScalePercent(getBackgroundScalePercent());
-            els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">底图手动调整</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="restore-background-original" title="恢复底图原始尺寸，保持当前位置中心不变">原始</button><span class="status-scale-label">缩放</span><input id="backgroundScaleInput" class="status-bg-scale-input" type="text" inputmode="decimal" value="${bgScale}%" data-bg-scale-original="${bgScale}%" aria-label="底图缩放百分比" title="输入底图缩放百分比，范围 1%–2000%。Enter 确认，Esc 取消" /><button type="button" class="status-action-btn" data-status-action="exit-background-edit">退出</button>`;
+            els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">底图手动调整</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="restore-background-original" title="恢复底图原始尺寸，保持当前位置中心不变">原始</button><input id="backgroundScaleInput" class="status-bg-scale-input" type="text" inputmode="decimal" value="缩放 ${bgScale}%" data-bg-scale-original="缩放 ${bgScale}%" aria-label="底图缩放百分比" title="输入底图缩放百分比，范围 1%–2000%。Enter 确认，Esc 取消" /><button type="button" class="status-action-btn" data-status-action="exit-background-edit">退出</button>`;
           }
         } else if (state.tool === 'area' && state.areaDrawing) {
           const pointCount = (state.areaPoints || []).length;
@@ -4101,7 +4101,7 @@
             const activeAreaScaleInput = document.activeElement && document.activeElement.id === 'areaScaleInput';
             if (!activeAreaScaleInput) {
               const areaScale = formatAreaScalePercent(getAreaScalePercent(activeScalableArea));
-              els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">区域缩放</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="reset-area-scale" title="恢复到进入缩放模式时的区域大小和位置">重置</button><span class="status-scale-label">缩放</span><input id="areaScaleInput" class="status-bg-scale-input" type="text" inputmode="decimal" value="${areaScale}%" data-area-scale-original="${areaScale}%" aria-label="区域缩放百分比" title="输入区域缩放百分比，范围 1%–2000%。相对本次进入缩放模式时的大小；Enter 确认，Esc 取消" /><button type="button" class="status-action-btn" data-status-action="exit-area-scale-mode">退出</button>`;
+              els.status.innerHTML = `<span class="status-tool">当前模式：<span class="status-mode-name">区域缩放</span></span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="reset-area-scale" title="恢复到进入缩放模式时的区域大小和位置">重置</button><input id="areaScaleInput" class="status-bg-scale-input" type="text" inputmode="decimal" value="缩放 ${areaScale}%" data-area-scale-original="缩放 ${areaScale}%" aria-label="区域缩放百分比" title="输入区域缩放百分比，范围 1%–2000%。相对本次进入缩放模式时的大小；Enter 确认，Esc 取消" /><button type="button" class="status-action-btn" data-status-action="exit-area-scale-mode">退出</button>`;
             }
           } else if (activeArea && state.areaNodeEditMode === 'add') {
             els.status.classList.remove('multi-select');
@@ -6254,7 +6254,8 @@
     function parseBackgroundScalePercent(value) {
       const text = String(value ?? '').trim();
       if (!text) return null;
-      const normalized = text.endsWith('%') ? text.slice(0, -1).trim() : text;
+      let normalized = text.replace(/^缩放\s*/u, '').trim();
+      normalized = normalized.endsWith('%') ? normalized.slice(0, -1).trim() : normalized;
       if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
       const n = Number(normalized);
       if (!Number.isFinite(n) || n <= 0) return null;
@@ -6290,11 +6291,11 @@
       if (!input || !state.backgroundImage) return false;
       const parsed = parseBackgroundScalePercent(input.value);
       if (parsed === null) {
-        input.value = input.dataset.bgScaleOriginal || `${formatBackgroundScalePercent(getBackgroundScalePercent())}%`;
+        input.value = input.dataset.bgScaleOriginal || `缩放 ${formatBackgroundScalePercent(getBackgroundScalePercent())}%`;
         return false;
       }
       setBackgroundScalePercent(parsed);
-      const label = `${formatBackgroundScalePercent(getBackgroundScalePercent())}%`;
+      const label = `缩放 ${formatBackgroundScalePercent(getBackgroundScalePercent())}%`;
       input.value = label;
       input.dataset.bgScaleOriginal = label;
       return true;
@@ -6302,7 +6303,7 @@
 
     function cancelBackgroundScaleInput(input) {
       if (!input) return;
-      input.value = input.dataset.bgScaleOriginal || `${formatBackgroundScalePercent(getBackgroundScalePercent())}%`;
+      input.value = input.dataset.bgScaleOriginal || `缩放 ${formatBackgroundScalePercent(getBackgroundScalePercent())}%`;
     }
 
     function restoreBackgroundOriginalSizeKeepCenter() {
@@ -9150,8 +9151,8 @@
       const input = bgInput || areaInput;
       if (!input) return;
       const label = bgInput
-        ? `${formatBackgroundScalePercent(getBackgroundScalePercent())}%`
-        : `${formatAreaScalePercent(getAreaScalePercent())}%`;
+        ? `缩放 ${formatBackgroundScalePercent(getBackgroundScalePercent())}%`
+        : `缩放 ${formatAreaScalePercent(getAreaScalePercent())}%`;
       if (bgInput) input.dataset.bgScaleOriginal = label;
       if (areaInput) input.dataset.areaScaleOriginal = label;
       input.value = label;
