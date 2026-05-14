@@ -2323,7 +2323,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v242';
+    const APP_VERSION = 'v243';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -2364,6 +2364,9 @@
       areaPreview: null,
       areaNodeEditMode: null,
       areaNodeHighlight: null,
+      areaScaleMode: false,
+      resizingAreaScale: false,
+      resizeAreaScaleHandle: null,
       rotationMode: false,
       rotatingObjectId: null,
       pendingAreaRotationFinalizeId: null,
@@ -3805,6 +3808,38 @@
       return pts.length >= 3 ? o : null;
     }
 
+    function getSingleAreaScalableObject() {
+      if (state.tool !== 'select' || state.backgroundEditMode || state.areaDrawing || state.selectedIds.length !== 1) return null;
+      const o = state.objects.find(x => x && x.id === state.selectedIds[0]);
+      if (!o || o.type !== 'area' || isObjectLocked(o) || o.groupId || getObjectRotationDegrees(o)) return null;
+      const pts = Array.isArray(o.points) ? o.points : [];
+      return pts.length >= 3 ? o : null;
+    }
+
+    function clearAreaScaleMode() {
+      const wasActive = !!state.areaScaleMode;
+      state.areaScaleMode = false;
+      state.resizingAreaScale = false;
+      state.resizeAreaScaleHandle = null;
+      if (wasActive) clearAreaNodeHighlight();
+      return wasActive;
+    }
+
+    function setAreaScaleMode(enabled) {
+      const area = getSingleAreaScalableObject();
+      if (!area) return false;
+      state.areaScaleMode = !!enabled;
+      if (state.areaScaleMode) {
+        state.areaNodeEditMode = null;
+        clearAreaNodeHighlight();
+        clearSnapIndicator();
+        clearSmartGuides();
+      }
+      draw();
+      updateCursor();
+      return true;
+    }
+
     function setAreaNodeHighlight(highlight, options = {}) {
       let next = null;
       if (highlight && highlight.objectId && highlight.mode === 'add-hover' && highlight.point) {
@@ -3852,11 +3887,13 @@
       if (mode === 'delete' && (area.points || []).length <= 3) {
         showStatusMessage('区域至少需要 3 个节点');
         state.areaNodeEditMode = null;
+        clearAreaScaleMode();
         draw();
         updateCursor();
         return false;
       }
       state.areaNodeEditMode = mode === 'add' || mode === 'delete' ? mode : null;
+      if (state.areaNodeEditMode) clearAreaScaleMode();
       clearAreaNodeHighlight();
       clearSnapIndicator();
       draw();
@@ -3918,12 +3955,17 @@
           els.status.innerHTML = `<span class="status-tool">当前工具：区域</span><span class="status-action-separator"></span><span class="status-area-info">已绘 ${pointCount} 个点</span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="undo-area-point" ${pointCount ? '' : 'disabled'} title="撤销上一个区域点">撤销</button><button type="button" class="status-action-btn primary" data-status-action="complete-area" ${canComplete ? '' : 'disabled'}>完成</button><button type="button" class="status-action-btn" data-status-action="cancel-area">取消</button>${getStatusSelectShortcutButton()}`;
         } else {
           const activeArea = getSingleAreaNodeEditableObject();
+          const activeScalableArea = getSingleAreaScalableObject();
           if (state.areaNodeEditMode && !activeArea) state.areaNodeEditMode = null;
+          if (state.areaScaleMode && !activeScalableArea) clearAreaScaleMode();
           const activeRotatable = getSingleRotatableObject();
           if (state.rotationMode && !activeRotatable) clearRotationMode();
           if (activeRotatable && state.rotationMode) {
             els.status.classList.remove('multi-select');
             els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span class="status-action-separator"></span><span class="status-select-count">已选 1 个${getObjectTypeLabel(activeRotatable)}</span><span class="status-action-separator"></span><span class="status-rotation-mode">旋转模式</span><button type="button" class="status-action-btn" data-status-action="exit-rotation-mode">退出</button>`;
+          } else if (activeScalableArea && state.areaScaleMode) {
+            els.status.classList.remove('multi-select');
+            els.status.innerHTML = `<span class="status-tool">缩放模式</span><span class="status-action-separator"></span><span class="status-area-info">拖动角点等比缩放区域</span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="exit-area-scale-mode">退出</button>`;
           } else if (activeArea && state.areaNodeEditMode === 'add') {
             els.status.classList.remove('multi-select');
             els.status.innerHTML = `<span class="status-tool">增加节点</span><span class="status-action-separator"></span><span class="status-area-info">请选择区域边线位置</span><span class="status-action-separator"></span><button type="button" class="status-action-btn" data-status-action="cancel-area-node-edit">取消</button>`;
@@ -3939,12 +3981,13 @@
             const areaNodeButtons = activeArea
               ? `<button type="button" class="status-action-btn" data-status-action="add-area-node" title="点击后，在区域边线位置新增节点">＋节点</button><button type="button" class="status-action-btn" data-status-action="delete-area-node" ${(activeArea.points || []).length > 3 ? '' : 'disabled'} title="点击后，选择要删除的区域节点">－节点</button>`
               : '';
+            const scaleButton = activeScalableArea ? `<button type="button" class="status-action-btn" data-status-action="enter-area-scale-mode" title="进入区域等比缩放模式">缩放</button>` : '';
             const rotateButton = activeRotatable ? `<button type="button" class="status-action-btn" data-status-action="enter-rotation-mode" title="进入旋转模式">旋转</button>` : '';
             let actionHtml = '';
             if (areaNodeButtons) actionHtml += areaNodeButtons;
-            if (rotateButton || selectShortcutButton) {
+            if (scaleButton || rotateButton || selectShortcutButton) {
               if (actionHtml) actionHtml += '<span class="status-action-separator"></span>';
-              actionHtml += rotateButton + selectShortcutButton;
+              actionHtml += scaleButton + rotateButton + selectShortcutButton;
             }
             els.status.innerHTML = `<span class="status-tool">当前工具：${toolNames[state.tool]}</span><span class="status-action-separator"></span><span class="${selectionCountClass}"${selectionCountAttrs}>${selectionText}</span>${actionHtml ? '<span class="status-action-separator"></span>' + actionHtml : ''}`;
           }
@@ -6699,7 +6742,7 @@
     function isEndpointSnapFeedbackActive() {
       // 橙色只表示“端点吸附已经命中”，不表示单纯点中 / 按住端点。
       // V139 起，移动整个对象时如果对象关键点吸附到其他端点，也使用同一套橙色反馈。
-      return !!state.snapIndicator && !!(state.drawing || state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex || (state.dragging && state.moveEndpointSnap));
+      return !!state.snapIndicator && !!(state.drawing || state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex || state.resizingAreaScale || (state.dragging && state.moveEndpointSnap));
     }
     function getSelectionNormalColor() { return UI_COLORS.selectionBlue; }
     function getSelectionSnapColor() { return UI_COLORS.snapOrange; }
@@ -6721,6 +6764,7 @@
       if (kind === 'endpoint' && state.resizingEndpoint && state.resizeEndpointIndex === key) return getSelectionSnapColor();
       if (kind === 'box' && state.resizingBox && state.resizeBoxHandle === key) return getSelectionSnapColor();
       if (kind === 'area' && state.resizingAreaVertex && state.resizeAreaVertexIndex === key) return getSelectionSnapColor();
+      if (kind === 'areaScale' && state.resizingAreaScale && state.resizeAreaScaleHandle === key) return getSelectionSnapColor();
       return getSelectionNormalColor();
     }
 
@@ -7045,7 +7089,10 @@
       if (!locked && state.selectedIds.length === 1 && !state.rotationMode) {
         if (isEditableLineObject(o)) drawEndpointHandles(c, o);
         else if (isResizableBoxObject(o)) drawBoxResizeHandles(c, o);
-        else if (o.type === 'area' && !getObjectRotationDegrees(o)) drawAreaVertexHandles(c, o);
+        else if (o.type === 'area' && !getObjectRotationDegrees(o)) {
+          if (state.areaScaleMode && state.selectedIds[0] === o.id) drawAreaScaleHandles(c, o);
+          else drawAreaVertexHandles(c, o);
+        }
       }
     }
     function drawEndpointHandles(c,o){
@@ -7173,6 +7220,89 @@
       }
       c.restore();
     }
+
+    function getAreaScaleBounds(o) {
+      const pts = Array.isArray(o && o.points) ? o.points : [];
+      const bounds = getPointBounds(pts);
+      if (!bounds) return null;
+      return { left: bounds.minX, top: bounds.minY, right: bounds.maxX, bottom: bounds.maxY, w: bounds.maxX - bounds.minX, h: bounds.maxY - bounds.minY };
+    }
+
+    function getAreaScaleHandles(o) {
+      const b = getAreaScaleBounds(o);
+      if (!b || b.w <= 0 || b.h <= 0) return [];
+      return [
+        { handle: 'nw', x: b.left, y: b.top, cursor: 'nwse-resize' },
+        { handle: 'ne', x: b.right, y: b.top, cursor: 'nesw-resize' },
+        { handle: 'se', x: b.right, y: b.bottom, cursor: 'nwse-resize' },
+        { handle: 'sw', x: b.left, y: b.bottom, cursor: 'nesw-resize' }
+      ];
+    }
+
+    function drawAreaScaleHandles(c, o) {
+      const size = getBoxHandleSize();
+      const half = size / 2;
+      c.save();
+      c.setLineDash([]);
+      c.fillStyle = '#ffffff';
+      c.lineWidth = 2 / state.zoom;
+      getAreaScaleHandles(o).forEach(h => {
+        c.strokeStyle = getHandleAccentColor(o, 'areaScale', h.handle);
+        c.beginPath();
+        c.rect(h.x - half, h.y - half, size, size);
+        c.fill();
+        c.stroke();
+      });
+      c.restore();
+    }
+
+    function hitAreaScaleHandle(p) {
+      if (!state.areaScaleMode || state.selectedIds.length !== 1) return null;
+      const o = getSingleAreaScalableObject();
+      if (!o) return null;
+      const tolerance = getHandleHitTolerance();
+      let best = null;
+      let bestDist = Infinity;
+      getAreaScaleHandles(o).forEach(h => {
+        const d = Math.hypot(p.x - h.x, p.y - h.y);
+        if (d <= tolerance && d < bestDist) { best = h; bestDist = d; }
+      });
+      return best ? { kind: 'areaScale', object: o, handle: best.handle, cursor: best.cursor } : null;
+    }
+
+    function updateAreaScaleFromPointer(e) {
+      const o = state.objects.find(x => x.id === state.resizingObjectId);
+      if (!o || o.type !== 'area') return;
+      const handle = state.resizeAreaScaleHandle;
+      const original = state.dragOriginals && state.dragOriginals.get(o.id) ? state.dragOriginals.get(o.id) : o;
+      const pts = Array.isArray(original.points) ? original.points : [];
+      if (!handle || pts.length < 3) return;
+      const b = getAreaScaleBounds(original);
+      if (!b || b.w <= 0 || b.h <= 0) return;
+      const fixed = {
+        x: handle.includes('w') ? b.right : b.left,
+        y: handle.includes('n') ? b.bottom : b.top
+      };
+      const draggedOriginal = {
+        x: handle.includes('w') ? b.left : b.right,
+        y: handle.includes('n') ? b.top : b.bottom
+      };
+      const p = screenToWorldWithSnapOptions(e, { excludeObjectId: o.id, disableSmartGuide: true });
+      const baseDistance = Math.max(0.0001, Math.hypot(draggedOriginal.x - fixed.x, draggedOriginal.y - fixed.y));
+      let scale = Math.hypot(p.x - fixed.x, p.y - fixed.y) / baseDistance;
+      scale = Math.max(0.02, Math.min(80, scale));
+      const signX = handle.includes('e') ? 1 : -1;
+      const signY = handle.includes('s') ? 1 : -1;
+      o.points = pts.map(pt => ({
+        x: fixed.x + (pt.x - fixed.x) * scale,
+        y: fixed.y + (pt.y - fixed.y) * scale
+      }));
+      const nextBounds = getAreaScaleBounds(o);
+      if (nextBounds && (nextBounds.w < 1 || nextBounds.h < 1)) {
+        o.points = pts.map(pt => ({ x: fixed.x + (pt.x - fixed.x) * 0.02, y: fixed.y + (pt.y - fixed.y) * 0.02 }));
+      }
+    }
+
     function drawSelectionBox(c){ const b=normalizeBox(state.selectionBox.x1,state.selectionBox.y1,state.selectionBox.x2,state.selectionBox.y2); c.save(); c.fillStyle='rgba(37,99,235,.08)'; c.strokeStyle=UI_COLORS.selectionBlue; c.setLineDash([5,4]); c.lineWidth=1.5/state.zoom; c.fillRect(b.x,b.y,b.w,b.h); c.strokeRect(b.x,b.y,b.w,b.h); c.restore(); }
     function drawShiftDragGuide(c) {
       const g = state.dragGuide;
@@ -7354,6 +7484,7 @@
       if (pts.length <= 3) {
         if (showHint) showStatusMessage('区域至少需要 3 个节点');
         state.areaNodeEditMode = null;
+        clearAreaScaleMode();
         draw();
         updateCursor();
         return false;
@@ -7383,6 +7514,7 @@
       if (state.areaNodeEditMode === 'delete') {
         if ((area.points || []).length <= 3) {
           state.areaNodeEditMode = null;
+          clearAreaScaleMode();
           clearAreaNodeHighlight();
           showStatusMessage('区域至少需要 3 个节点');
           draw();
@@ -7445,7 +7577,7 @@
 
     function hitResizeHandle(p) {
       if (state.rotationMode) return null;
-      return hitEndpointHandle(p) || hitBoxResizeHandle(p) || hitAreaVertexHandle(p);
+      return hitEndpointHandle(p) || hitBoxResizeHandle(p) || hitAreaScaleHandle(p) || hitAreaVertexHandle(p);
     }
 
     function updateCursor(e) {
@@ -7474,7 +7606,7 @@
       } else if (state.rotatingObject) {
         cursor = 'grabbing';
         rotationHoverNext = true;
-      } else if (state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex || state.dragging) {
+      } else if (state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex || state.resizingAreaScale || state.dragging) {
         cursor = 'grabbing';
       } else if (state.boxSelecting) {
         cursor = 'default';
@@ -8017,6 +8149,19 @@
         }
         // V229：旋转模式下点击/拖动当前对象本体，应继续保持旋转模式。
         // 只有点空白、点其他对象、Esc 或状态栏退出，才真正退出旋转模式并定型区域。
+        if (state.areaScaleMode) {
+          const scaleHit = hitAreaScaleHandle(raw);
+          if (scaleHit) {
+            state.resizingAreaScale = true;
+            state.resizeHistorySaved = false;
+            state.resizingObjectId = scaleHit.object.id;
+            state.resizeAreaScaleHandle = scaleHit.handle || null;
+            state.dragOriginals = captureSelectedOriginals();
+            draw();
+            updateCursor(e);
+            return;
+          }
+        }
         if (state.areaNodeEditMode) {
           handleAreaNodeEditPointerDown(e, raw);
           updateCursor(e);
@@ -8057,6 +8202,7 @@
           if (state.rotationMode && !hitActiveRotationObject) {
             clearRotationMode({ suppressHandleAnimation: true, deferFinalizeArea: true });
           }
+          if (state.areaScaleMode && (!state.selectedIds.includes(found.id) || found.type !== 'area')) clearAreaScaleMode();
           let ids=expandSelectionWithGroup(found.id);
           if(touchInteraction.multiSelectMode){
             const set=new Set(state.selectedIds);
@@ -8096,6 +8242,7 @@
           } else {
             if (state.rotationMode) clearRotationMode({ suppressHandleAnimation: true, deferFinalizeArea: true });
             state.selectedIds=[];
+            clearAreaScaleMode();
             finalizePendingAreaRotation();
             state.boxSelecting=true;
             state.selectionBox={x1:raw.x,y1:raw.y,x2:raw.x,y2:raw.y};
@@ -8202,9 +8349,10 @@
         p = applySmartGuideDrawingDirectionAssist(raw, p);
       }
       if(state.tool==='wall') p = snapWallEndpoint(p);
-      if(state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex){
+      if(state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex || state.resizingAreaScale){
         if(!state.resizeHistorySaved){ saveHistory(); state.resizeHistorySaved = true; }
         if (state.resizingBox) updateBoxResizeFromPointer(e);
+        else if (state.resizingAreaScale) updateAreaScaleFromPointer(e);
         else if (state.resizingAreaVertex) updateAreaVertexFromPointer(e);
         else updateEndpointFromPointer(e);
         // V137：调整端点 / 控制点 / 区域节点时，智能辅助线应跟随当前正在拖动的点。
@@ -8320,6 +8468,7 @@
           if (!touchInteraction.panStarted) {
             if (state.rotationMode) clearRotationMode({ suppressHandleAnimation: true, deferFinalizeArea: true });
             state.selectedIds = [];
+            clearAreaScaleMode();
             touchInteraction.multiSelectMode = false;
             finalizePendingAreaRotation();
             draw();
@@ -8409,7 +8558,7 @@
         state.lockBadgePointerId = null;
         needsDraw = true;
       }
-      if (state.snapIndicator && !state.drawing && !state.resizingEndpoint && !state.resizingBox && !state.resizingAreaVertex && !state.dragging) {
+      if (state.snapIndicator && !state.drawing && !state.resizingEndpoint && !state.resizingBox && !state.resizingAreaVertex && !state.resizingAreaScale && !state.dragging) {
         clearSnapIndicator();
         clearMoveEndpointSnap();
         needsDraw = true;
@@ -8462,7 +8611,7 @@
         markProjectDirty();
         return;
       }
-      if(state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex){
+      if(state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex || state.resizingAreaScale){
         state.resizingEndpoint=false;
         state.resizingBox=false;
         state.resizingAreaVertex=false;
@@ -8470,6 +8619,7 @@
         state.resizeEndpointIndex=null;
         state.resizeBoxHandle=null;
         state.resizeAreaVertexIndex=null;
+        state.resizeAreaScaleHandle=null;
         state.dragOriginals=null;
         state.resizeHistorySaved=false;
         clearSnapIndicator();
@@ -8630,7 +8780,7 @@
     function setTool(tool) {
       if (state.backgroundEditMode) exitBackgroundEditMode(false);
       if (tool !== state.tool) cancelAreaDraft(false);
-      if (tool !== 'select') state.areaNodeEditMode = null;
+      if (tool !== 'select') { state.areaNodeEditMode = null; clearAreaScaleMode(); }
       if (tool !== 'select') clearRotationMode();
       if (tool !== 'select') clearAreaNodeHighlight();
       if (tool !== 'eraser') state.eraserPreview = null;
@@ -8729,6 +8879,16 @@
         if (!target.disabled) setAreaNodeEditMode('delete');
         return;
       }
+      if (action === 'enter-area-scale-mode') {
+        if (!target.disabled) setAreaScaleMode(true);
+        return;
+      }
+      if (action === 'exit-area-scale-mode') {
+        clearAreaScaleMode();
+        draw();
+        updateCursor();
+        return;
+      }
       if (action === 'cancel-area-node-edit') {
         clearAreaNodeEditMode();
         draw();
@@ -8739,6 +8899,7 @@
         const rotatable = getSingleRotatableObject();
         if (rotatable) {
           state.areaNodeEditMode = null;
+          clearAreaScaleMode();
           clearAreaNodeHighlight();
           state.tool = 'select';
           document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active', b.dataset.tool === 'select'));
@@ -8763,6 +8924,7 @@
         if (state.tool !== 'select' || state.backgroundEditMode || !state.selectedIds.length) return;
         touchInteraction.multiSelectMode = !touchInteraction.multiSelectMode;
         state.areaNodeEditMode = null;
+        clearAreaScaleMode();
         draw();
         updateCursor();
         return;
