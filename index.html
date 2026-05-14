@@ -2323,7 +2323,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v244';
+    const APP_VERSION = 'v245';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -9857,7 +9857,14 @@
           o.openingThicknessMode = o.openingUseWallThickness ? 'wall' : 'linear';
         }
         if(o.type==='door') { o.doorSwing = o.doorSwing || o.swing || 'right'; o.swing = o.doorSwing; }
-        if(o.type==='area') { o.layer = o.layer || 'areas'; o.points = Array.isArray(o.points) ? o.points : []; normalizeFillableShapeObject(o); }
+        if(o.type==='area') {
+          o.layer = o.layer || 'areas';
+          o.points = Array.isArray(o.points) ? o.points : [];
+          normalizeFillableShapeObject(o);
+          // V245：区域对象的正式模型以 points 为准。旧版本文件中若残留 rotation，
+          // 打开时一次性应用到节点并归零，使旧区域恢复节点编辑 / 缩放能力。
+          applyAreaRotationToPoints(o);
+        }
         if(o.type==='rect' || o.type==='ellipse') { normalizeFillableShapeObject(o); }
         if(o.type === 'dimension') {
           if(!o.dimensionLabelMode) o.dimensionLabelMode = 'inline';
