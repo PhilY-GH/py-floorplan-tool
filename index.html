@@ -1294,6 +1294,16 @@
       border-color: #93c5fd;
       color: #1d4ed8;
     }
+    .status.status-hover-suppressed .status-action-btn:hover:not(:disabled) {
+      background: rgba(255,255,255,.74);
+      border-color: rgba(203,213,225,.9);
+      color: #0f172a;
+    }
+    .status.status-hover-suppressed .status-action-btn.primary:hover:not(:disabled) {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
     .status-action-btn:disabled {
       opacity: .45;
       cursor: default;
@@ -2305,7 +2315,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v239';
+    const APP_VERSION = 'v240';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -8625,12 +8635,26 @@
       updateCursor();
     }
     document.querySelectorAll('[data-tool]').forEach(btn=>btn.addEventListener('click',()=>setTool(btn.dataset.tool)));
+    let statusHoverSuppressTimer = null;
+    function suppressStatusHover(duration = 260) {
+      if (!els.status) return;
+      if (statusHoverSuppressTimer) clearTimeout(statusHoverSuppressTimer);
+      els.status.classList.add('status-hover-suppressed');
+      statusHoverSuppressTimer = setTimeout(() => {
+        statusHoverSuppressTimer = null;
+        if (els.status) els.status.classList.remove('status-hover-suppressed');
+      }, duration);
+    }
+
     function handleStatusAction(e) {
       const target = e.target.closest('[data-status-action]');
       if (!target) return;
       const action = target.dataset.statusAction;
       e.preventDefault();
       e.stopPropagation();
+      // V240：状态栏按钮切换后，iPad / Apple Pencil / 鼠标可能把新按钮误判为 hover。
+      // 短暂抑制 hover 视觉，避免“完成/退出”后新按钮瞬间变蓝，看起来像误触。
+      suppressStatusHover();
       if (action === 'undo-area-point') {
         if (!target.disabled && state.tool === 'area' && state.areaDrawing) {
           undoLastAreaPoint(true);
