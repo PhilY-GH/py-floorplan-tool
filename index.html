@@ -2323,7 +2323,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v243';
+    const APP_VERSION = 'v244';
     const HISTORY_LIMIT = 100;
     const UI_COLORS = {
       selectionBlue: '#2563eb',
@@ -7974,7 +7974,7 @@
 
     function resetTransientInteraction(restore = false) {
       if (restore) {
-        if (state.dragging || state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex) restoreDragOriginals();
+        if (state.dragging || state.resizingEndpoint || state.resizingBox || state.resizingAreaVertex || state.resizingAreaScale) restoreDragOriginals();
         if (state.erasing) {
           const last = state.objects[state.objects.length - 1];
           if (last && (last.type === 'brush' || last.type === 'erase')) state.objects.pop();
@@ -7991,6 +7991,7 @@
       state.resizingEndpoint = false;
       state.resizingBox = false;
       state.resizingAreaVertex = false;
+      state.resizingAreaScale = false;
       state.resizeEndpointIndex = null;
       state.resizeBoxHandle = null;
       state.resizeAreaVertexIndex = null;
@@ -8615,6 +8616,7 @@
         state.resizingEndpoint=false;
         state.resizingBox=false;
         state.resizingAreaVertex=false;
+        state.resizingAreaScale=false;
         state.resizingObjectId=null;
         state.resizeEndpointIndex=null;
         state.resizeBoxHandle=null;
