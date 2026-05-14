@@ -2362,7 +2362,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v259';
+    const APP_VERSION = 'v261';
     const HISTORY_LIMIT = 100;
     const SCALE_PERCENT_MIN = 1;
     const SCALE_PERCENT_MAX = 2000;
@@ -7149,7 +7149,7 @@
 
     function getLockedSelectionBadgeBox(o) {
       if (!o || !isObjectLocked(o)) return null;
-      return getLockedSelectionBadgeBoxFromBounds(getObjectBox(o));
+      return getLockedSelectionBadgeBoxFromCorners(getSelectionFrameCornersForBadge(o));
     }
     function hitLockedSelectionBadge(raw, pointerEvent = null) {
       if (!raw || state.tool !== 'select') return null;
@@ -7191,10 +7191,74 @@
       c.restore();
     }
 
+    function getSelectionFrameCornersFromBounds(b, expand = 6) {
+      if (!b) return [];
+      return [
+        { x: b.x - expand, y: b.y - expand },
+        { x: b.x + b.w + expand, y: b.y - expand },
+        { x: b.x + b.w + expand, y: b.y + b.h + expand },
+        { x: b.x - expand, y: b.y + b.h + expand }
+      ];
+    }
+
+    function getSelectionFrameCornersForBadge(o) {
+      if (!o) return [];
+      const expand = 6;
+      const deg = getObjectRotationDegrees(o);
+      const isRotatable = isRotatableObject({ ...o, locked: false });
+      if (isRotatable && deg) {
+        const base = getObjectBaseBox(o);
+        const center = getBoxCenter(base);
+        return getSelectionFrameCornersFromBounds(base, expand).map(pt => rotatePointAround(pt, center, -deg));
+      }
+      return getSelectionFrameCornersFromBounds(getObjectBox(o), expand);
+    }
+
+    function getSelectionCornerCenter(corners) {
+      if (!Array.isArray(corners) || !corners.length) return null;
+      const sum = corners.reduce((acc, pt) => ({ x: acc.x + pt.x, y: acc.y + pt.y }), { x: 0, y: 0 });
+      return { x: sum.x / corners.length, y: sum.y / corners.length };
+    }
+
+    function getVisualTopRightSelectionCorner(corners) {
+      if (!Array.isArray(corners) || !corners.length) return null;
+      const bounds = getPointBounds(corners);
+      if (!bounds) return corners[0];
+      const w = Math.max(1, bounds.maxX - bounds.minX);
+      const h = Math.max(1, bounds.maxY - bounds.minY);
+      let best = corners[0];
+      let bestScore = -Infinity;
+      corners.forEach(pt => {
+        // 视觉右上角：优先靠上，其次靠右；稍微增加“靠上”的权重，避免宽扁对象选到过右但偏下的角。
+        const nx = (pt.x - bounds.minX) / w;
+        const ny = (bounds.maxY - pt.y) / h;
+        const score = ny * 1.15 + nx;
+        if (score > bestScore) {
+          bestScore = score;
+          best = pt;
+        }
+      });
+      return best;
+    }
+
+    function getLockedSelectionBadgeBoxFromCorners(corners) {
+      if (!Array.isArray(corners) || !corners.length) return null;
+      const size = Math.max(18 / state.zoom, 14);
+      const corner = getVisualTopRightSelectionCorner(corners);
+      const center = getSelectionCornerCenter(corners) || corner;
+      let vx = corner.x - center.x;
+      let vy = corner.y - center.y;
+      const len = Math.hypot(vx, vy) || 1;
+      vx /= len;
+      vy /= len;
+      // V261：小锁跟随当前视觉选定框角点，沿中心→角点方向向外偏移，避免压住控制点。
+      const offset = Math.max(15 / Math.max(0.0001, state.zoom), 10);
+      return { x: corner.x + vx * offset - size / 2, y: corner.y + vy * offset - size / 2, size };
+    }
+
     function getLockedSelectionBadgeBoxFromBounds(b) {
       if (!b) return null;
-      const size = Math.max(18 / state.zoom, 14);
-      return { x: b.x + b.w + 8, y: b.y - 8 - size, size };
+      return getLockedSelectionBadgeBoxFromCorners(getSelectionFrameCornersFromBounds(b, 6));
     }
 
     function drawSelectionBounds(c, b, options = {}) {
@@ -7377,6 +7441,33 @@
       const isRotationActive = state.rotationMode && state.rotatingObjectId === o.id && isRotatable && !locked;
       if (isRotatable && (getObjectRotationDegrees(o) || isRotationActive)) {
         drawRotatedSelectionFrame(c, o, { locked });
+        // V260：旋转后的矩形 / 椭圆 / 文字也需要显示可点击小锁。
+        // 小锁位置使用当前视觉外接框右上角，而不是对象零角度框的右上角。
+        if (locked) {
+          const badge = getLockedSelectionBadgeBox(o);
+          if (badge) {
+            const { x, y, size } = badge;
+            const badgeHover = state.lockBadgeHoverId === o.id;
+            const badgePress = state.lockBadgePressId === o.id;
+            const cornerRadius = Math.max(5 / state.zoom, 3);
+            c.save();
+            c.setLineDash([]);
+            c.fillStyle = (badgeHover || badgePress) ? 'rgba(255,237,213,.98)' : 'rgba(255,247,237,.95)';
+            c.strokeStyle = '#fdba74';
+            c.lineWidth = Math.max(1 / state.zoom, .7);
+            c.beginPath();
+            if (c.roundRect) c.roundRect(x, y, size, size, cornerRadius);
+            else c.rect(x, y, size, size);
+            c.fill();
+            c.stroke();
+            c.restore();
+
+            const iconSize = size * 0.58;
+            const ix = x + (size - iconSize) / 2;
+            const iy = y + (size - iconSize) / 2;
+            drawCanvasLockIcon(c, ix, iy, iconSize, UI_COLORS.snapOrange);
+          }
+        }
       } else {
         const accent = locked ? '#64748b' : getSelectionAccentColor();
         c.save();
