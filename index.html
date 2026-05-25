@@ -2362,7 +2362,7 @@
   <div id="backgroundPopover" class="bg-popover hidden" aria-hidden="true"></div>
 
   <script>
-    const APP_VERSION = 'v261';
+    const APP_VERSION = 'v262';
     const HISTORY_LIMIT = 100;
     const SCALE_PERCENT_MIN = 1;
     const SCALE_PERCENT_MAX = 2000;
@@ -4140,7 +4140,7 @@
               ? `<button type="button" class="status-action-btn" data-status-action="add-area-node" title="点击后，在区域边线位置新增节点">＋节点</button><button type="button" class="status-action-btn" data-status-action="delete-area-node" ${(activeArea.points || []).length > 3 ? '' : 'disabled'} title="点击后，选择要删除的区域节点">－节点</button>`
               : '';
             const scaleButton = activeScalableArea ? `<button type="button" class="status-action-btn" data-status-action="enter-area-scale-mode" title="进入区域等比缩放模式">缩放</button>` : '';
-            const rotateButton = activeRotatable ? `<button type="button" class="status-action-btn" data-status-action="enter-rotation-mode" title="进入旋转模式">旋转</button>` : '';
+            const rotateButton = (state.tool === 'select' && activeRotatable) ? `<button type="button" class="status-action-btn" data-status-action="enter-rotation-mode" title="进入旋转模式">旋转</button>` : '';
             let actionHtml = '';
             if (areaNodeButtons) actionHtml += areaNodeButtons;
             if (scaleButton || rotateButton || selectShortcutButton) {
@@ -9385,7 +9385,7 @@
         return;
       }
       if (action === 'enter-rotation-mode') {
-        const rotatable = getSingleRotatableObject();
+        const rotatable = state.tool === 'select' ? getSingleRotatableObject() : null;
         if (rotatable) {
           state.areaNodeEditMode = null;
           clearAreaScaleMode();
